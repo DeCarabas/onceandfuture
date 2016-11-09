@@ -167,6 +167,15 @@ namespace onceandfuture
             return null;
         }
 
+        static string Slice(string str, int min, int max)
+        {
+            if (min >= str.Length) { return String.Empty; }
+            if (max > str.Length) { max = str.Length; }
+            return str.Substring(min, max - min);
+        }
+
+        static string ThreeChar(string str) => str.Length <= 3 ? str : str.Substring(0, 3);
+
         static DateTime? TryParseDateAscTime(string timeString)
         {
             // Like:
@@ -178,14 +187,6 @@ namespace onceandfuture
             if (parts.Count == 5) { parts.Insert(4, "+0000"); }
             if (parts.Count != 6) { return null; }
             return TryParseDateRFC822(String.Join(" ", parts[0], parts[2], parts[1], parts[5], parts[3], parts[4]));
-        }
-
-        static string ThreeChar(string str) => str.Length <= 3 ? str : str.Substring(0, 3);
-        static string Slice(string str, int min, int max)
-        {
-            if (min >= str.Length) { return String.Empty; }
-            if (max > str.Length) { max = str.Length; }
-            return str.Substring(min, max - min);
         }
 
         static DateTime? TryParseDateGreek(string timeString) => null;
