@@ -4,10 +4,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using AngleSharp.Dom;
+using AngleSharp.Dom.Html;
 using AngleSharp.Extensions;
 using AngleSharp.Parser.Html;
 
@@ -140,10 +143,15 @@ namespace onceandfuture
         public static string ParseBody(XElement body)
         {
             var parser = new HtmlParser();
-            var document = parser.Parse(body.Value);
+            IHtmlDocument document = parser.Parse(body.Value);
 
-            string result = document.Body.Text();
-            if (result.Length > 280) { result = result.Substring(0, 277) + "..."; }
+            string result = HtmlFormatter.Format(document.Body);
+
+            //string result = String.Join(
+            //    " ",
+            //    document.Body.Text().Split(default(char[]), StringSplitOptions.RemoveEmptyEntries)
+            //);
+            //if (result.Length > 280) { result = result.Substring(0, 277) + "..."; }
             return result;
         }
 
@@ -291,6 +299,62 @@ namespace onceandfuture
                 return result.UtcDateTime;
             }
             return null;
+        }
+
+        class HtmlFormatter
+        {
+            readonly StringBuilder builder = new StringBuilder();
+
+            HtmlFormatter() { }
+
+            public static string Format(IHtmlElement element)
+            {
+                var formatter = new HtmlFormatter();
+                formatter.Visit(element);
+                return formatter.builder.ToString();
+            }
+
+            bool Visit(INode node)
+            {
+                switch (node.NodeType)
+                {
+                case NodeType.Element:
+                    if (node.NodeName == "SCRIPT") { break; }
+                    foreach (INode child in node.ChildNodes)
+                    {
+                        if (!Visit(child)) { return false; }
+                    }
+                    if (node.NodeName == "P" || node.NodeName == "DIV" || node.NodeName == "BR")
+                    {
+                        builder.AppendLine();
+                        builder.AppendLine();
+                    }
+                    break;
+
+                case NodeType.Text:
+                case NodeType.CharacterData:
+                case NodeType.EntityReference:
+                    string[] parts = node.TextContent.Split(default(char[]), StringSplitOptions.RemoveEmptyEntries);
+                    for (int i = 0; i < parts.Length; i++)
+                    {
+                        builder.Append(parts[i]);
+                        builder.Append(" ");
+                    }
+                    break;
+
+                default:
+                    break;
+                }
+
+                if (builder.Length > 280)
+                {
+                    builder.Length = 277;
+                    builder.Append("...");
+                    return false;
+                }
+
+                return true;
+            }
         }
     }
 
@@ -700,9 +764,9 @@ namespace onceandfuture
                 {
                     parse.task.Wait();
 
-                    //Console.WriteLine(parse.url);
-                    //DumpFeed(parse.task.Result);
-                    // Console.ReadLine();
+                    Console.WriteLine(parse.url);
+                    DumpFeed(parse.task.Result);
+                    Console.ReadLine();
                 }
 
                 //if (Util.BadDates.Count > 0)
