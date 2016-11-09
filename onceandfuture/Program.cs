@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -12,10 +13,79 @@ using AngleSharp.Parser.Html;
 
 namespace onceandfuture
 {
+    static class Log
+    {
+        public static void BadDate(string url, string date)
+        {
+            Console.WriteLine("{0}: Unparsable date encountered: {1}", url, date);
+        }
+
+        public static void NetworkError(Uri uri, HttpRequestException requestException, Stopwatch loadTimer)
+        {
+            Console.WriteLine(
+                "{0}: {2} ms: Network Error: {1}",
+                uri,
+                requestException.Message,
+                loadTimer.ElapsedMilliseconds
+            );
+        }
+
+        public static void XmlError(Uri uri, XmlException xmlException, Stopwatch loadTimer)
+        {
+            Console.WriteLine(
+                "{0}: {2} ms: XML Error: {1}",
+                uri,
+                xmlException.Message,
+                loadTimer.ElapsedMilliseconds
+            );
+        }
+
+        public static void BeginGetFeed(Uri uri)
+        {
+            Console.WriteLine("{0}: Begin fetching", uri);
+        }
+
+        public static void EndGetFeed(
+            Uri uri,
+            string version,
+            HttpResponseMessage response,
+            RiverFeed result,
+            Stopwatch loadTimer
+        )
+        {
+            Console.WriteLine(
+                "{0}: Fetched {1} items from {2} feed in {3} ms",
+                uri,
+                result.Items.Count,
+                version,
+                loadTimer.ElapsedMilliseconds
+            );
+        }
+
+        public static void UnrecognizableFeed(Uri uri, HttpResponseMessage response, string body, Stopwatch loadTimer)
+        {
+            Console.WriteLine(
+                "{0}: Could not identify feed type in {1} ms: {2}",
+                uri,
+                loadTimer.ElapsedMilliseconds,
+                body
+            );
+        }
+
+        public static void EndGetFeedFailure(Uri uri, HttpResponseMessage response, string body, Stopwatch loadTimer)
+        {
+            Console.WriteLine(
+                "{0}: Got failure status code {1} in {2} ms: {3}",
+                uri,
+                response.StatusCode,
+                loadTimer.ElapsedMilliseconds,
+                body
+            );
+        }
+    }
+
     public static class Util
     {
-        public static List<string> BadDates = new List<string>();
-
         readonly static Func<string, DateTime?>[] DateParsers = new Func<string, DateTime?>[]
         {
             TryParseDateNative,
@@ -79,23 +149,13 @@ namespace onceandfuture
 
         public static DateTime? ParseDate(XElement dateTime)
         {
-            // TODO: Date parsing, for reals.
-            //DateTime result;
-            //string dateTimeString = dateTime.Value;
-
-            //if (DateTime.TryParse(dateTime.Value, out result))
-            //{
-            //    return result;
-            //}
-
             for (int i = 0; i < DateParsers.Length; i++)
             {
                 DateTime? result = DateParsers[i](dateTime.Value);
                 if (result != null) { return result; }
             }
 
-            Console.WriteLine("BAD DATE: {0}", dateTime.Value);
-            lock(BadDates) { BadDates.Add(dateTime.Value); }
+            Log.BadDate(dateTime.BaseUri, dateTime.Value);
             return null;
         }
 
@@ -141,11 +201,7 @@ namespace onceandfuture
             }
 
             // If there's a day name at the front, remove it.            
-            if (DayNames.Contains(ThreeChar(parts[0])))
-            {
-                parts.RemoveAt(0);
-            }
-
+            if (DayNames.Contains(ThreeChar(parts[0]))) { parts.RemoveAt(0); }
 
             // If we don't have at least 5 parts now there's not enough information to interpret.
             if (parts.Count < 5) { return null; }
@@ -224,7 +280,6 @@ namespace onceandfuture
                 return null;
             }
         }
-
 
         static DateTime? TryParseDateW3DTF(string timeString) => null;
 
@@ -550,75 +605,77 @@ namespace onceandfuture
             string ifModifiedSince,
             CancellationToken cancellationToken)
         {
+            Stopwatch loadTimer = Stopwatch.StartNew();
             try
             {
                 var client = new HttpClient();
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
 
-
-                Log("Loading {0}...", uri);
+                Log.BeginGetFeed(uri);
                 HttpResponseMessage response = await client.GetAsync(uri, cancellationToken);
                 if (!response.IsSuccessStatusCode)
                 {
-                    Log("Failed to load feed {0}: Status code {1}", uri, response.StatusCode);
-
-                    string body = await response.Content.ReadAsStringAsync();
-                    Log("{0}", body);
+                    //string body = await response.Content.ReadAsStringAsync();
+                    string body = string.Empty;
+                    Log.EndGetFeedFailure(uri, response, body, loadTimer);
                     return null;
                 }
+
+                Uri responseUri = response.RequestMessage.RequestUri;
 
                 // TODO: Character detection!
                 // TODO: Handle redirection correctly.
 
                 await response.Content.LoadIntoBufferAsync();
                 using (Stream responseStream = await response.Content.ReadAsStreamAsync())
+                using (var textReader = new StreamReader(responseStream))
+                using (var reader = XmlReader.Create(textReader, null, responseUri.AbsoluteUri))
                 {
-                    // TODO: LoadOptions.SetBaseUri
-                    XElement element = XElement.Load(responseStream);
+                    XElement element = XElement.Load(reader, LoadOptions.SetBaseUri);
                     if (element.Name == XNames.RSS.Rss)
                     {
-                        return RiverFeed.LoadFeed(uri, element.Element(XNames.RSS.Channel));
+                        RiverFeed result = RiverFeed.LoadFeed(responseUri, element.Element(XNames.RSS.Channel));
+                        Log.EndGetFeed(uri, "rss2.0", response, result, loadTimer);
+                        return result;
                     }
                     else if (element.Name == XNames.Atom.Feed)
                     {
-                        return RiverFeed.LoadFeed(uri, element);
+                        RiverFeed result = RiverFeed.LoadFeed(responseUri, element);
+                        Log.EndGetFeed(uri, "atom", response, result, loadTimer);
+                        return result;
                     }
                     else if (element.Name == XNames.RDF.Rdf)
                     {
-                        RiverFeed feed = RiverFeed.LoadFeed(uri, element.Element(XNames.RSS10.Channel));
+                        RiverFeed result = RiverFeed.LoadFeed(responseUri, element.Element(XNames.RSS10.Channel));
                         foreach (XElement elem in element.Elements(XNames.RSS10.Item))
                         {
-                            feed.Items.Add(RiverItem.LoadItem(elem));
+                            result.Items.Add(RiverItem.LoadItem(elem));
                         }
-                        return feed;
+                        Log.EndGetFeed(uri, "rdf", response, result, loadTimer);
+                        return result;
                     }
-
-                    return null;
-                    //Console.WriteLine(uri);
+                    else
+                    {
+                        Log.UnrecognizableFeed(uri, response, element.ToString(), loadTimer);
+                        return null;
+                    }
                 }
             }
             catch (HttpRequestException requestException)
             {
-                Log("Network error loading {0}: {1}", uri, requestException);
+                Log.NetworkError(uri, requestException, loadTimer);
                 return null;
             }
             catch (XmlException xmlException)
             {
-                Log("Failed to load {0} as XML: {1}", uri, xmlException);
+                Log.XmlError(uri, xmlException, loadTimer);
                 return null;
             }
-        }
-
-        static void Log(string msg, params object[] args)
-        {
-            Console.WriteLine(String.Format(msg, args));
         }
     }
 
     class Program
     {
-
-
         static void Main(string[] args)
         {
             try
