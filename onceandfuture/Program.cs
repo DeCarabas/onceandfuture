@@ -524,7 +524,7 @@ namespace onceandfuture
                 { XNames.Atom.Title,      (rf, xe) => rf.FeedTitle = xe.Value },
 
                 { XNames.RSS.Link,        (rf, xe) => rf.WebsiteUrl = xe.Value },
-                { XNames.RSS10.Link,      (rf, xe) => rf.FeedTitle = xe.Value },
+                { XNames.RSS10.Link,      (rf, xe) => rf.WebsiteUrl = xe.Value },
                 { XNames.Atom.Link,       (rf, xe) => HandleAtomLink(rf, xe) },
 
                 { XNames.RSS.Description,   (rf, xe) => rf.FeedDescription = Util.ParseBody(xe) },
@@ -984,7 +984,7 @@ namespace onceandfuture
                 foreach (var parse in parses.ToList())
                 {
                     parse.task.Wait();
-
+                   
                     Console.WriteLine(parse.url);
                     DumpFeed(parse.task.Result);
                     Console.ReadLine();
