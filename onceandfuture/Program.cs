@@ -335,7 +335,6 @@ namespace onceandfuture
         class HtmlFormatter
         {
             readonly StringBuilder builder = new StringBuilder();
-            bool lastWasLine;
 
             HtmlFormatter() { }
 
@@ -355,15 +354,6 @@ namespace onceandfuture
                     foreach (INode child in node.ChildNodes)
                     {
                         if (!Visit(child)) { return false; }
-                    }
-                    if (node.NodeName == "P" || node.NodeName == "DIV" || node.NodeName == "BR")
-                    {
-                        if (!this.lastWasLine)
-                        {
-                            builder.AppendLine();
-                            builder.AppendLine();
-                            this.lastWasLine = true;
-                        }
                     }
                     break;
 
