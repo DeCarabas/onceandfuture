@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -85,6 +86,11 @@ namespace onceandfuture
                 loadTimer.ElapsedMilliseconds,
                 body
             );
+        }
+
+        public static void EndGetFeedNotModified(Uri uri, HttpResponseMessage response, Stopwatch loadTimer)
+        {
+            Console.WriteLine("{0}: Got feed not modified in {1} ms", uri, loadTimer.ElapsedMilliseconds);
         }
     }
 
@@ -330,7 +336,7 @@ namespace onceandfuture
                     if (node.NodeName == "P" || node.NodeName == "DIV" || node.NodeName == "BR")
                     {
                         if (!this.lastWasLine)
-                        {                            
+                        {
                             builder.AppendLine();
                             builder.AppendLine();
                             this.lastWasLine = true;
@@ -491,6 +497,9 @@ namespace onceandfuture
         public DateTime WhenLastUpdate { get; set; }
         public IList<RiverItem> Items => this.items;
 
+        public string Etag { get; set; }
+        public string LastModified { get; set; }
+
         static readonly Dictionary<XName, Action<RiverFeed, XElement>> FeedElements =
             new Dictionary<XName, Action<RiverFeed, XElement>>
             {
@@ -511,9 +520,98 @@ namespace onceandfuture
             };
 
 
+        public static async Task<RiverFeed> FetchAsync(
+            Uri uri,
+            string etag,
+            string lastModified,
+            CancellationToken cancellationToken
+        )
+        {
+            Stopwatch loadTimer = Stopwatch.StartNew();
+            try
+            {
+                var client = new HttpClient();
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                    RequestUri = uri,
+                    Headers = { { "User-Agent", "TheOnceAndFuture/1.0" } }
+                };
+                if (etag != null) { request.Headers.Add("If-None-Match", etag); }
+                if (lastModified != null) { request.Headers.Add("If-Modified-Since", lastModified); }
+
+                Log.BeginGetFeed(uri);
+                HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
+                if (response.StatusCode == HttpStatusCode.NotModified)
+                {
+                    Log.EndGetFeedNotModified(uri, response, loadTimer);
+                    return new RiverFeed { Etag = etag, LastModified = lastModified };
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    //string body = await response.Content.ReadAsStringAsync();
+                    string body = string.Empty;
+                    Log.EndGetFeedFailure(uri, response, body, loadTimer);
+                    return null;
+                }
+
+                Uri responseUri = response.RequestMessage.RequestUri;
+
+                // TODO: Character detection!
+
+                await response.Content.LoadIntoBufferAsync();
+                using (Stream responseStream = await response.Content.ReadAsStreamAsync())
+                using (var textReader = new StreamReader(responseStream))
+                using (var reader = XmlReader.Create(textReader, null, responseUri.AbsoluteUri))
+                {
+                    XElement element = XElement.Load(reader, LoadOptions.SetBaseUri);
+                    if (element.Name == XNames.RSS.Rss)
+                    {
+                        RiverFeed result = RiverFeed.LoadFeed(responseUri, element.Element(XNames.RSS.Channel));
+                        Log.EndGetFeed(uri, "rss2.0", response, result, loadTimer);
+                        return result;
+                    }
+                    else if (element.Name == XNames.Atom.Feed)
+                    {
+                        RiverFeed result = RiverFeed.LoadFeed(responseUri, element);
+                        Log.EndGetFeed(uri, "atom", response, result, loadTimer);
+                        return result;
+                    }
+                    else if (element.Name == XNames.RDF.Rdf)
+                    {
+                        RiverFeed result = RiverFeed.LoadFeed(responseUri, element.Element(XNames.RSS10.Channel));
+                        foreach (XElement elem in element.Elements(XNames.RSS10.Item))
+                        {
+                            result.Items.Add(RiverItem.LoadItem(elem));
+                        }
+                        Log.EndGetFeed(uri, "rdf", response, result, loadTimer);
+                        return result;
+                    }
+                    else
+                    {
+                        Log.UnrecognizableFeed(uri, response, element.ToString(), loadTimer);
+                        return null;
+                    }
+                }
+            }
+            catch (HttpRequestException requestException)
+            {
+                Log.NetworkError(uri, requestException, loadTimer);
+                return null;
+            }
+            catch (XmlException xmlException)
+            {
+                Log.XmlError(uri, xmlException, loadTimer);
+                return null;
+            }
+        }
+
         public static RiverFeed LoadFeed(Uri feedUrl, XElement item)
         {
-            var rf = new RiverFeed();
+            var rf = new RiverFeed { WhenLastUpdate = DateTime.UtcNow };
             foreach (XElement xe in item.Elements())
             {
                 Action<RiverFeed, XElement> action;
@@ -680,82 +778,6 @@ namespace onceandfuture
         public string Length { get; set; }
     }
 
-    class Feed
-    {
-        public static async Task<RiverFeed> GetFeedAsync(
-            Uri uri,
-            string etag,
-            string ifModifiedSince,
-            CancellationToken cancellationToken)
-        {
-            Stopwatch loadTimer = Stopwatch.StartNew();
-            try
-            {
-                var client = new HttpClient();
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
-
-                Log.BeginGetFeed(uri);
-                HttpResponseMessage response = await client.GetAsync(uri, cancellationToken);
-                if (!response.IsSuccessStatusCode)
-                {
-                    //string body = await response.Content.ReadAsStringAsync();
-                    string body = string.Empty;
-                    Log.EndGetFeedFailure(uri, response, body, loadTimer);
-                    return null;
-                }
-
-                Uri responseUri = response.RequestMessage.RequestUri;
-
-                // TODO: Character detection!
-
-                await response.Content.LoadIntoBufferAsync();
-                using (Stream responseStream = await response.Content.ReadAsStreamAsync())
-                using (var textReader = new StreamReader(responseStream))
-                using (var reader = XmlReader.Create(textReader, null, responseUri.AbsoluteUri))
-                {
-                    XElement element = XElement.Load(reader, LoadOptions.SetBaseUri);
-                    if (element.Name == XNames.RSS.Rss)
-                    {
-                        RiverFeed result = RiverFeed.LoadFeed(responseUri, element.Element(XNames.RSS.Channel));
-                        Log.EndGetFeed(uri, "rss2.0", response, result, loadTimer);
-                        return result;
-                    }
-                    else if (element.Name == XNames.Atom.Feed)
-                    {
-                        RiverFeed result = RiverFeed.LoadFeed(responseUri, element);
-                        Log.EndGetFeed(uri, "atom", response, result, loadTimer);
-                        return result;
-                    }
-                    else if (element.Name == XNames.RDF.Rdf)
-                    {
-                        RiverFeed result = RiverFeed.LoadFeed(responseUri, element.Element(XNames.RSS10.Channel));
-                        foreach (XElement elem in element.Elements(XNames.RSS10.Item))
-                        {
-                            result.Items.Add(RiverItem.LoadItem(elem));
-                        }
-                        Log.EndGetFeed(uri, "rdf", response, result, loadTimer);
-                        return result;
-                    }
-                    else
-                    {
-                        Log.UnrecognizableFeed(uri, response, element.ToString(), loadTimer);
-                        return null;
-                    }
-                }
-            }
-            catch (HttpRequestException requestException)
-            {
-                Log.NetworkError(uri, requestException, loadTimer);
-                return null;
-            }
-            catch (XmlException xmlException)
-            {
-                Log.XmlError(uri, xmlException, loadTimer);
-                return null;
-            }
-        }
-    }
-
     class Program
     {
         static void Main(string[] args)
@@ -775,7 +797,7 @@ namespace onceandfuture
                     select new
                     {
                         url = entry.XmlUrl,
-                        task = Feed.GetFeedAsync(entry.XmlUrl, null, null, CancellationToken.None),
+                        task = RiverFeed.FetchAsync(entry.XmlUrl, null, null, CancellationToken.None),
                     };
 
                 foreach (var parse in parses.ToList())
