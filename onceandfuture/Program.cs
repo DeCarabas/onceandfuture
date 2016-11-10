@@ -881,9 +881,6 @@ namespace onceandfuture
 
                 Uri responseUri = response.RequestMessage.RequestUri;
 
-                // TODO: Handle redirects properly.
-                //       That is: permanent redirects get recorded; temporary ones do not.               
-
                 // TODO: Character detection!
 
                 await response.Content.LoadIntoBufferAsync();
