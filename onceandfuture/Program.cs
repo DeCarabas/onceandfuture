@@ -510,9 +510,7 @@ namespace onceandfuture
             string websiteUrl = null,
             string feedDescription = null,
             DateTime? whenLastUpdate = null,
-            IEnumerable<RiverItem> items = null,
-            string etag = null,
-            DateTimeOffset? lastModified = null)
+            IEnumerable<RiverItem> items = null)
         {
             FeedTitle = feedTitle ?? otherFeed?.FeedTitle ?? String.Empty;
             FeedUrl = feedUrl ?? otherFeed?.FeedUrl;
@@ -521,9 +519,6 @@ namespace onceandfuture
             WhenLastUpdate = whenLastUpdate ?? otherFeed?.WhenLastUpdate ?? DateTime.UtcNow;
 
             Items = ImmutableList.CreateRange<RiverItem>(items ?? otherFeed?.Items ?? Enumerable.Empty<RiverItem>());
-
-            Etag = etag ?? otherFeed?.Etag;
-            LastModified = lastModified ?? otherFeed?.LastModified;
         }
 
         [JsonProperty(PropertyName = "feedTitle")]
@@ -543,155 +538,6 @@ namespace onceandfuture
 
         [JsonProperty(PropertyName = "item")]
         public ImmutableList<RiverItem> Items { get; }
-
-        [JsonIgnore]
-        public string Etag { get; }
-        [JsonIgnore]
-        public DateTimeOffset? LastModified { get; }
-
-        static readonly Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>> FeedElements =
-            new Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>>
-            {
-                { XNames.RSS.Title,       (rf, xe) => new RiverFeed(rf, feedTitle: xe.Value) },
-                { XNames.RSS10.Title,     (rf, xe) => new RiverFeed(rf, feedTitle: xe.Value) },
-                { XNames.Atom.Title,      (rf, xe) => new RiverFeed(rf, feedTitle: xe.Value) },
-
-                { XNames.RSS.Link,        (rf, xe) => new RiverFeed(rf, websiteUrl: xe.Value) },
-                { XNames.RSS10.Link,      (rf, xe) => new RiverFeed(rf, websiteUrl: xe.Value) },
-                { XNames.Atom.Link,       (rf, xe) => HandleAtomLink(rf, xe) },
-
-                { XNames.RSS.Description,   (rf, xe) => new RiverFeed(rf, feedDescription: xe.Value) },
-                { XNames.RSS10.Description, (rf, xe) => new RiverFeed(rf, feedDescription: xe.Value) },
-
-                { XNames.RSS.Item,        (rf, xe) => new RiverFeed(rf, items: rf.Items.Add(RiverItem.LoadItem(xe))) },
-                { XNames.RSS10.Item,      (rf, xe) => new RiverFeed(rf, items: rf.Items.Add(RiverItem.LoadItem(xe))) },
-                { XNames.Atom.Entry,      (rf, xe) => new RiverFeed(rf, items: rf.Items.Add(RiverItem.LoadItem(xe))) },
-            };
-
-
-        public static async Task<RiverFeed> FetchAsync(
-            Uri uri,
-            string etag,
-            DateTimeOffset? lastModified,
-            CancellationToken cancellationToken
-        )
-        {
-            Stopwatch loadTimer = Stopwatch.StartNew();
-            try
-            {
-                var client = new HttpClient();
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
-
-                var request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get,
-                    RequestUri = uri,
-                    Headers = { { "User-Agent", "TheOnceAndFuture/1.0" } }
-                };
-                if (etag != null) { request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag)); }
-                request.Headers.IfModifiedSince = lastModified;
-
-                // TODO: Handle redirects properly.
-                //       That is: permanent redirects get recorded; temporary ones do not.
-
-                Log.BeginGetFeed(uri);
-                HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
-                if (response.StatusCode == HttpStatusCode.NotModified)
-                {
-                    Log.EndGetFeedNotModified(uri, response, loadTimer);
-                    return new RiverFeed(etag: etag, lastModified: lastModified);
-                }
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    //string body = await response.Content.ReadAsStringAsync();
-                    string body = string.Empty;
-                    Log.EndGetFeedFailure(uri, response, body, loadTimer);
-                    return null;
-                }
-
-                Uri responseUri = response.RequestMessage.RequestUri;
-
-                // TODO: Character detection!
-
-                await response.Content.LoadIntoBufferAsync();
-                using (Stream responseStream = await response.Content.ReadAsStreamAsync())
-                using (var textReader = new StreamReader(responseStream))
-                using (var reader = XmlReader.Create(textReader, null, responseUri.AbsoluteUri))
-                {
-                    RiverFeed result = null;
-                    XElement element = XElement.Load(reader, LoadOptions.SetBaseUri);
-                    if (element.Name == XNames.RSS.Rss)
-                    {
-                        result = RiverFeed.LoadFeed(responseUri, element.Element(XNames.RSS.Channel));
-                        Log.EndGetFeed(uri, "rss2.0", response, result, loadTimer);
-                    }
-                    else if (element.Name == XNames.Atom.Feed)
-                    {
-                        result = RiverFeed.LoadFeed(responseUri, element);
-                        Log.EndGetFeed(uri, "atom", response, result, loadTimer);
-                    }
-                    else if (element.Name == XNames.RDF.Rdf)
-                    {
-                        result = RiverFeed.LoadFeed(responseUri, element.Element(XNames.RSS10.Channel));
-                        result = new RiverFeed(
-                            result,
-                            items: result.Items.AddRange(
-                                element.Elements(XNames.RSS10.Item).Select(xe => RiverItem.LoadItem(xe))
-                            )
-                        );
-                        Log.EndGetFeed(uri, "rdf", response, result, loadTimer);
-                    }
-                    else
-                    {
-                        Log.UnrecognizableFeed(uri, response, element.ToString(), loadTimer);
-                    }
-
-                    if (result != null)
-                    {
-                        string newEtag = response.Headers.ETag?.Tag;
-                        DateTimeOffset? newLastModified = response.Content.Headers.LastModified;
-                        result = new RiverFeed(result, etag: newEtag, lastModified: newLastModified);
-                    }
-
-                    return result;
-                }
-            }
-            catch (HttpRequestException requestException)
-            {
-                Log.NetworkError(uri, requestException, loadTimer);
-                return null;
-            }
-            catch (XmlException xmlException)
-            {
-                Log.XmlError(uri, xmlException, loadTimer);
-                return null;
-            }
-        }
-
-        public static RiverFeed LoadFeed(Uri feedUrl, XElement item)
-        {
-            var rf = new RiverFeed(feedUrl: feedUrl);
-            foreach (XElement xe in item.Elements())
-            {
-                Func<RiverFeed, XElement, RiverFeed> action;
-                if (FeedElements.TryGetValue(xe.Name, out action)) { rf = action(rf, xe); }
-            }
-            return rf;
-        }
-
-        static RiverFeed HandleAtomLink(RiverFeed feed, XElement link)
-        {
-            if (
-                link.Attribute(XNames.Atom.Rel)?.Value == "alternate"
-                && link.Attribute(XNames.Atom.Type)?.Value == "text/html"
-            )
-            {
-                feed = new RiverFeed(feed, websiteUrl: link.Attribute(XNames.Atom.Href)?.Value);
-            }
-
-            return feed;
-        }
     }
 
     // TODO: Relative URLs.
@@ -754,123 +600,6 @@ namespace onceandfuture
 
         [JsonProperty(PropertyName = "enclosure")]
         public ImmutableList<RiverItemEnclosure> Enclosures { get; }
-
-        static readonly Dictionary<XName, Func<RiverItem, XElement, RiverItem>> ItemElements =
-            new Dictionary<XName, Func<RiverItem, XElement, RiverItem>>
-            {
-                { XNames.RSS.Title,       (ri, xe) => new RiverItem(ri, title: Util.ParseBody(xe)) },
-                { XNames.RSS.Link,        (ri, xe) => new RiverItem(ri, link: xe.Value) },
-                { XNames.RSS.Description, (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
-                { XNames.RSS.Comments,    (ri, xe) => new RiverItem(ri, comments: xe.Value) },
-                { XNames.RSS.PubDate,     (ri, xe) => HandlePubDate(ri, xe) },
-                { XNames.RSS.Guid,        (ri, xe) => HandleGuid(ri, xe) },
-                { XNames.RSS.Enclosure,   (ri, xe) => HandleEnclosure(ri, xe) },
-
-                { XNames.RSS10.Title,       (ri, xe) => new RiverItem(ri, title: Util.ParseBody(xe)) },
-                { XNames.RSS10.Link,        (ri, xe) => new RiverItem(ri, link: xe.Value) },
-                { XNames.RSS10.Description, (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
-                { XNames.RSS10.Comments,    (ri, xe) => new RiverItem(ri, comments: xe.Value) },
-                { XNames.RSS10.PubDate,     (ri, xe) => HandlePubDate(ri, xe) },
-                { XNames.RSS10.Guid,        (ri, xe) => HandleGuid(ri, xe) },
-
-                { XNames.Atom.Title,       (ri, xe) => new RiverItem(ri, title: Util.ParseBody(xe)) },
-                { XNames.Atom.Content,     (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
-                { XNames.Atom.Summary,     (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
-                { XNames.Atom.Link,        (ri, xe) => HandleAtomLink(ri, xe) },
-                { XNames.Atom.Id,          (ri, xe) => new RiverItem(ri, id: xe.Value) },
-                { XNames.Atom.Published,   (ri, xe) => HandlePubDate(ri, xe) },
-                { XNames.Atom.Updated,     (ri, xe) => HandlePubDate(ri, xe) },
-            };
-
-        static RiverItem HandleGuid(RiverItem item, XElement element)
-        {
-            item = new RiverItem(item, id: element.Value);
-            if (item.Id.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-                item.Id.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-            {
-                item = new RiverItem(item, permaLink: item.Id);
-            }
-            return item;
-        }
-
-        static RiverItem HandleEnclosure(RiverItem item, XElement element)
-        {
-            return new RiverItem(
-                item,
-                enclosures: item.Enclosures.Add(new RiverItemEnclosure(
-                    length: element.Attribute(XNames.RSS.Length)?.Value,
-                    type: element.Attribute(XNames.RSS.Type)?.Value,
-                    url: element.Attribute(XNames.RSS.Url)?.Value
-                )));
-        }
-
-        static RiverItem HandlePubDate(RiverItem item, XElement element)
-        {
-            DateTime? date = Util.ParseDate(element);
-            if (date != null && (item.PubDate == null || date > item.PubDate))
-            {
-                return new RiverItem(item, pubDate: date);
-            }
-            return item;
-        }
-
-        static RiverItem HandleAtomLink(RiverItem item, XElement link)
-        {
-            if (link.Attribute(XNames.Atom.Rel)?.Value == "alternate" &&
-                link.Attribute(XNames.Atom.Type)?.Value == "text/html")
-            {
-                item = new RiverItem(item, link: link.Attribute(XNames.Atom.Href)?.Value);
-            }
-
-            if (link.Attribute(XNames.Atom.Rel)?.Value == "self" &&
-                link.Attribute(XNames.Atom.Type)?.Value == "text/html")
-            {
-                item = new RiverItem(item, permaLink: link.Attribute(XNames.Atom.Href)?.Value);
-            }
-
-            if (link.Attribute(XNames.Atom.Rel)?.Value == "enclosure")
-            {
-                item = new RiverItem(item, enclosures: item.Enclosures.Add(new RiverItemEnclosure(
-                    length: link.Attribute(XNames.Atom.Length)?.Value,
-                    type: link.Attribute(XNames.Atom.Type)?.Value,
-                    url: link.Attribute(XNames.Atom.Href)?.Value
-                )));
-            }
-            return item;
-        }
-
-        public static RiverItem LoadItem(XElement item)
-        {
-            var ri = new RiverItem();
-            foreach (XElement xe in item.Elements())
-            {
-                Func<RiverItem, XElement, RiverItem> func;
-                if (ItemElements.TryGetValue(xe.Name, out func)) { ri = func(ri, xe); }
-            }
-
-            if (ri.PermaLink == null) { ri = new RiverItem(ri, permaLink: ri.Link); }
-            if (ri.Id == null) { ri = new RiverItem(ri, id: CreateId(ri)); }
-            if (ri.Thumbnail == null)
-            {
-                // Load the thumbnail.
-            }
-            return ri;
-        }
-
-        static string CreateId(RiverItem item)
-        {
-            var guid = "";
-            if (item.PubDate != null) { guid += item.PubDate.ToString(); }
-            if (item.Link != null) { guid += item.Link; }
-            if (item.Title != null) { guid += item.Title; }
-
-            if (guid.Length > 0)
-            {
-                byte[] hash = SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(guid));
-                guid = Convert.ToBase64String(hash);
-            }
-            return guid;
-        }
     }
 
     public class RiverItemThumbnail
@@ -985,6 +714,313 @@ namespace onceandfuture
         public RiverFeedMeta Metadata { get; }
     }
 
+    class FetchResult
+    {
+        public FetchResult(
+            RiverFeed feed,
+            HttpStatusCode status,
+            Uri feedUrl,
+            string etag,
+            DateTimeOffset? lastModified)
+        {
+            Feed = feed;
+            Status = status;
+            FeedUrl = feedUrl;
+            Etag = etag;
+            LastModified = lastModified;
+        }
+
+        public RiverFeed Feed { get; }
+        public HttpStatusCode Status { get; }
+        public Uri FeedUrl { get; }
+        public string Etag { get; }
+        public DateTimeOffset? LastModified { get; }
+    }
+
+    static class RiverFeedParser
+    {
+        static readonly Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>> FeedElements =
+            new Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>>
+            {
+                { XNames.RSS.Title,       (rf, xe) => new RiverFeed(rf, feedTitle: xe.Value) },
+                { XNames.RSS10.Title,     (rf, xe) => new RiverFeed(rf, feedTitle: xe.Value) },
+                { XNames.Atom.Title,      (rf, xe) => new RiverFeed(rf, feedTitle: xe.Value) },
+
+                { XNames.RSS.Link,        (rf, xe) => new RiverFeed(rf, websiteUrl: xe.Value) },
+                { XNames.RSS10.Link,      (rf, xe) => new RiverFeed(rf, websiteUrl: xe.Value) },
+                { XNames.Atom.Link,       (rf, xe) => HandleAtomLink(rf, xe) },
+
+                { XNames.RSS.Description,   (rf, xe) => new RiverFeed(rf, feedDescription: xe.Value) },
+                { XNames.RSS10.Description, (rf, xe) => new RiverFeed(rf, feedDescription: xe.Value) },
+
+                { XNames.RSS.Item,        (rf, xe) => new RiverFeed(rf, items: rf.Items.Add(LoadItem(xe))) },
+                { XNames.RSS10.Item,      (rf, xe) => new RiverFeed(rf, items: rf.Items.Add(LoadItem(xe))) },
+                { XNames.Atom.Entry,      (rf, xe) => new RiverFeed(rf, items: rf.Items.Add(LoadItem(xe))) },
+            };
+
+        static readonly Dictionary<XName, Func<RiverItem, XElement, RiverItem>> ItemElements =
+            new Dictionary<XName, Func<RiverItem, XElement, RiverItem>>
+            {
+                { XNames.RSS.Title,       (ri, xe) => new RiverItem(ri, title: Util.ParseBody(xe)) },
+                { XNames.RSS.Link,        (ri, xe) => new RiverItem(ri, link: xe.Value) },
+                { XNames.RSS.Description, (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
+                { XNames.RSS.Comments,    (ri, xe) => new RiverItem(ri, comments: xe.Value) },
+                { XNames.RSS.PubDate,     (ri, xe) => HandlePubDate(ri, xe) },
+                { XNames.RSS.Guid,        (ri, xe) => HandleGuid(ri, xe) },
+                { XNames.RSS.Enclosure,   (ri, xe) => HandleEnclosure(ri, xe) },
+
+                { XNames.RSS10.Title,       (ri, xe) => new RiverItem(ri, title: Util.ParseBody(xe)) },
+                { XNames.RSS10.Link,        (ri, xe) => new RiverItem(ri, link: xe.Value) },
+                { XNames.RSS10.Description, (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
+                { XNames.RSS10.Comments,    (ri, xe) => new RiverItem(ri, comments: xe.Value) },
+                { XNames.RSS10.PubDate,     (ri, xe) => HandlePubDate(ri, xe) },
+                { XNames.RSS10.Guid,        (ri, xe) => HandleGuid(ri, xe) },
+
+                { XNames.Atom.Title,       (ri, xe) => new RiverItem(ri, title: Util.ParseBody(xe)) },
+                { XNames.Atom.Content,     (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
+                { XNames.Atom.Summary,     (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
+                { XNames.Atom.Link,        (ri, xe) => HandleAtomLink(ri, xe) },
+                { XNames.Atom.Id,          (ri, xe) => new RiverItem(ri, id: xe.Value) },
+                { XNames.Atom.Published,   (ri, xe) => HandlePubDate(ri, xe) },
+                { XNames.Atom.Updated,     (ri, xe) => HandlePubDate(ri, xe) },
+        };
+
+        public static async Task<FetchResult> FetchAsync(
+            Uri uri,
+            string etag,
+            DateTimeOffset? lastModified,
+            CancellationToken cancellationToken
+        )
+        {
+            Stopwatch loadTimer = Stopwatch.StartNew();
+            try
+            {
+                var client = new HttpClient();
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                    RequestUri = uri,
+                    Headers = { { "User-Agent", "TheOnceAndFuture/1.0" } }
+                };
+                if (etag != null) { request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag)); }
+                request.Headers.IfModifiedSince = lastModified;
+
+                Log.BeginGetFeed(uri);
+                HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
+                if (response.StatusCode == HttpStatusCode.NotModified)
+                {
+                    Log.EndGetFeedNotModified(uri, response, loadTimer);
+                    return new FetchResult(
+                        feed: null, 
+                        status: HttpStatusCode.NotModified, 
+                        feedUrl: uri, 
+                        etag: etag, 
+                        lastModified: lastModified);                    
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    //string body = await response.Content.ReadAsStringAsync();
+                    string body = string.Empty;
+                    Log.EndGetFeedFailure(uri, response, body, loadTimer);
+                    return new FetchResult(
+                        feed: null,
+                        status: response.StatusCode,
+                        feedUrl: uri,
+                        etag: etag,
+                        lastModified: lastModified);
+                }
+
+                Uri responseUri = response.RequestMessage.RequestUri;
+
+                // TODO: Handle redirects properly.
+                //       That is: permanent redirects get recorded; temporary ones do not.               
+
+                // TODO: Character detection!
+
+                await response.Content.LoadIntoBufferAsync();
+                using (Stream responseStream = await response.Content.ReadAsStreamAsync())
+                using (var textReader = new StreamReader(responseStream))
+                using (var reader = XmlReader.Create(textReader, null, responseUri.AbsoluteUri))
+                {
+                    RiverFeed result = null;
+                    XElement element = XElement.Load(reader, LoadOptions.SetBaseUri);
+                    if (element.Name == XNames.RSS.Rss)
+                    {
+                        result = LoadFeed(responseUri, element.Element(XNames.RSS.Channel));
+                        Log.EndGetFeed(uri, "rss2.0", response, result, loadTimer);
+                    }
+                    else if (element.Name == XNames.Atom.Feed)
+                    {
+                        result = LoadFeed(responseUri, element);
+                        Log.EndGetFeed(uri, "atom", response, result, loadTimer);
+                    }
+                    else if (element.Name == XNames.RDF.Rdf)
+                    {
+                        result = LoadFeed(responseUri, element.Element(XNames.RSS10.Channel));
+                        result = new RiverFeed(
+                            result,
+                            items: result.Items.AddRange(
+                                element.Elements(XNames.RSS10.Item).Select(xe => LoadItem(xe))
+                            )
+                        );
+                        Log.EndGetFeed(uri, "rdf", response, result, loadTimer);
+                    }
+                    else
+                    {
+                        Log.UnrecognizableFeed(uri, response, element.ToString(), loadTimer);
+                    }
+
+                    string newEtag = response.Headers.ETag?.Tag;
+                    DateTimeOffset? newLastModified = response.Content.Headers.LastModified;
+
+                    return new FetchResult(
+                        feed: result,
+                        status: HttpStatusCode.OK,
+                        feedUrl: responseUri,
+                        etag: newEtag,
+                        lastModified: newLastModified);
+                }
+            }
+            catch (HttpRequestException requestException)
+            {
+                Log.NetworkError(uri, requestException, loadTimer);
+                return new FetchResult(
+                    feed: null,
+                    status: 0,
+                    feedUrl: uri,
+                    etag: etag,
+                    lastModified: lastModified);
+            }
+            catch (XmlException xmlException)
+            {
+                Log.XmlError(uri, xmlException, loadTimer);
+                return new FetchResult(
+                    feed: null,
+                    status: 0,
+                    feedUrl: uri,
+                    etag: etag,
+                    lastModified: lastModified);
+            }
+        }
+
+        static RiverFeed LoadFeed(Uri feedUrl, XElement item)
+        {
+            var rf = new RiverFeed(feedUrl: feedUrl);
+            foreach (XElement xe in item.Elements())
+            {
+                Func<RiverFeed, XElement, RiverFeed> action;
+                if (FeedElements.TryGetValue(xe.Name, out action)) { rf = action(rf, xe); }
+            }
+            return rf;
+        }
+
+        static RiverFeed HandleAtomLink(RiverFeed feed, XElement link)
+        {
+            if (
+                link.Attribute(XNames.Atom.Rel)?.Value == "alternate"
+                && link.Attribute(XNames.Atom.Type)?.Value == "text/html"
+            )
+            {
+                feed = new RiverFeed(feed, websiteUrl: link.Attribute(XNames.Atom.Href)?.Value);
+            }
+
+            return feed;
+        }
+
+        static RiverItem HandleAtomLink(RiverItem item, XElement link)
+        {
+            if (link.Attribute(XNames.Atom.Rel)?.Value == "alternate" &&
+                link.Attribute(XNames.Atom.Type)?.Value == "text/html")
+            {
+                item = new RiverItem(item, link: link.Attribute(XNames.Atom.Href)?.Value);
+            }
+
+            if (link.Attribute(XNames.Atom.Rel)?.Value == "self" &&
+                link.Attribute(XNames.Atom.Type)?.Value == "text/html")
+            {
+                item = new RiverItem(item, permaLink: link.Attribute(XNames.Atom.Href)?.Value);
+            }
+
+            if (link.Attribute(XNames.Atom.Rel)?.Value == "enclosure")
+            {
+                item = new RiverItem(item, enclosures: item.Enclosures.Add(new RiverItemEnclosure(
+                    length: link.Attribute(XNames.Atom.Length)?.Value,
+                    type: link.Attribute(XNames.Atom.Type)?.Value,
+                    url: link.Attribute(XNames.Atom.Href)?.Value
+                )));
+            }
+            return item;
+        }
+
+        static RiverItem HandleEnclosure(RiverItem item, XElement element)
+        {
+            return new RiverItem(
+                item,
+                enclosures: item.Enclosures.Add(new RiverItemEnclosure(
+                    length: element.Attribute(XNames.RSS.Length)?.Value,
+                    type: element.Attribute(XNames.RSS.Type)?.Value,
+                    url: element.Attribute(XNames.RSS.Url)?.Value
+                )));
+        }
+
+        static RiverItem HandleGuid(RiverItem item, XElement element)
+        {
+            item = new RiverItem(item, id: element.Value);
+            if (item.Id.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                item.Id.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                item = new RiverItem(item, permaLink: item.Id);
+            }
+            return item;
+        }
+
+        static RiverItem HandlePubDate(RiverItem item, XElement element)
+        {
+            DateTime? date = Util.ParseDate(element);
+            if (date != null && (item.PubDate == null || date > item.PubDate))
+            {
+                return new RiverItem(item, pubDate: date);
+            }
+            return item;
+        }
+
+        static RiverItem LoadItem(XElement item)
+        {
+            var ri = new RiverItem();
+            foreach (XElement xe in item.Elements())
+            {
+                Func<RiverItem, XElement, RiverItem> func;
+                if (ItemElements.TryGetValue(xe.Name, out func)) { ri = func(ri, xe); }
+            }
+
+            if (ri.PermaLink == null) { ri = new RiverItem(ri, permaLink: ri.Link); }
+            if (ri.Id == null) { ri = new RiverItem(ri, id: CreateId(ri)); }
+            if (ri.Thumbnail == null)
+            {
+                // Load the thumbnail.
+            }
+            return ri;
+        }
+
+        static string CreateId(RiverItem item)
+        {
+            var guid = "";
+            if (item.PubDate != null) { guid += item.PubDate.ToString(); }
+            if (item.Link != null) { guid += item.Link; }
+            if (item.Title != null) { guid += item.Title; }
+
+            if (guid.Length > 0)
+            {
+                byte[] hash = SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(guid));
+                guid = Convert.ToBase64String(hash);
+            }
+            return guid;
+        }
+    }
+
     static class RiverFeedStore
     {
         static string GetNameForUri(Uri feedUri)
@@ -1022,14 +1058,15 @@ namespace onceandfuture
     {
         public static async Task<River> UpdateRiver(River river, CancellationToken cancellationToken)
         {
-            RiverFeed feed = await RiverFeed.FetchAsync(
+            FetchResult fetchResult = await RiverFeedParser.FetchAsync(
                 river.Metadata.OriginUrl,
                 river.Metadata.Etag,
                 river.Metadata.LastModified,
                 cancellationToken
             );
-            if (feed != null)
+            if (fetchResult.Feed != null)
             {
+                var feed = fetchResult.Feed;
                 var existingItems = new HashSet<string>(
                     from existingFeed in river.UpdatedFeeds.Feeds
                     from item in existingFeed.Items
@@ -1047,8 +1084,8 @@ namespace onceandfuture
                             feeds: river.UpdatedFeeds.Feeds.Insert(0, feed)),
                         metadata: new RiverFeedMeta(
                             river.Metadata,
-                            etag: feed.Etag,
-                            lastModified: feed.LastModified,
+                            etag: fetchResult.Etag,
+                            lastModified: fetchResult.LastModified,
                             originUrl: feed.FeedUrl));
                 }
             }
