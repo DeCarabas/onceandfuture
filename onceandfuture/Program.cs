@@ -677,7 +677,7 @@ namespace onceandfuture
             Id = id ?? existingItem?.Id;
             Thumbnail = thumbnail ?? existingItem?.Thumbnail;
 
-            Enclosures = Enclosures.AddRange(
+            Enclosures = ImmutableList.CreateRange<RiverItemEnclosure>(
                 enclosures ??
                 existingItem?.Enclosures ??
                 Enumerable.Empty<RiverItemEnclosure>()
@@ -832,9 +832,9 @@ namespace onceandfuture
     public class RiverItemThumbnail
     {
         public RiverItemThumbnail(
-            RiverItemThumbnail existingThumbnail = null, 
-            string url = null, 
-            int? width = 0, 
+            RiverItemThumbnail existingThumbnail = null,
+            string url = null,
+            int? width = 0,
             int? height = 0)
         {
             Url = url ?? existingThumbnail?.Url;
@@ -851,8 +851,8 @@ namespace onceandfuture
     {
         public RiverItemEnclosure(
             RiverItemEnclosure existingEnclosure = null,
-            string url = null, 
-            string type = null, 
+            string url = null,
+            string type = null,
             string length = null)
         {
             Url = url ?? existingEnclosure?.Url;
@@ -867,30 +867,58 @@ namespace onceandfuture
 
     public class RiverFeedMeta
     {
-        public string Name { get; set; }
-        public string OriginUrl { get; set; }
-        public string Docs { get; set; } = "http://riverjs.org/";
-        public string Etag { get; set; }
-        public string LastModified { get; set; }
+        public RiverFeedMeta(
+            RiverFeedMeta existingMeta = null,
+            string name = null,
+            string originUrl = null,
+            string docs = null,
+            string etag = null,
+            string lastModified = null)
+        {
+            Name = name ?? existingMeta?.Name;
+            OriginUrl = originUrl ?? existingMeta?.OriginUrl;
+            Docs = docs ?? existingMeta?.Docs ?? "http://riverjs.org/";
+            Etag = etag ?? existingMeta?.Etag;
+            LastModified = lastModified ?? existingMeta?.LastModified;
+        }
+        public string Name { get; }
+        public string OriginUrl { get; }
+        public string Docs { get; }
+        public string Etag { get; }
+        public string LastModified { get; }
     }
 
     public class UpdatedFeeds
     {
-        readonly List<RiverFeed> feeds = new List<RiverFeed>();
+        public UpdatedFeeds(
+            UpdatedFeeds existingFeeds = null,
+            IEnumerable<RiverFeed> feeds = null)
+        {
+            Feeds = ImmutableList.CreateRange<RiverFeed>(
+                feeds ?? existingFeeds?.Feeds ?? Enumerable.Empty<RiverFeed>()
+            );
+        }
 
         [JsonProperty(PropertyName = "updatedFeed")]
-        public List<RiverFeed> Feeds => this.feeds;
+        public ImmutableList<RiverFeed> Feeds { get; }
     }
 
     public class River
     {
-        readonly List<RiverFeed> feeds = new List<RiverFeed>();
+        public River(
+            River existingRiver = null,
+            UpdatedFeeds updatedFeeds = null,
+            RiverFeedMeta metadata = null)
+        {
+            UpdatedFeeds = updatedFeeds ?? existingRiver?.UpdatedFeeds ?? new UpdatedFeeds();
+            Metadata = metadata ?? existingRiver?.Metadata ?? new RiverFeedMeta();
+        }
 
         [JsonProperty(PropertyName = "updatedFeeds")]
-        public UpdatedFeeds UpdatedFeeds { get; set; } = new UpdatedFeeds();
+        public UpdatedFeeds UpdatedFeeds { get; }
 
         [JsonProperty(PropertyName = "metadata")]
-        public RiverFeedMeta Metadata { get; set; } = new RiverFeedMeta();
+        public RiverFeedMeta Metadata { get; }
     }
 
     class Program
@@ -915,10 +943,16 @@ namespace onceandfuture
                 feed.Items.RemoveAll(item => existingItems.Contains(item.Id));
                 if (feed.Items.Count > 0)
                 {
-                    river.UpdatedFeeds.Feeds.Insert(0, feed);
-                    river.Metadata.Etag = feed.Etag;
-                    river.Metadata.LastModified = feed.LastModified;
-                    river.Metadata.OriginUrl = feed.FeedUrl;
+                    river = new River(
+                        river,
+                        updatedFeeds: new UpdatedFeeds(
+                            river.UpdatedFeeds, 
+                            feeds: river.UpdatedFeeds.Feeds.Insert(0, feed)),
+                        metadata: new RiverFeedMeta(
+                            river.Metadata,
+                            etag: feed.Etag,
+                            lastModified: feed.LastModified,
+                            originUrl: feed.FeedUrl));
                 }
             }
             return river;
