@@ -104,8 +104,8 @@ namespace onceandfuture
         public static void EndGetFeedMovedPermanently(Uri uri, HttpResponseMessage response, Stopwatch loadTimer)
         {
             Trace.WriteLine(String.Format(
-                "{0}: Feed moved permanently to {2} in {1} ms", 
-                uri, 
+                "{0}: Feed moved permanently to {2} in {1} ms",
+                uri,
                 loadTimer.ElapsedMilliseconds,
                 response.Headers.Location));
         }
@@ -360,6 +360,8 @@ namespace onceandfuture
                 {
                 case NodeType.Element:
                     if (node.NodeName == "SCRIPT") { break; }
+                    if (node.NodeName == "FIGURE") { break; }
+
                     foreach (INode child in node.ChildNodes)
                     {
                         if (!Visit(child)) { return false; }
@@ -372,8 +374,8 @@ namespace onceandfuture
 
                 case NodeType.Text:
                 case NodeType.CharacterData:
-                case NodeType.EntityReference:                    
-                    for(int i = 0; i < node.TextContent.Length && builder.Length < 280; i++)
+                case NodeType.EntityReference:
+                    for (int i = 0; i < node.TextContent.Length && builder.Length < 280; i++)
                     {
                         if (Char.IsWhiteSpace(node.TextContent[i]))
                         {
@@ -404,6 +406,13 @@ namespace onceandfuture
 
     public static class XNames
     {
+        public static class Content
+        {
+            public static readonly XNamespace Namespace = XNamespace.Get("http://purl.org/rss/1.0/modules/content/");
+
+            public static readonly XName Encoded = Namespace.GetName("encoded");
+        }
+
         public static class OPML
         {
             public static readonly XName Body = XName.Get("body");
@@ -766,16 +775,16 @@ namespace onceandfuture
         static readonly Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>> FeedElements =
             new Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>>
             {
-                { XNames.RSS.Title,       (rf, xe) => new RiverFeed(rf, feedTitle: xe.Value) },
-                { XNames.RSS10.Title,     (rf, xe) => new RiverFeed(rf, feedTitle: xe.Value) },
-                { XNames.Atom.Title,      (rf, xe) => new RiverFeed(rf, feedTitle: xe.Value) },
+                { XNames.RSS.Title,       (rf, xe) => new RiverFeed(rf, feedTitle: Util.ParseBody(xe)) },
+                { XNames.RSS10.Title,     (rf, xe) => new RiverFeed(rf, feedTitle: Util.ParseBody(xe)) },
+                { XNames.Atom.Title,      (rf, xe) => new RiverFeed(rf, feedTitle: Util.ParseBody(xe)) },
 
                 { XNames.RSS.Link,        (rf, xe) => new RiverFeed(rf, websiteUrl: xe.Value) },
                 { XNames.RSS10.Link,      (rf, xe) => new RiverFeed(rf, websiteUrl: xe.Value) },
                 { XNames.Atom.Link,       (rf, xe) => HandleAtomLink(rf, xe) },
 
-                { XNames.RSS.Description,   (rf, xe) => new RiverFeed(rf, feedDescription: xe.Value) },
-                { XNames.RSS10.Description, (rf, xe) => new RiverFeed(rf, feedDescription: xe.Value) },
+                { XNames.RSS.Description,   (rf, xe) => new RiverFeed(rf, feedDescription: Util.ParseBody(xe)) },
+                { XNames.RSS10.Description, (rf, xe) => new RiverFeed(rf, feedDescription: Util.ParseBody(xe)) },
 
                 { XNames.RSS.Item,        (rf, xe) => new RiverFeed(rf, items: rf.Items.Add(LoadItem(xe))) },
                 { XNames.RSS10.Item,      (rf, xe) => new RiverFeed(rf, items: rf.Items.Add(LoadItem(xe))) },
@@ -799,6 +808,8 @@ namespace onceandfuture
                 { XNames.RSS10.Comments,    (ri, xe) => new RiverItem(ri, comments: xe.Value) },
                 { XNames.RSS10.PubDate,     (ri, xe) => HandlePubDate(ri, xe) },
                 { XNames.RSS10.Guid,        (ri, xe) => HandleGuid(ri, xe) },
+
+                { XNames.Content.Encoded,  (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
 
                 { XNames.Atom.Title,       (ri, xe) => new RiverItem(ri, title: Util.ParseBody(xe)) },
                 { XNames.Atom.Content,     (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
@@ -827,20 +838,17 @@ namespace onceandfuture
         {
             Stopwatch loadTimer = Stopwatch.StartNew();
             try
-            {                
-                var request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get,
-                    RequestUri = uri,
-                };
-                if (etag != null) { request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag)); }
-                request.Headers.IfModifiedSince = lastModified;
-
+            {
                 Log.BeginGetFeed(uri);
                 HttpResponseMessage response = null;
 
-                for(int i = 0; i < 30; i++)
+                Uri requestUri = uri;
+                for (int i = 0; i < 30; i++)
                 {
+                    var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+                    if (etag != null) { request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag)); }
+                    request.Headers.IfModifiedSince = lastModified;
+
                     response = await client.SendAsync(request, cancellationToken);
                     if ((response.StatusCode != HttpStatusCode.TemporaryRedirect) &&
                         (response.StatusCode != HttpStatusCode.Found) &&
@@ -849,8 +857,9 @@ namespace onceandfuture
                         break;
                     }
 
-                    request.RequestUri = response.Headers.Location;
-                } while (false);
+                    requestUri = response.Headers.Location;
+                    Console.WriteLine("Redirect {0} ==> {1}", uri, requestUri);
+                }
 
                 if (response.StatusCode == HttpStatusCode.NotModified)
                 {
@@ -955,7 +964,7 @@ namespace onceandfuture
                     etag: etag,
                     lastModified: lastModified);
             }
-        }        
+        }
 
         static RiverFeed HandleAtomLink(RiverFeed feed, XElement link)
         {
@@ -1034,6 +1043,15 @@ namespace onceandfuture
             {
                 Func<RiverFeed, XElement, RiverFeed> action;
                 if (FeedElements.TryGetValue(xe.Name, out action)) { rf = action(rf, xe); }
+            }
+            if (String.IsNullOrWhiteSpace(rf.FeedTitle))
+            {
+                string title = null;
+                if (!String.IsNullOrWhiteSpace(rf.FeedDescription)) { title = rf.FeedDescription; }
+                else if (!String.IsNullOrWhiteSpace(rf.WebsiteUrl)) { title = rf.WebsiteUrl; }
+                else if (rf.FeedUrl != null) { title = rf.FeedUrl.AbsoluteUri; }
+
+                rf = new RiverFeed(rf, feedTitle: title);
             }
             return rf;
         }
@@ -1131,7 +1149,7 @@ namespace onceandfuture
                 etag: fetchResult.Etag,
                 lastModified: fetchResult.LastModified,
                 originUrl: fetchResult.FeedUrl,
-                lastStatus: fetchResult.Status);            
+                lastStatus: fetchResult.Status);
 
             if (fetchResult.Feed != null)
             {
@@ -1147,7 +1165,7 @@ namespace onceandfuture
                 {
                     feed = new RiverFeed(feed, items: newItems);
                     updatedFeeds = new UpdatedFeeds(
-                        river.UpdatedFeeds, 
+                        river.UpdatedFeeds,
                         feeds: river.UpdatedFeeds.Feeds.Insert(0, feed));
                 }
             }
@@ -1167,12 +1185,12 @@ namespace onceandfuture
                 river = await UpdateRiver(river, cancellationToken);
                 await RiverFeedStore.WriteRiver(uri, river);
             }
-            
+
             if (river.Metadata.LastStatus == HttpStatusCode.MovedPermanently)
             {
                 return await FetchAndUpdateRiver(river.Metadata.OriginUrl, cancellationToken);
             }
-            
+
             return river;
         }
 
@@ -1188,16 +1206,16 @@ namespace onceandfuture
                      where elem.Attribute(XNames.OPML.XmlUrl) != null
                      select OpmlEntry.FromXml(elem)).ToList();
 
-                //var parses =
-                //    from entry in feeds
-                //    select new
-                //    {
-                //        url = entry.XmlUrl,
-                //        task = FetchAndUpdateRiver(entry.XmlUrl, CancellationToken.None),
-                //    };
+                var parses =
+                    from entry in feeds
+                    select new
+                    {
+                        url = entry.XmlUrl,
+                        task = FetchAndUpdateRiver(entry.XmlUrl, CancellationToken.None),
+                    };
 
-                Uri uri = new Uri("http://davepeck.org/feed/");
-                var parses = new[] { new { url = uri, task = FetchAndUpdateRiver(uri, CancellationToken.None) } };
+                //Uri uri = new Uri("http://davepeck.org/feed/");
+                //var parses = new[] { new { url = uri, task = FetchAndUpdateRiver(uri, CancellationToken.None) } };
 
                 foreach (var parse in parses.ToList())
                 {
