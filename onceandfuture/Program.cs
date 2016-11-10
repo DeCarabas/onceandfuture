@@ -691,7 +691,7 @@ namespace onceandfuture
         [JsonProperty(PropertyName = "lastModified")]
         public DateTimeOffset? LastModified { get; }
 
-        [JsonProperty(PropertyName = "permanentRedirect")]
+        [JsonProperty(PropertyName = "lastStatus")]
         public HttpStatusCode LastStatus { get; }
     }
 
