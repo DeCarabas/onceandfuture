@@ -330,7 +330,7 @@ namespace onceandfuture
                     if (node.NodeName == "P" || node.NodeName == "DIV" || node.NodeName == "BR")
                     {
                         if (!this.lastWasLine)
-                        {
+                        {                            
                             builder.AppendLine();
                             builder.AppendLine();
                             this.lastWasLine = true;
@@ -707,7 +707,6 @@ namespace onceandfuture
                 Uri responseUri = response.RequestMessage.RequestUri;
 
                 // TODO: Character detection!
-                // TODO: Handle redirection correctly.
 
                 await response.Content.LoadIntoBufferAsync();
                 using (Stream responseStream = await response.Content.ReadAsStreamAsync())
