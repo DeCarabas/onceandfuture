@@ -947,18 +947,7 @@ namespace onceandfuture
                     etag: etag,
                     lastModified: lastModified);
             }
-        }
-
-        static RiverFeed LoadFeed(Uri feedUrl, XElement item)
-        {
-            var rf = new RiverFeed(feedUrl: feedUrl);
-            foreach (XElement xe in item.Elements())
-            {
-                Func<RiverFeed, XElement, RiverFeed> action;
-                if (FeedElements.TryGetValue(xe.Name, out action)) { rf = action(rf, xe); }
-            }
-            return rf;
-        }
+        }        
 
         static RiverFeed HandleAtomLink(RiverFeed feed, XElement link)
         {
@@ -1030,6 +1019,17 @@ namespace onceandfuture
             return item;
         }
 
+        static RiverFeed LoadFeed(Uri feedUrl, XElement item)
+        {
+            var rf = new RiverFeed(feedUrl: feedUrl);
+            foreach (XElement xe in item.Elements())
+            {
+                Func<RiverFeed, XElement, RiverFeed> action;
+                if (FeedElements.TryGetValue(xe.Name, out action)) { rf = action(rf, xe); }
+            }
+            return rf;
+        }
+
         static RiverItem LoadItem(XElement item)
         {
             var ri = new RiverItem();
@@ -1041,6 +1041,15 @@ namespace onceandfuture
 
             if (ri.PermaLink == null) { ri = new RiverItem(ri, permaLink: ri.Link); }
             if (ri.Id == null) { ri = new RiverItem(ri, id: CreateId(ri)); }
+            if (String.IsNullOrWhiteSpace(ri.Title))
+            {
+                string title = null;
+                if (ri.PubDate != null) { title = ri.PubDate.ToString(); }
+                else if (ri.PermaLink != null) { title = ri.PermaLink; }
+                else if (ri.Id != null) { title = ri.Id; }
+
+                if (title != null) { ri = new RiverItem(ri, title: title); }
+            }
             if (ri.Thumbnail == null)
             {
                 // Load the thumbnail.
