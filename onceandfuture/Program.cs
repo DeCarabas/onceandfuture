@@ -155,35 +155,6 @@ namespace onceandfuture
             {"jul", 7}, {"aug", 8}, {"sep", 9}, {"oct", 10}, {"nov", 11}, {"dec", 12},
         };
 
-        public static TResult Extract<TResult>(XElement source, Func<XElement, TResult> extract, params XName[] names)
-        {
-            return ExtractAll(source, extract, names).FirstOrDefault();
-        }
-
-        public static IEnumerable<TResult> ExtractAll<TResult>(
-            XElement source,
-            Func<XElement, TResult> extract,
-            params XName[] names
-        )
-        {
-            for (int i = 0; i < names.Length; i++)
-            {
-                foreach (XElement match in source.Elements(names[i]).Reverse())
-                {
-                    TResult result = extract(match);
-                    if (!Object.Equals(result, default(TResult))) { yield return result; }
-                }
-            }
-        }
-
-        public static Func<XElement, string> AtomLink(string rel, string type)
-        {
-            return link =>
-                (link.Attribute(XNames.Atom.Rel)?.Value == rel && link.Attribute(XNames.Atom.Type)?.Value == type)
-                    ? link.Attribute(XNames.Atom.Href)?.Value
-                    : null;
-        }
-
         public static string HashString(string input)
         {
             byte[] hash = SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(input));
@@ -784,85 +755,119 @@ namespace onceandfuture
         [JsonProperty(PropertyName = "enclosure")]
         public ImmutableList<RiverItemEnclosure> Enclosures { get; }
 
+        static readonly Dictionary<XName, Func<RiverItem, XElement, RiverItem>> ItemElements =
+            new Dictionary<XName, Func<RiverItem, XElement, RiverItem>>
+            {
+                { XNames.RSS.Title,       (ri, xe) => new RiverItem(ri, title: Util.ParseBody(xe)) },
+                { XNames.RSS.Link,        (ri, xe) => new RiverItem(ri, link: xe.Value) },
+                { XNames.RSS.Description, (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
+                { XNames.RSS.Comments,    (ri, xe) => new RiverItem(ri, comments: xe.Value) },
+                { XNames.RSS.PubDate,     (ri, xe) => HandlePubDate(ri, xe) },
+                { XNames.RSS.Guid,        (ri, xe) => HandleGuid(ri, xe) },
+                { XNames.RSS.Enclosure,   (ri, xe) => HandleEnclosure(ri, xe) },
+
+                { XNames.RSS10.Title,       (ri, xe) => new RiverItem(ri, title: Util.ParseBody(xe)) },
+                { XNames.RSS10.Link,        (ri, xe) => new RiverItem(ri, link: xe.Value) },
+                { XNames.RSS10.Description, (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
+                { XNames.RSS10.Comments,    (ri, xe) => new RiverItem(ri, comments: xe.Value) },
+                { XNames.RSS10.PubDate,     (ri, xe) => HandlePubDate(ri, xe) },
+                { XNames.RSS10.Guid,        (ri, xe) => HandleGuid(ri, xe) },
+
+                { XNames.Atom.Title,       (ri, xe) => new RiverItem(ri, title: Util.ParseBody(xe)) },
+                { XNames.Atom.Content,     (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
+                { XNames.Atom.Summary,     (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
+                { XNames.Atom.Link,        (ri, xe) => HandleAtomLink(ri, xe) },
+                { XNames.Atom.Id,          (ri, xe) => new RiverItem(ri, id: xe.Value) },
+                { XNames.Atom.Published,   (ri, xe) => HandlePubDate(ri, xe) },
+                { XNames.Atom.Updated,     (ri, xe) => HandlePubDate(ri, xe) },
+            };
+
+        static RiverItem HandleGuid(RiverItem item, XElement element)
+        {
+            item = new RiverItem(item, id: element.Value);
+            if (item.Id.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                item.Id.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                item = new RiverItem(item, permaLink: item.Id);
+            }
+            return item;
+        }
+
+        static RiverItem HandleEnclosure(RiverItem item, XElement element)
+        {
+            return new RiverItem(
+                item,
+                enclosures: item.Enclosures.Add(new RiverItemEnclosure(
+                    length: element.Attribute(XNames.RSS.Length)?.Value,
+                    type: element.Attribute(XNames.RSS.Type)?.Value,
+                    url: element.Attribute(XNames.RSS.Url)?.Value
+                )));
+        }
+
+        static RiverItem HandlePubDate(RiverItem item, XElement element)
+        {
+            DateTime? date = Util.ParseDate(element);
+            if (date != null && (item.PubDate == null || date > item.PubDate))
+            {
+                return new RiverItem(item, pubDate: date);
+            }
+            return item;
+        }
+
+        static RiverItem HandleAtomLink(RiverItem item, XElement link)
+        {
+            if (link.Attribute(XNames.Atom.Rel)?.Value == "alternate" &&
+                link.Attribute(XNames.Atom.Type)?.Value == "text/html")
+            {
+                item = new RiverItem(item, link: link.Attribute(XNames.Atom.Href)?.Value);
+            }
+
+            if (link.Attribute(XNames.Atom.Rel)?.Value == "self" &&
+                link.Attribute(XNames.Atom.Type)?.Value == "text/html")
+            {
+                item = new RiverItem(item, permaLink: link.Attribute(XNames.Atom.Href)?.Value);
+            }
+
+            if (link.Attribute(XNames.Atom.Rel)?.Value == "enclosure")
+            {
+                item = new RiverItem(item, enclosures: item.Enclosures.Add(new RiverItemEnclosure(
+                    length: link.Attribute(XNames.Atom.Length)?.Value,
+                    type: link.Attribute(XNames.Atom.Type)?.Value,
+                    url: link.Attribute(XNames.Atom.Href)?.Value
+                )));
+            }
+            return item;
+        }
+
         public static RiverItem LoadItem(XElement item)
         {
-            string title =
-                Util.Extract(item, Util.ParseBody, new[] {
-                    XNames.RSS.Title,
-                    XNames.RSS10.Title,
-                    XNames.Atom.Title,
-                });
+            var ri = new RiverItem();
+            foreach (XElement xe in item.Elements())
+            {
+                Func<RiverItem, XElement, RiverItem> func;
+                if (ItemElements.TryGetValue(xe.Name, out func)) { ri = func(ri, xe); }
+            }
 
-            string link =
-                Util.Extract(item, Util.AtomLink("alternate", "text/html"), XNames.Atom.Link) ??
-                Util.Extract(item, xe => xe.Value, new[] { XNames.RSS.Link, XNames.RSS10.Link });
-
-            string body =
-                Util.Extract(item, Util.ParseBody, new[] {
-                    XNames.Atom.Summary,
-                    XNames.Atom.Content,
-                    XNames.RSS.Description,
-                    XNames.RSS10.Description,
-                });
-
-            string comments =
-                Util.Extract(item, xe => xe.Value, new[] { XNames.RSS.Comments, XNames.RSS10.Comments });
-
-            DateTime? pubDate =
-                Util.Extract(item, Util.ParseDate, new[]
-                {
-                    XNames.Atom.Published,
-                    XNames.Atom.Updated,
-                    XNames.RSS.PubDate,
-                    XNames.RSS10.PubDate,
-                });
-
-            string id =
-                Util.Extract(item, xe => xe.Value, new[] { XNames.Atom.Id, XNames.RSS.Guid, XNames.RSS10.Guid }) ??
-                CreateId(pubDate, link, title);
-
-            string permalink = IsHttpUrl(id) ? id : null;
-
-            IEnumerable<RiverItemEnclosure> enclosures =
-                Enumerable.Concat(
-                    Util.ExtractAll(item, RiverItemEnclosure.ExtractAtom, XNames.Atom.Link),
-                    Util.ExtractAll(item, RiverItemEnclosure.ExtractRss, XNames.RSS.Enclosure)
-                );
-
-            // TODO: Thumbnail
-
-            return new RiverItem(
-                title: title,
-                link: link,
-                body: body,
-                comments: comments,
-                pubDate: pubDate,
-                id: id,
-                permaLink: permalink,
-                enclosures: enclosures
-            );
+            if (ri.PermaLink == null) { ri = new RiverItem(ri, permaLink: ri.Link); }
+            if (ri.Id == null) { ri = new RiverItem(ri, id: CreateId(ri)); }
+            if (ri.Thumbnail == null)
+            {
+                // Load the thumbnail.
+            }
+            return ri;
         }
 
-        static bool IsHttpUrl(string url)
-        {
-            return
-                url != null &&
-                (
-                    url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-                    url.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-                );
-        }
-
-        static string CreateId(DateTime? pubDate, string link, string title)
+        static string CreateId(RiverItem item)
         {
             var guid = "";
-            if (pubDate != null) { guid += pubDate.ToString(); }
-            if (link != null) { guid += link; }
-            if (title != null) { guid += title; }
+            if (item.PubDate != null) { guid += item.PubDate.ToString(); }
+            if (item.Link != null) { guid += item.Link; }
+            if (item.Title != null) { guid += item.Title; }
 
             if (guid.Length > 0)
             {
-                guid = Util.HashString(guid);
+                byte[] hash = SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(guid));
+                guid = Convert.ToBase64String(hash);
             }
             return guid;
         }
@@ -912,30 +917,6 @@ namespace onceandfuture
 
         [JsonProperty(PropertyName = "length")]
         public string Length { get; }
-
-
-        public static RiverItemEnclosure ExtractRss(XElement element)
-        {
-            return new RiverItemEnclosure(
-                length: element.Attribute(XNames.RSS.Length)?.Value,
-                type: element.Attribute(XNames.RSS.Type)?.Value,
-                url: element.Attribute(XNames.RSS.Url)?.Value
-            );
-        }
-
-        public static RiverItemEnclosure ExtractAtom(XElement element)
-        {
-            if (element.Attribute(XNames.Atom.Rel)?.Value == "enclosure")
-            {
-                return new RiverItemEnclosure(
-                    length: element.Attribute(XNames.Atom.Length)?.Value,
-                    type: element.Attribute(XNames.Atom.Type)?.Value,
-                    url: element.Attribute(XNames.Atom.Href)?.Value
-                );
-            }
-
-            return null;
-        }
     }
 
     public class RiverFeedMeta
