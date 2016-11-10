@@ -100,6 +100,15 @@ namespace onceandfuture
         {
             Trace.WriteLine(String.Format("{0}: Got feed not modified in {1} ms", uri, loadTimer.ElapsedMilliseconds));
         }
+
+        public static void EndGetFeedMovedPermanently(Uri uri, HttpResponseMessage response, Stopwatch loadTimer)
+        {
+            Trace.WriteLine(String.Format(
+                "{0}: Feed moved permanently to {2} in {1} ms", 
+                uri, 
+                loadTimer.ElapsedMilliseconds,
+                response.Headers.Location));
+        }
     }
 
     public static class Util
@@ -656,13 +665,15 @@ namespace onceandfuture
             Uri originUrl = null,
             string docs = null,
             string etag = null,
-            DateTimeOffset? lastModified = null)
+            DateTimeOffset? lastModified = null,
+            HttpStatusCode? lastStatus = null)
         {
             Name = name ?? existingMeta?.Name;
             OriginUrl = originUrl ?? existingMeta?.OriginUrl;
             Docs = docs ?? existingMeta?.Docs ?? "http://riverjs.org/";
             Etag = etag ?? existingMeta?.Etag;
             LastModified = lastModified ?? existingMeta?.LastModified;
+            LastStatus = lastStatus ?? existingMeta?.LastStatus ?? HttpStatusCode.OK;
         }
 
         [JsonProperty(PropertyName = "name")]
@@ -679,6 +690,9 @@ namespace onceandfuture
 
         [JsonProperty(PropertyName = "lastModified")]
         public DateTimeOffset? LastModified { get; }
+
+        [JsonProperty(PropertyName = "permanentRedirect")]
+        public HttpStatusCode LastStatus { get; }
     }
 
     public class UpdatedFeeds
@@ -739,6 +753,8 @@ namespace onceandfuture
 
     static class RiverFeedParser
     {
+        static readonly HttpClient client;
+
         static readonly Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>> FeedElements =
             new Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>>
             {
@@ -785,6 +801,15 @@ namespace onceandfuture
                 { XNames.Atom.Updated,     (ri, xe) => HandlePubDate(ri, xe) },
         };
 
+        static RiverFeedParser()
+        {
+            HttpClientHandler httpClientHandler = new HttpClientHandler();
+            httpClientHandler.AllowAutoRedirect = false;
+
+            client = new HttpClient(httpClientHandler, false);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
+        }
+
         public static async Task<FetchResult> FetchAsync(
             Uri uri,
             string etag,
@@ -794,30 +819,51 @@ namespace onceandfuture
         {
             Stopwatch loadTimer = Stopwatch.StartNew();
             try
-            {
-                var client = new HttpClient();
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
-
+            {                
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Get,
                     RequestUri = uri,
-                    Headers = { { "User-Agent", "TheOnceAndFuture/1.0" } }
                 };
                 if (etag != null) { request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag)); }
                 request.Headers.IfModifiedSince = lastModified;
 
                 Log.BeginGetFeed(uri);
-                HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
+                HttpResponseMessage response = null;
+
+                for(int i = 0; i < 30; i++)
+                {
+                    response = await client.SendAsync(request, cancellationToken);
+                    if ((response.StatusCode != HttpStatusCode.TemporaryRedirect) &&
+                        (response.StatusCode != HttpStatusCode.Found) &&
+                        (response.StatusCode != HttpStatusCode.SeeOther))
+                    {
+                        break;
+                    }
+
+                    request.RequestUri = response.Headers.Location;
+                } while (false);
+
                 if (response.StatusCode == HttpStatusCode.NotModified)
                 {
                     Log.EndGetFeedNotModified(uri, response, loadTimer);
                     return new FetchResult(
-                        feed: null, 
-                        status: HttpStatusCode.NotModified, 
-                        feedUrl: uri, 
-                        etag: etag, 
-                        lastModified: lastModified);                    
+                        feed: null,
+                        status: HttpStatusCode.NotModified,
+                        feedUrl: uri,
+                        etag: etag,
+                        lastModified: lastModified);
+                }
+
+                if (response.StatusCode == HttpStatusCode.MovedPermanently)
+                {
+                    Log.EndGetFeedMovedPermanently(uri, response, loadTimer);
+                    return new FetchResult(
+                        feed: null,
+                        status: HttpStatusCode.MovedPermanently,
+                        feedUrl: response.Headers.Location,
+                        etag: etag,
+                        lastModified: lastModified);
                 }
 
                 if (!response.IsSuccessStatusCode)
@@ -1045,9 +1091,9 @@ namespace onceandfuture
             }
         }
 
-        public static async Task WriteRiver(River river)
+        public static async Task WriteRiver(Uri uri, River river)
         {
-            using (var stream = File.CreateText(GetNameForUri(river.Metadata.OriginUrl)))
+            using (var stream = File.CreateText(GetNameForUri(uri)))
             {
                 await stream.WriteAsync(JsonConvert.SerializeObject(river));
             }
@@ -1064,6 +1110,15 @@ namespace onceandfuture
                 river.Metadata.LastModified,
                 cancellationToken
             );
+
+            var updatedFeeds = river.UpdatedFeeds;
+            var metadata = new RiverFeedMeta(
+                river.Metadata,
+                etag: fetchResult.Etag,
+                lastModified: fetchResult.LastModified,
+                originUrl: fetchResult.FeedUrl,
+                lastStatus: fetchResult.Status);            
+
             if (fetchResult.Feed != null)
             {
                 var feed = fetchResult.Feed;
@@ -1077,30 +1132,34 @@ namespace onceandfuture
                 if (newItems.Count > 0)
                 {
                     feed = new RiverFeed(feed, items: newItems);
-                    river = new River(
-                        river,
-                        updatedFeeds: new UpdatedFeeds(
-                            river.UpdatedFeeds,
-                            feeds: river.UpdatedFeeds.Feeds.Insert(0, feed)),
-                        metadata: new RiverFeedMeta(
-                            river.Metadata,
-                            etag: fetchResult.Etag,
-                            lastModified: fetchResult.LastModified,
-                            originUrl: feed.FeedUrl));
+                    updatedFeeds = new UpdatedFeeds(
+                        river.UpdatedFeeds, 
+                        feeds: river.UpdatedFeeds.Feeds.Insert(0, feed));
                 }
             }
-            return river;
+
+            return new River(
+                river,
+                updatedFeeds: updatedFeeds,
+                metadata: metadata);
         }
 
         public static async Task<River> FetchAndUpdateRiver(Uri uri, CancellationToken cancellationToken)
         {
             River river = await RiverFeedStore.LoadRiverForFeed(uri);
-
-            River newRiver = await UpdateRiver(river, cancellationToken);
-
-            // TODO: Handle redirects
-            await RiverFeedStore.WriteRiver(newRiver);
-            return newRiver;
+            if ((river.Metadata.LastStatus != HttpStatusCode.MovedPermanently) &&
+                (river.Metadata.LastStatus != HttpStatusCode.Gone))
+            {
+                river = await UpdateRiver(river, cancellationToken);
+                await RiverFeedStore.WriteRiver(uri, river);
+            }
+            
+            if (river.Metadata.LastStatus == HttpStatusCode.MovedPermanently)
+            {
+                return await FetchAndUpdateRiver(river.Metadata.OriginUrl, cancellationToken);
+            }
+            
+            return river;
         }
 
         static void Main(string[] args)
@@ -1115,16 +1174,16 @@ namespace onceandfuture
                      where elem.Attribute(XNames.OPML.XmlUrl) != null
                      select OpmlEntry.FromXml(elem)).ToList();
 
-                var parses =
-                    from entry in feeds
-                    select new
-                    {
-                        url = entry.XmlUrl,
-                        task = FetchAndUpdateRiver(entry.XmlUrl, CancellationToken.None),
-                    };
+                //var parses =
+                //    from entry in feeds
+                //    select new
+                //    {
+                //        url = entry.XmlUrl,
+                //        task = FetchAndUpdateRiver(entry.XmlUrl, CancellationToken.None),
+                //    };
 
-                //Uri uri = new Uri("http://nielsenhayden.com/makinglight/index.rdf");
-                //var parses = new[] { new { url = uri, task = FetchAndUpdateRiver(uri, CancellationToken.None) } };
+                Uri uri = new Uri("http://davepeck.org/feed/");
+                var parses = new[] { new { url = uri, task = FetchAndUpdateRiver(uri, CancellationToken.None) } };
 
                 foreach (var parse in parses.ToList())
                 {
