@@ -338,6 +338,15 @@ namespace onceandfuture
 
             HtmlFormatter() { }
 
+            void AppendWhitespace()
+            {
+                if (builder.Length > 0 && !Char.IsWhiteSpace(builder[builder.Length - 1]))
+                {
+                    builder.Append(" ");
+                }
+            }
+
+
             public static string Format(IHtmlElement element)
             {
                 var formatter = new HtmlFormatter();
@@ -355,16 +364,25 @@ namespace onceandfuture
                     {
                         if (!Visit(child)) { return false; }
                     }
+                    if (node.NodeName == "P" || node.NodeName == "DIV" || node.NodeName == "BR")
+                    {
+                        AppendWhitespace();
+                    }
                     break;
 
                 case NodeType.Text:
                 case NodeType.CharacterData:
-                case NodeType.EntityReference:
-                    string[] parts = node.TextContent.Split(default(char[]), StringSplitOptions.RemoveEmptyEntries);
-                    for (int i = 0; i < parts.Length; i++)
+                case NodeType.EntityReference:                    
+                    for(int i = 0; i < node.TextContent.Length && builder.Length < 280; i++)
                     {
-                        builder.Append(parts[i]);
-                        builder.Append(" ");
+                        if (Char.IsWhiteSpace(node.TextContent[i]))
+                        {
+                            AppendWhitespace();
+                        }
+                        else
+                        {
+                            builder.Append(node.TextContent[i]);
+                        }
                     }
                     break;
 
