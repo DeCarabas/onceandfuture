@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -31,9 +32,9 @@ namespace onceandfuture
         {
             Trace.WriteLine(
                 String.Format(
-                    "{0}: {2} ms: Network Error: {1}", 
-                    uri, 
-                    requestException.Message, 
+                    "{0}: {2} ms: Network Error: {1}",
+                    uri,
+                    requestException.Message,
                     loadTimer.ElapsedMilliseconds
                 )
             );
@@ -74,9 +75,9 @@ namespace onceandfuture
         {
             Trace.WriteLine(
                 String.Format(
-                    "{0}: Could not identify feed type in {1} ms: {2}", 
-                    uri, 
-                    loadTimer.ElapsedMilliseconds, 
+                    "{0}: Could not identify feed type in {1} ms: {2}",
+                    uri,
+                    loadTimer.ElapsedMilliseconds,
                     body
                 )
             );
@@ -86,10 +87,10 @@ namespace onceandfuture
         {
             Trace.WriteLine(
                 String.Format(
-                    "{0}: Got failure status code {1} in {2} ms: {3}", 
-                    uri, 
-                    response.StatusCode, 
-                    loadTimer.ElapsedMilliseconds, 
+                    "{0}: Got failure status code {1} in {2} ms: {3}",
+                    uri,
+                    response.StatusCode,
+                    loadTimer.ElapsedMilliseconds,
                     body
                 )
             );
@@ -511,7 +512,7 @@ namespace onceandfuture
             DateTime? whenLastUpdate = null,
             IEnumerable<RiverItem> items = null,
             string etag = null,
-            string lastModified = null)
+            DateTimeOffset? lastModified = null)
         {
             FeedTitle = feedTitle ?? otherFeed?.FeedTitle ?? String.Empty;
             FeedUrl = feedUrl ?? otherFeed?.FeedUrl;
@@ -546,7 +547,7 @@ namespace onceandfuture
         [JsonIgnore]
         public string Etag { get; }
         [JsonIgnore]
-        public string LastModified { get; }
+        public DateTimeOffset? LastModified { get; }
 
         static readonly Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>> FeedElements =
             new Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>>
@@ -571,7 +572,7 @@ namespace onceandfuture
         public static async Task<RiverFeed> FetchAsync(
             Uri uri,
             string etag,
-            string lastModified,
+            DateTimeOffset? lastModified,
             CancellationToken cancellationToken
         )
         {
@@ -587,10 +588,11 @@ namespace onceandfuture
                     RequestUri = uri,
                     Headers = { { "User-Agent", "TheOnceAndFuture/1.0" } }
                 };
-                if (etag != null) { request.Headers.Add("If-None-Match", etag); }
-                if (lastModified != null) { request.Headers.Add("If-Modified-Since", lastModified); }
+                if (etag != null) { request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag)); }
+                request.Headers.IfModifiedSince = lastModified;
 
                 // TODO: Handle redirects properly.
+                //       That is: permanent redirects get recorded; temporary ones do not.
 
                 Log.BeginGetFeed(uri);
                 HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
@@ -617,34 +619,42 @@ namespace onceandfuture
                 using (var textReader = new StreamReader(responseStream))
                 using (var reader = XmlReader.Create(textReader, null, responseUri.AbsoluteUri))
                 {
+                    RiverFeed result = null;
                     XElement element = XElement.Load(reader, LoadOptions.SetBaseUri);
                     if (element.Name == XNames.RSS.Rss)
                     {
-                        RiverFeed result = RiverFeed.LoadFeed(responseUri, element.Element(XNames.RSS.Channel));
+                        result = RiverFeed.LoadFeed(responseUri, element.Element(XNames.RSS.Channel));
                         Log.EndGetFeed(uri, "rss2.0", response, result, loadTimer);
-                        return result;
                     }
                     else if (element.Name == XNames.Atom.Feed)
                     {
-                        RiverFeed result = RiverFeed.LoadFeed(responseUri, element);
+                        result = RiverFeed.LoadFeed(responseUri, element);
                         Log.EndGetFeed(uri, "atom", response, result, loadTimer);
-                        return result;
                     }
                     else if (element.Name == XNames.RDF.Rdf)
                     {
-                        RiverFeed result = RiverFeed.LoadFeed(responseUri, element.Element(XNames.RSS10.Channel));
-                        foreach (XElement elem in element.Elements(XNames.RSS10.Item))
-                        {
-                            result.Items.Add(RiverItem.LoadItem(elem));
-                        }
+                        result = RiverFeed.LoadFeed(responseUri, element.Element(XNames.RSS10.Channel));
+                        result = new RiverFeed(
+                            result,
+                            items: result.Items.AddRange(
+                                element.Elements(XNames.RSS10.Item).Select(xe => RiverItem.LoadItem(xe))
+                            )
+                        );
                         Log.EndGetFeed(uri, "rdf", response, result, loadTimer);
-                        return result;
                     }
                     else
                     {
                         Log.UnrecognizableFeed(uri, response, element.ToString(), loadTimer);
-                        return null;
                     }
+
+                    if (result != null)
+                    {
+                        string newEtag = response.Headers.ETag?.Tag;
+                        DateTimeOffset? newLastModified = response.Content.Headers.LastModified;
+                        result = new RiverFeed(result, etag: newEtag, lastModified: newLastModified);
+                    }
+
+                    return result;
                 }
             }
             catch (HttpRequestException requestException)
@@ -906,7 +916,7 @@ namespace onceandfuture
             Uri originUrl = null,
             string docs = null,
             string etag = null,
-            string lastModified = null)
+            DateTimeOffset? lastModified = null)
         {
             Name = name ?? existingMeta?.Name;
             OriginUrl = originUrl ?? existingMeta?.OriginUrl;
@@ -918,7 +928,7 @@ namespace onceandfuture
         public Uri OriginUrl { get; }
         public string Docs { get; }
         public string Etag { get; }
-        public string LastModified { get; }
+        public DateTimeOffset? LastModified { get; }
     }
 
     public class UpdatedFeeds
@@ -1005,9 +1015,10 @@ namespace onceandfuture
                     where item.Id != null
                     select item.Id
                 );
-                feed.Items.RemoveAll(item => existingItems.Contains(item.Id));
-                if (feed.Items.Count > 0)
+                var newItems = feed.Items.RemoveAll(item => existingItems.Contains(item.Id));
+                if (newItems.Count > 0)
                 {
+                    feed = new RiverFeed(feed, items: newItems);
                     river = new River(
                         river,
                         updatedFeeds: new UpdatedFeeds(
@@ -1026,7 +1037,9 @@ namespace onceandfuture
         public static async Task<River> FetchAndUpdateRiver(Uri uri, CancellationToken cancellationToken)
         {
             River river = await RiverFeedStore.LoadRiverForFeed(uri);
+
             River newRiver = await UpdateRiver(river, cancellationToken);
+
             // TODO: Handle redirects
             await RiverFeedStore.WriteRiver(newRiver);
             return newRiver;
@@ -1051,6 +1064,9 @@ namespace onceandfuture
                         url = entry.XmlUrl,
                         task = FetchAndUpdateRiver(entry.XmlUrl, CancellationToken.None),
                     };
+
+                //Uri uri = new Uri("http://nielsenhayden.com/makinglight/index.rdf");
+                //var parses = new[] { new { url = uri, task = FetchAndUpdateRiver(uri, CancellationToken.None) } };
 
                 foreach (var parse in parses.ToList())
                 {
