@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -305,6 +306,7 @@ namespace onceandfuture
         class HtmlFormatter
         {
             readonly StringBuilder builder = new StringBuilder();
+            bool lastWasLine;
 
             HtmlFormatter() { }
 
@@ -327,8 +329,12 @@ namespace onceandfuture
                     }
                     if (node.NodeName == "P" || node.NodeName == "DIV" || node.NodeName == "BR")
                     {
-                        builder.AppendLine();
-                        builder.AppendLine();
+                        if (!this.lastWasLine)
+                        {
+                            builder.AppendLine();
+                            builder.AppendLine();
+                            this.lastWasLine = true;
+                        }
                     }
                     break;
 
@@ -636,15 +642,27 @@ namespace onceandfuture
             }
 
             if (ri.PermaLink == null) { ri.PermaLink = ri.Link; }
-            if (ri.Id == null)
-            {
-                // Synthesize the ID.
-            }
+            if (ri.Id == null) { ri.Id = CreateId(ri); }
             if (ri.Thumbnail == null)
             {
                 // Load the thumbnail.
             }
             return ri;
+        }
+
+        static string CreateId(RiverItem item)
+        {
+            var guid = "";
+            if (item.PubDate != null) { guid += item.PubDate.ToString(); }
+            if (item.Link != null) { guid += item.Link; }
+            if (item.Title != null) { guid += item.Title; }
+
+            if (guid.Length > 0)
+            {
+                byte[] hash = SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(guid));
+                guid = Convert.ToBase64String(hash);
+            }
+            return guid;
         }
     }
 
