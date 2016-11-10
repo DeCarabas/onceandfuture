@@ -24,32 +24,31 @@ namespace onceandfuture
     {
         public static void BadDate(string url, string date)
         {
-            Console.WriteLine("{0}: Unparsable date encountered: {1}", url, date);
+            Trace.WriteLine(String.Format("{0}: Unparsable date encountered: {1}", url, date));
         }
 
         public static void NetworkError(Uri uri, HttpRequestException requestException, Stopwatch loadTimer)
         {
-            Console.WriteLine(
-                "{0}: {2} ms: Network Error: {1}",
-                uri,
-                requestException.Message,
-                loadTimer.ElapsedMilliseconds
+            Trace.WriteLine(
+                String.Format(
+                    "{0}: {2} ms: Network Error: {1}", 
+                    uri, 
+                    requestException.Message, 
+                    loadTimer.ElapsedMilliseconds
+                )
             );
         }
 
         public static void XmlError(Uri uri, XmlException xmlException, Stopwatch loadTimer)
         {
-            Console.WriteLine(
-                "{0}: {2} ms: XML Error: {1}",
-                uri,
-                xmlException.Message,
-                loadTimer.ElapsedMilliseconds
+            Trace.WriteLine(
+                String.Format("{0}: {2} ms: XML Error: {1}", uri, xmlException.Message, loadTimer.ElapsedMilliseconds)
             );
         }
 
         public static void BeginGetFeed(Uri uri)
         {
-            Console.WriteLine("{0}: Begin fetching", uri);
+            Trace.WriteLine(String.Format("{0}: Begin fetching", uri));
         }
 
         public static void EndGetFeed(
@@ -60,39 +59,45 @@ namespace onceandfuture
             Stopwatch loadTimer
         )
         {
-            Console.WriteLine(
-                "{0}: Fetched {1} items from {2} feed in {3} ms",
-                uri,
-                result.Items.Count,
-                version,
-                loadTimer.ElapsedMilliseconds
+            Trace.WriteLine(
+                String.Format(
+                    "{0}: Fetched {1} items from {2} feed in {3} ms",
+                    uri,
+                    result.Items.Count,
+                    version,
+                    loadTimer.ElapsedMilliseconds
+                )
             );
         }
 
         public static void UnrecognizableFeed(Uri uri, HttpResponseMessage response, string body, Stopwatch loadTimer)
         {
-            Console.WriteLine(
-                "{0}: Could not identify feed type in {1} ms: {2}",
-                uri,
-                loadTimer.ElapsedMilliseconds,
-                body
+            Trace.WriteLine(
+                String.Format(
+                    "{0}: Could not identify feed type in {1} ms: {2}", 
+                    uri, 
+                    loadTimer.ElapsedMilliseconds, 
+                    body
+                )
             );
         }
 
         public static void EndGetFeedFailure(Uri uri, HttpResponseMessage response, string body, Stopwatch loadTimer)
         {
-            Console.WriteLine(
-                "{0}: Got failure status code {1} in {2} ms: {3}",
-                uri,
-                response.StatusCode,
-                loadTimer.ElapsedMilliseconds,
-                body
+            Trace.WriteLine(
+                String.Format(
+                    "{0}: Got failure status code {1} in {2} ms: {3}", 
+                    uri, 
+                    response.StatusCode, 
+                    loadTimer.ElapsedMilliseconds, 
+                    body
+                )
             );
         }
 
         public static void EndGetFeedNotModified(Uri uri, HttpResponseMessage response, Stopwatch loadTimer)
         {
-            Console.WriteLine("{0}: Got feed not modified in {1} ms", uri, loadTimer.ElapsedMilliseconds);
+            Trace.WriteLine(String.Format("{0}: Got feed not modified in {1} ms", uri, loadTimer.ElapsedMilliseconds));
         }
     }
 
@@ -148,6 +153,12 @@ namespace onceandfuture
             {"jan", 1}, {"feb", 2}, {"mar", 3}, {"apr", 4}, {"may", 5}, {"jun", 6},
             {"jul", 7}, {"aug", 8}, {"sep", 9}, {"oct", 10}, {"nov", 11}, {"dec", 12},
         };
+
+        public static string HashString(string input)
+        {
+            byte[] hash = SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(input));
+            return Convert.ToBase64String(hash).Replace('/', '-');
+        }
 
         public static string ParseBody(XElement body)
         {
@@ -491,48 +502,69 @@ namespace onceandfuture
     [JsonObject]
     public class RiverFeed
     {
-        readonly List<RiverItem> items = new List<RiverItem>();
+        public RiverFeed(
+            RiverFeed otherFeed = null,
+            string feedTitle = null,
+            Uri feedUrl = null,
+            string websiteUrl = null,
+            string feedDescription = null,
+            DateTime? whenLastUpdate = null,
+            IEnumerable<RiverItem> items = null,
+            string etag = null,
+            string lastModified = null)
+        {
+            FeedTitle = feedTitle ?? otherFeed?.FeedTitle ?? String.Empty;
+            FeedUrl = feedUrl ?? otherFeed?.FeedUrl;
+            WebsiteUrl = websiteUrl ?? otherFeed?.WebsiteUrl ?? String.Empty;
+            FeedDescription = feedDescription ?? otherFeed?.FeedDescription ?? String.Empty;
+            WhenLastUpdate = whenLastUpdate ?? otherFeed?.WhenLastUpdate ?? DateTime.UtcNow;
+
+            Items = ImmutableList.CreateRange<RiverItem>(items ?? otherFeed?.Items ?? Enumerable.Empty<RiverItem>());
+
+            Etag = etag ?? otherFeed?.Etag;
+            LastModified = lastModified ?? otherFeed?.LastModified;
+        }
 
         [JsonProperty(PropertyName = "feedTitle")]
-        public string FeedTitle { get; set; } = String.Empty;
+        public string FeedTitle { get; }
 
         [JsonProperty(PropertyName = "feedUrl")]
-        public string FeedUrl { get; set; }
+        public Uri FeedUrl { get; }
 
         [JsonProperty(PropertyName = "websiteUrl")]
-        public string WebsiteUrl { get; set; } = String.Empty;
+        public string WebsiteUrl { get; }
 
         [JsonProperty(PropertyName = "feedDescription")]
-        public string FeedDescription { get; set; } = String.Empty;
+        public string FeedDescription { get; }
 
         [JsonProperty(PropertyName = "whenLastUpdate")]
-        public DateTime WhenLastUpdate { get; set; }
+        public DateTime WhenLastUpdate { get; }
 
         [JsonProperty(PropertyName = "item")]
-        public List<RiverItem> Items => this.items;
+        public ImmutableList<RiverItem> Items { get; }
 
         [JsonIgnore]
-        public string Etag { get; set; }
+        public string Etag { get; }
         [JsonIgnore]
-        public string LastModified { get; set; }
+        public string LastModified { get; }
 
-        static readonly Dictionary<XName, Action<RiverFeed, XElement>> FeedElements =
-            new Dictionary<XName, Action<RiverFeed, XElement>>
+        static readonly Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>> FeedElements =
+            new Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>>
             {
-                { XNames.RSS.Title,       (rf, xe) => rf.FeedTitle = xe.Value },
-                { XNames.RSS10.Title,     (rf, xe) => rf.FeedTitle = xe.Value },
-                { XNames.Atom.Title,      (rf, xe) => rf.FeedTitle = xe.Value },
+                { XNames.RSS.Title,       (rf, xe) => new RiverFeed(rf, feedTitle: xe.Value) },
+                { XNames.RSS10.Title,     (rf, xe) => new RiverFeed(rf, feedTitle: xe.Value) },
+                { XNames.Atom.Title,      (rf, xe) => new RiverFeed(rf, feedTitle: xe.Value) },
 
-                { XNames.RSS.Link,        (rf, xe) => rf.WebsiteUrl = xe.Value },
-                { XNames.RSS10.Link,      (rf, xe) => rf.WebsiteUrl = xe.Value },
+                { XNames.RSS.Link,        (rf, xe) => new RiverFeed(rf, websiteUrl: xe.Value) },
+                { XNames.RSS10.Link,      (rf, xe) => new RiverFeed(rf, websiteUrl: xe.Value) },
                 { XNames.Atom.Link,       (rf, xe) => HandleAtomLink(rf, xe) },
 
-                { XNames.RSS.Description,   (rf, xe) => rf.FeedDescription = Util.ParseBody(xe) },
-                { XNames.RSS10.Description, (rf, xe) => rf.FeedTitle = xe.Value },
+                { XNames.RSS.Description,   (rf, xe) => new RiverFeed(rf, feedDescription: xe.Value) },
+                { XNames.RSS10.Description, (rf, xe) => new RiverFeed(rf, feedDescription: xe.Value) },
 
-                { XNames.RSS.Item,        (rf, xe) => rf.Items.Add(RiverItem.LoadItem(xe)) },
-                { XNames.RSS10.Item,      (rf, xe) => rf.Items.Add(RiverItem.LoadItem(xe)) },
-                { XNames.Atom.Entry,      (rf, xe) => rf.Items.Add(RiverItem.LoadItem(xe)) },
+                { XNames.RSS.Item,        (rf, xe) => new RiverFeed(rf, items: rf.Items.Add(RiverItem.LoadItem(xe))) },
+                { XNames.RSS10.Item,      (rf, xe) => new RiverFeed(rf, items: rf.Items.Add(RiverItem.LoadItem(xe))) },
+                { XNames.Atom.Entry,      (rf, xe) => new RiverFeed(rf, items: rf.Items.Add(RiverItem.LoadItem(xe))) },
             };
 
 
@@ -558,12 +590,14 @@ namespace onceandfuture
                 if (etag != null) { request.Headers.Add("If-None-Match", etag); }
                 if (lastModified != null) { request.Headers.Add("If-Modified-Since", lastModified); }
 
+                // TODO: Handle redirects properly.
+
                 Log.BeginGetFeed(uri);
                 HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
                 if (response.StatusCode == HttpStatusCode.NotModified)
                 {
                     Log.EndGetFeedNotModified(uri, response, loadTimer);
-                    return new RiverFeed { Etag = etag, LastModified = lastModified };
+                    return new RiverFeed(etag: etag, lastModified: lastModified);
                 }
 
                 if (!response.IsSuccessStatusCode)
@@ -627,25 +661,26 @@ namespace onceandfuture
 
         public static RiverFeed LoadFeed(Uri feedUrl, XElement item)
         {
-            var rf = new RiverFeed { WhenLastUpdate = DateTime.UtcNow };
+            var rf = new RiverFeed(feedUrl: feedUrl);
             foreach (XElement xe in item.Elements())
             {
-                Action<RiverFeed, XElement> action;
-                if (FeedElements.TryGetValue(xe.Name, out action)) { action(rf, xe); }
+                Func<RiverFeed, XElement, RiverFeed> action;
+                if (FeedElements.TryGetValue(xe.Name, out action)) { rf = action(rf, xe); }
             }
-            rf.FeedUrl = feedUrl.AbsoluteUri;
             return rf;
         }
 
-        static void HandleAtomLink(RiverFeed feed, XElement link)
+        static RiverFeed HandleAtomLink(RiverFeed feed, XElement link)
         {
             if (
                 link.Attribute(XNames.Atom.Rel)?.Value == "alternate"
                 && link.Attribute(XNames.Atom.Type)?.Value == "text/html"
             )
             {
-                feed.WebsiteUrl = link.Attribute(XNames.Atom.Href)?.Value;
+                feed = new RiverFeed(feed, websiteUrl: link.Attribute(XNames.Atom.Href)?.Value);
             }
+
+            return feed;
         }
     }
 
@@ -653,8 +688,6 @@ namespace onceandfuture
 
     public class RiverItem
     {
-        public RiverItem() { }
-
         [JsonConstructor]
         public RiverItem(
             RiverItem existingItem = null,
@@ -709,7 +742,7 @@ namespace onceandfuture
         public RiverItemThumbnail Thumbnail { get; }
 
         [JsonProperty(PropertyName = "enclosure")]
-        public ImmutableList<RiverItemEnclosure> Enclosures { get; } = ImmutableList<RiverItemEnclosure>.Empty;
+        public ImmutableList<RiverItemEnclosure> Enclosures { get; }
 
         static readonly Dictionary<XName, Func<RiverItem, XElement, RiverItem>> ItemElements =
             new Dictionary<XName, Func<RiverItem, XElement, RiverItem>>
@@ -870,7 +903,7 @@ namespace onceandfuture
         public RiverFeedMeta(
             RiverFeedMeta existingMeta = null,
             string name = null,
-            string originUrl = null,
+            Uri originUrl = null,
             string docs = null,
             string etag = null,
             string lastModified = null)
@@ -882,7 +915,7 @@ namespace onceandfuture
             LastModified = lastModified ?? existingMeta?.LastModified;
         }
         public string Name { get; }
-        public string OriginUrl { get; }
+        public Uri OriginUrl { get; }
         public string Docs { get; }
         public string Etag { get; }
         public string LastModified { get; }
@@ -921,13 +954,45 @@ namespace onceandfuture
         public RiverFeedMeta Metadata { get; }
     }
 
+    static class RiverFeedStore
+    {
+        static string GetNameForUri(Uri feedUri)
+        {
+            // TODO: Normalize URI?
+            return Util.HashString(feedUri.AbsoluteUri);
+        }
+
+        public static async Task<River> LoadRiverForFeed(Uri feedUri)
+        {
+            try
+            {
+                using (var stream = File.OpenText(GetNameForUri(feedUri)))
+                {
+                    string text = await stream.ReadToEndAsync();
+                    return JsonConvert.DeserializeObject<River>(text);
+                }
+            }
+            catch (FileNotFoundException)
+            {
+                return new River(metadata: new RiverFeedMeta(originUrl: feedUri));
+            }
+        }
+
+        public static async Task WriteRiver(River river)
+        {
+            using (var stream = File.CreateText(GetNameForUri(river.Metadata.OriginUrl)))
+            {
+                await stream.WriteAsync(JsonConvert.SerializeObject(river));
+            }
+        }
+    }
+
     class Program
     {
         public static async Task<River> UpdateRiver(River river, CancellationToken cancellationToken)
         {
-            // TODO: Rivers should be immutable so that this doesn't cause problems.
             RiverFeed feed = await RiverFeed.FetchAsync(
-                new Uri(river.Metadata.OriginUrl),
+                river.Metadata.OriginUrl,
                 river.Metadata.Etag,
                 river.Metadata.LastModified,
                 cancellationToken
@@ -946,7 +1011,7 @@ namespace onceandfuture
                     river = new River(
                         river,
                         updatedFeeds: new UpdatedFeeds(
-                            river.UpdatedFeeds, 
+                            river.UpdatedFeeds,
                             feeds: river.UpdatedFeeds.Feeds.Insert(0, feed)),
                         metadata: new RiverFeedMeta(
                             river.Metadata,
@@ -956,6 +1021,15 @@ namespace onceandfuture
                 }
             }
             return river;
+        }
+
+        public static async Task<River> FetchAndUpdateRiver(Uri uri, CancellationToken cancellationToken)
+        {
+            River river = await RiverFeedStore.LoadRiverForFeed(uri);
+            River newRiver = await UpdateRiver(river, cancellationToken);
+            // TODO: Handle redirects
+            await RiverFeedStore.WriteRiver(newRiver);
+            return newRiver;
         }
 
         static void Main(string[] args)
@@ -970,23 +1044,23 @@ namespace onceandfuture
                      where elem.Attribute(XNames.OPML.XmlUrl) != null
                      select OpmlEntry.FromXml(elem)).ToList();
 
-                // TODO: Ideally load the river from JSON.
-
-
                 var parses =
                     from entry in feeds
                     select new
                     {
                         url = entry.XmlUrl,
-                        task = RiverFeed.FetchAsync(entry.XmlUrl, null, null, CancellationToken.None),
+                        task = FetchAndUpdateRiver(entry.XmlUrl, CancellationToken.None),
                     };
 
                 foreach (var parse in parses.ToList())
                 {
                     parse.task.Wait();
-                   
+
                     Console.WriteLine(parse.url);
-                    DumpFeed(parse.task.Result);
+                    foreach (RiverFeed feed in parse.task.Result.UpdatedFeeds.Feeds)
+                    {
+                        DumpFeed(feed);
+                    }
                     Console.ReadLine();
                 }
             }
