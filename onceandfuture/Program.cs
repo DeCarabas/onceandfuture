@@ -885,8 +885,13 @@ namespace onceandfuture
             Height = height ?? existingThumbnail?.Height ?? 0;
         }
 
+        [JsonProperty(PropertyName = "url")]
         public string Url { get; }
+
+        [JsonProperty(PropertyName = "width")]
         public int Width { get; }
+
+        [JsonProperty(PropertyName = "height")]
         public int Height { get; }
     }
 
@@ -903,8 +908,13 @@ namespace onceandfuture
             Length = length ?? existingEnclosure?.Length;
         }
 
+        [JsonProperty(PropertyName = "url")]
         public string Url { get; }
+
+        [JsonProperty(PropertyName = "type")]
         public string Type { get; }
+
+        [JsonProperty(PropertyName = "length")]
         public string Length { get; }
     }
 
@@ -924,10 +934,20 @@ namespace onceandfuture
             Etag = etag ?? existingMeta?.Etag;
             LastModified = lastModified ?? existingMeta?.LastModified;
         }
+
+        [JsonProperty(PropertyName = "name")]
         public string Name { get; }
+
+        [JsonProperty(PropertyName = "originUrl")]
         public Uri OriginUrl { get; }
+
+        [JsonProperty(PropertyName = "docs")]
         public string Docs { get; }
+
+        [JsonProperty(PropertyName = "etag")]
         public string Etag { get; }
+
+        [JsonProperty(PropertyName = "lastModified")]
         public DateTimeOffset? LastModified { get; }
     }
 
