@@ -194,6 +194,16 @@ namespace onceandfuture
         {
             Trace.TraceInformation("{0}: {1} Cached Error: {2}", baseUrl, imageUrl, cachedObject);
         }
+
+        public static void FeedTimeout(Uri uri, Stopwatch loadTimer)
+        {
+            Trace.TraceError("{0}: Timeout after {1}ms", uri, loadTimer.ElapsedMilliseconds);
+        }
+
+        public static void ThumbnailTimeout(Uri baseUrl, Uri imageUri, string kind)
+        {
+            Trace.TraceError("{0}: {1} ({2}): Timeout", baseUrl, imageUri, kind);
+        }
     }
 
     public static class Util
@@ -1092,7 +1102,7 @@ namespace onceandfuture
             ImageUrl imageUrl,
             Uri referrer,
             CancellationToken cancellationToken)
-        {
+        {            
             try
             {
                 object cachedObject = imageCache.Get(imageUrl.Uri.AbsoluteUri);
@@ -1136,6 +1146,12 @@ namespace onceandfuture
                         return null;
                     }
                 }
+            }
+            catch(TaskCanceledException tce)
+            {
+                Log.ThumbnailTimeout(referrer, imageUrl.Uri, imageUrl.Kind);
+                CacheError(imageUrl, tce.Message);
+                return null;
             }
             catch (HttpRequestException hre)
             {
@@ -1410,6 +1426,17 @@ namespace onceandfuture
                         etag: newEtag,
                         lastModified: newLastModified);
                 }
+            }
+            catch (TaskCanceledException)
+            {
+                if (cancellationToken.IsCancellationRequested) { throw; }
+                Log.FeedTimeout(uri, loadTimer);
+                return new FetchResult(
+                    feed: null,
+                    status: 0,
+                    feedUrl: uri,
+                    etag: etag,
+                    lastModified: lastModified);
             }
             catch (HttpRequestException requestException)
             {
@@ -1722,7 +1749,7 @@ namespace onceandfuture
         {
             try
             {
-                Trace.Listeners.Add(new ConsoleTraceListener());
+                // Trace.Listeners.Add(new ConsoleTraceListener());
 
                 XDocument doc = XDocument.Load(@"C:\Users\John\Downloads\NewsBlur-DeCarabas-2016-11-08");
                 XElement body = doc.Root.Element(XNames.OPML.Body);
