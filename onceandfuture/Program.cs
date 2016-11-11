@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -9,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.Caching;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -27,31 +29,27 @@ namespace onceandfuture
     {
         public static void BadDate(string url, string date)
         {
-            Trace.WriteLine(String.Format("{0}: Unparsable date encountered: {1}", url, date));
+            Trace.TraceWarning("{0}: Unparsable date encountered: {1}", url, date);
         }
 
         public static void NetworkError(Uri uri, HttpRequestException requestException, Stopwatch loadTimer)
         {
-            Trace.WriteLine(
-                String.Format(
-                    "{0}: {2} ms: Network Error: {1}",
-                    uri,
-                    requestException.Message,
-                    loadTimer.ElapsedMilliseconds
-                )
+            Trace.TraceError(
+                "{0}: {2} ms: Network Error: {1}",
+                uri,
+                requestException.Message,
+                loadTimer.ElapsedMilliseconds
             );
         }
 
         public static void XmlError(Uri uri, XmlException xmlException, Stopwatch loadTimer)
         {
-            Trace.WriteLine(
-                String.Format("{0}: {2} ms: XML Error: {1}", uri, xmlException.Message, loadTimer.ElapsedMilliseconds)
-            );
+            Trace.TraceError("{0}: {2} ms: XML Error: {1}", uri, xmlException.Message, loadTimer.ElapsedMilliseconds);
         }
 
         public static void BeginGetFeed(Uri uri)
         {
-            Trace.WriteLine(String.Format("{0}: Begin fetching", uri));
+            Trace.TraceInformation("{0}: Begin fetching feed", uri);
         }
 
         public static void EndGetFeed(
@@ -62,90 +60,139 @@ namespace onceandfuture
             Stopwatch loadTimer
         )
         {
-            Trace.WriteLine(
-                String.Format(
-                    "{0}: Fetched {1} items from {2} feed in {3} ms",
-                    uri,
-                    result.Items.Count,
-                    version,
-                    loadTimer.ElapsedMilliseconds
-                )
+            Trace.TraceInformation(
+                "{0}: Fetched {1} items from {2} feed in {3} ms",
+                uri,
+                result.Items.Count,
+                version,
+                loadTimer.ElapsedMilliseconds
             );
         }
 
         public static void UnrecognizableFeed(Uri uri, HttpResponseMessage response, string body, Stopwatch loadTimer)
         {
-            Trace.WriteLine(
-                String.Format(
-                    "{0}: Could not identify feed type in {1} ms: {2}",
-                    uri,
-                    loadTimer.ElapsedMilliseconds,
-                    body
-                )
+            Trace.TraceError(
+                "{0}: Could not identify feed type in {1} ms: {2}",
+                uri,
+                loadTimer.ElapsedMilliseconds,
+                body
             );
         }
 
         public static void EndGetFeedFailure(Uri uri, HttpResponseMessage response, string body, Stopwatch loadTimer)
         {
-            Trace.WriteLine(
-                String.Format(
-                    "{0}: Got failure status code {1} in {2} ms: {3}",
-                    uri,
-                    response.StatusCode,
-                    loadTimer.ElapsedMilliseconds,
-                    body
-                )
+            Trace.TraceError(
+                "{0}: Got failure status code {1} in {2} ms: {3}",
+                uri,
+                response.StatusCode,
+                loadTimer.ElapsedMilliseconds,
+                body
             );
         }
 
         public static void EndGetFeedNotModified(Uri uri, HttpResponseMessage response, Stopwatch loadTimer)
         {
-            Trace.WriteLine(String.Format("{0}: Got feed not modified in {1} ms", uri, loadTimer.ElapsedMilliseconds));
+            Trace.TraceInformation("{0}: Got feed not modified in {1} ms", uri, loadTimer.ElapsedMilliseconds);
         }
 
         public static void EndGetFeedMovedPermanently(Uri uri, HttpResponseMessage response, Stopwatch loadTimer)
         {
-            Trace.WriteLine(String.Format(
+            Trace.TraceInformation(
                 "{0}: Feed moved permanently to {2} in {1} ms",
                 uri,
                 loadTimer.ElapsedMilliseconds,
-                response.Headers.Location));
+                response.Headers.Location);
         }
 
-        public static void ConsideringImage(Uri baseUrl, Uri uri, int area, float ratio)
+        public static void ConsideringImage(Uri baseUrl, Uri uri, string kind, int area, float ratio)
         {
-            Trace.WriteLine(
-                String.Format("{0}: Considering image {1} (area: {2}, ratio: {3})", baseUrl, uri, area, ratio)
+            Trace.TraceInformation(
+                "{0}: Considering image {1} ({2}) (area: {3}, ratio: {4})", baseUrl, uri, kind, area, ratio);
+        }
+
+        public static void NewBestImage(Uri baseUrl, Uri uri, string kind, int area, float ratio)
+        {
+            Trace.TraceInformation(
+                "{0}: New best image: {1} ({2}) (area: {3}, ratio: {4})", baseUrl, uri, kind, area, ratio);
+        }
+
+        public static void ThumbnailErrorResponse(Uri baseUrl, Uri imageUri, string kind, HttpResponseMessage response)
+        {
+            Trace.TraceError(
+                "{0}: {1} ({4}): Error From Host: {2} {3}",
+                baseUrl,
+                imageUri,
+                response.StatusCode,
+                response.ReasonPhrase,
+                kind
             );
         }
 
-        public static void NewBestImage(Uri baseUrl, Uri uri, int area, float ratio)
+        public static void InvalidThumbnailImageFormat(Uri baseUrl, Uri imageUri, string kind, ArgumentException ae)
         {
-            Trace.WriteLine(
-                String.Format("{0}: New best image: {1} (area: {2}, ratio: {3})", baseUrl, uri, area, ratio)
-            );
+            Trace.TraceError("{0}: {1} ({2}): Is not a valid image ({3})", baseUrl, imageUri, kind, ae.Message);
         }
 
-        public static void ThumbnailErrorResponse(Uri baseUrl, Uri imageUri, HttpResponseMessage response)
+        public static void ThumbnailNetworkError(Uri baseUrl, Uri imageUri, string kind, HttpRequestException hre)
         {
-            Trace.WriteLine(String.Format(
-                "{0}: {1}: Error From Host: {2} {3}", baseUrl, imageUri, response.StatusCode, response.ReasonPhrase
-            ));
+            Trace.TraceError("{0}: {1} ({3}): Network Error: {2}", baseUrl, imageUri, hre.Message, kind);
         }
 
-        public static void InvalidThumbnailImageFormat(Uri baseUrl, Uri imageUri, ArgumentException ae)
+        public static void FoundThumbnail(Uri baseUrl, Uri uri, string kind)
         {
-            Trace.WriteLine(String.Format("{0}: {1}: Is not a valid image ({2})", baseUrl, imageUri, ae.Message));
+            Trace.TraceInformation("{0}: Found thumbnail {1} ({2})", baseUrl, uri, kind);
         }
 
-        internal static void ThumbnailNetworkError(Uri baseUrl, Uri imageUri, HttpRequestException hre)
+        public static void BeginLoadThumbnails(RiverFeed feed)
         {
-            Trace.WriteLine(String.Format("{0}: {1}: Network Error: {2}", baseUrl, imageUri, hre.Message));
+            Trace.TraceInformation(
+                "{0}: Loading thumbnails...",
+                feed.FeedUrl);
         }
 
-        internal static void FoundThumbnail(Uri baseUrl, Uri uri, string kind)
+        public static void EndLoadThumbnails(RiverFeed feed, RiverItem[] items, Stopwatch loadTimer)
         {
-            Trace.WriteLine(String.Format("{0}: Found thumbnail {1} ({2})", baseUrl, uri, kind));
+            Trace.TraceInformation(
+                "{0}: Finished loading thumbs for {1} items in {2} ms",
+                feed.FeedUrl,
+                items.Length,
+                loadTimer.ElapsedMilliseconds);
+        }
+
+        public static void NoThumbnailFound(Uri baseUrl)
+        {
+            Trace.TraceWarning("{0}: No suitable thumbnails found.", baseUrl);
+        }
+
+        public static void EndGetThumbsFromSoup(Uri baseUrl, int length, Stopwatch loadTimer)
+        {
+            Trace.TraceInformation(
+                "{0}: Loaded {1} thumbnails in {2}ms", baseUrl, length, loadTimer.ElapsedMilliseconds);
+        }
+
+        public static void BeginGetThumbsFromSoup(Uri baseUrl, int length)
+        {
+            Trace.TraceInformation("{0}: Loading {1} thumbnails...", baseUrl, length);
+        }
+
+        public static void ThumbnailTooSmall(Uri baseUrl, Uri uri, string kind, int area)
+        {
+            Trace.TraceInformation("{0}: {1} ({2}): Too small ({3})", baseUrl, uri, kind, area);
+        }
+
+        public static void ThumbnailTooOblong(Uri baseUrl, Uri uri, string kind, float ratio)
+        {
+            Trace.TraceInformation("{0}: {1} ({2}): Too oblong ({3})", baseUrl, uri, kind, ratio);
+        }
+
+        public static void ThumbnailSuccessCacheHit(Uri baseUrl, Uri imageUrl)
+        {
+            Trace.TraceInformation("{0}: {1} Cached Success", baseUrl, imageUrl);
+        }
+
+        public static void ThumbnailErrorCacheHit(Uri baseUrl, Uri imageUrl, object cachedObject)
+        {
+            Trace.TraceInformation("{0}: {1} Cached Error: {2}", baseUrl, imageUrl, cachedObject);
         }
     }
 
@@ -791,11 +838,13 @@ namespace onceandfuture
     static class ThumbnailExtractor
     {
         static readonly HttpClient client;
+        static readonly MemoryCache imageCache;
 
         static readonly string[] BadThumbnails = new string[]
         {
             "addgoogle2.gif",
             "blank.jpg",
+            "spacer.gif",
         };
 
         static readonly string[] BadThumbnailHosts = new string[]
@@ -804,27 +853,34 @@ namespace onceandfuture
             "doubleclick.net",
             "googleadservices.com",
             "gravatar.com",
+            "pixel.quantserve.com",
         };
 
         static ThumbnailExtractor()
         {
-            // TODO: Caching.
             client = new HttpClient();
             client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
+
+            imageCache = new MemoryCache("ThumbMemoryCache", new NameValueCollection
+            {
+                { "cacheMemoryLimitMegabytes", "100" },
+                { "physicalMemoryLimitPercentage", "10" },
+            });
         }
 
-        public static async Task<RiverItem> GetItemThumbnailAsync(
-            RiverItem item, Uri baseUri, CancellationToken token)
+        // TODO: Thumbs only for new items.
+
+        public static async Task<RiverItem> GetItemThumbnailAsync(RiverItem item, Uri baseUri, CancellationToken token)
         {
             if (item.Thumbnail != null) { return item; }
-            if (item.Link == null) { return null; }
+            if (item.Link == null) { return item; }
 
             Uri itemLink;
-            if (!Uri.TryCreate(item.Link, UriKind.RelativeOrAbsolute, out itemLink)) { return null; }
+            if (!Uri.TryCreate(item.Link, UriKind.RelativeOrAbsolute, out itemLink)) { return item; }
             if (!itemLink.IsAbsoluteUri)
             {
                 Uri relativeUri = itemLink;
-                if (!Uri.TryCreate(relativeUri, baseUri, out itemLink)) { return null; }
+                if (!Uri.TryCreate(relativeUri, baseUri, out itemLink)) { return item; }
             }
 
             Image sourceImage = await FindThumbnailAsync(itemLink, token);
@@ -858,7 +914,8 @@ namespace onceandfuture
                     string mediaType = response.Content.Headers.ContentType?.MediaType ?? "";
                     if (mediaType.Contains("image"))
                     {
-                        return await FetchThumbnailAsync(uri, null, cancellationToken);
+                        var iu = new ImageUrl { Uri = uri, Kind = "Direct" };
+                        return await FetchThumbnailAsync(iu, uri, cancellationToken);
                     }
 
                     if (mediaType.Contains("html"))
@@ -892,15 +949,21 @@ namespace onceandfuture
             if (easyUri != null)
             {
                 Log.FoundThumbnail(baseUrl, easyUri.Uri, easyUri.Kind);
-                return await FetchThumbnailAsync(easyUri.Uri, baseUrl, cancellationToken);
+                return await FetchThumbnailAsync(easyUri, baseUrl, cancellationToken);
             }
 
-            Uri[] imageUrls =
+            IEnumerable<Uri> distinctSrc =
                 (from element in document.GetElementsByTagName("img")
                  let src = MakeThumbnailUrl(baseUrl, element.Attributes["src"]?.Value)
                  where src != null
-                 select src).ToArray();
+                 select src).Distinct();
 
+            ImageUrl[] imageUrls =
+                (from src in distinctSrc
+                 select new ImageUrl { Uri = src, Kind = "ImgTag" }).ToArray();
+
+            Stopwatch loadTimer = Stopwatch.StartNew();
+            Log.BeginGetThumbsFromSoup(baseUrl, imageUrls.Length);
             var potentialThumbnails = new Task<Image>[imageUrls.Length];
             for (int i = 0; i < potentialThumbnails.Length; i++)
             {
@@ -908,41 +971,55 @@ namespace onceandfuture
             }
 
             Image[] images = await Task.WhenAll(potentialThumbnails);
+            Log.EndGetThumbsFromSoup(baseUrl, imageUrls.Length, loadTimer);
 
-            Uri bestImageUrl = null;
+            ImageUrl bestImageUrl = null;
             Image bestImage = null;
             int bestArea = 0;
             for (int i = 0; i < images.Length; i++)
             {
+                ImageUrl imageUrl = imageUrls[i];
                 Image image = images[i];
                 if (image == null) { continue; } // It was invalid.
 
                 int width = image.Width;
                 int height = image.Height;
                 int area = width * height;
-                if (area < 5000) { continue; } // Too small!
+                if (area < 5000)
+                {
+                    Log.ThumbnailTooSmall(baseUrl, imageUrl.Uri, imageUrl.Kind, area);
+                    CacheError(imageUrl, "Too Small");
+                    continue;
+                }
 
                 float ratio = (float)Math.Max(width, height) / (float)Math.Min(width, height);
-                if (ratio > 2.25f) { continue; } // Too oblong!
-
-                if (imageUrls[i].AbsolutePath.Contains("sprite")) { area /= 10; } // Penalize images named "sprite"
-
-                Log.ConsideringImage(baseUrl, imageUrls[i], area, ratio);
-                if (area > bestArea)
+                if (ratio > 2.25f)
                 {
-                    if (bestImage != null) { bestImage.Dispose(); }
+                    Log.ThumbnailTooOblong(baseUrl, imageUrl.Uri, imageUrl.Kind, ratio);
+                    CacheError(imageUrl, "Too Oblong");
+                    continue;
+                }
+
+                if (imageUrl.Uri.AbsolutePath.Contains("sprite")) { ratio /= 10; } // Penalize images named "sprite"
+
+                Log.ConsideringImage(baseUrl, imageUrl.Uri, imageUrl.Kind, area, ratio);
+                if (ratio > bestArea)
+                {
                     bestArea = area;
                     bestImage = image;
                     bestImageUrl = imageUrls[i];
-                    Log.NewBestImage(baseUrl, bestImageUrl, area, ratio);
-                }
-                else
-                {
-                    image.Dispose();
+                    Log.NewBestImage(baseUrl, bestImageUrl.Uri, bestImageUrl.Kind, area, ratio);
                 }
             }
 
-            if (bestImage != null) { Log.FoundThumbnail(baseUrl, bestImageUrl, "ImgTag"); }
+            if (bestImage != null)
+            {
+                Log.FoundThumbnail(baseUrl, bestImageUrl.Uri, bestImageUrl.Kind);
+            }
+            else
+            {
+                Log.NoThumbnailFound(baseUrl);
+            }
             return bestImage;
         }
 
@@ -995,21 +1072,36 @@ namespace onceandfuture
                 select new ImageUrl { Uri = thumbnail, Kind = "OpenGraph" };
         }
 
+        static readonly TimeSpan ErrorCacheLifetime = TimeSpan.FromSeconds(30);
+        static readonly TimeSpan SuccessCacheLifetime = TimeSpan.FromHours(1);
+
         static async Task<Image> FetchThumbnailAsync(
-            Uri imageUri,
+            ImageUrl imageUrl,
             Uri referrer,
             CancellationToken cancellationToken)
         {
             try
             {
-                var request = new HttpRequestMessage(HttpMethod.Get, imageUri);
-                if (referrer != null) { request.Headers.Referrer = referrer; }
+                object cachedObject = imageCache.Get(imageUrl.Uri.AbsoluteUri);
+                if (cachedObject is string)
+                {
+                    Log.ThumbnailErrorCacheHit(referrer, imageUrl.Uri, cachedObject);
+                    return null;
+                }
+                if (cachedObject is Image)
+                {
+                    Log.ThumbnailSuccessCacheHit(referrer, imageUrl.Uri);
+                    return (Image)cachedObject;
+                }
 
+                var request = new HttpRequestMessage(HttpMethod.Get, imageUrl.Uri);
+                if (referrer != null) { request.Headers.Referrer = referrer; }
 
                 HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
                 if (!response.IsSuccessStatusCode)
                 {
-                    Log.ThumbnailErrorResponse(referrer, imageUri, response);
+                    Log.ThumbnailErrorResponse(referrer, imageUrl.Uri, imageUrl.Kind, response);
+                    CacheError(imageUrl, response.ReasonPhrase);
                     return null;
                 }
 
@@ -1018,21 +1110,52 @@ namespace onceandfuture
                 {
                     try
                     {
-                        Image streamImage = Image.FromStream(stream);
-                        // Need to duplicate because reasons. (Thanks System.Drawing!)
-                        return new Bitmap(streamImage);
+                        using (Image streamImage = Image.FromStream(stream))
+                        {
+                            // Need to duplicate because reasons. (Thanks System.Drawing!)
+                            return CacheSuccess(imageUrl, new Bitmap(streamImage));
+                        }
                     }
                     catch (ArgumentException ae)
                     {
-                        Log.InvalidThumbnailImageFormat(referrer, imageUri, ae);
+                        Log.InvalidThumbnailImageFormat(referrer, imageUrl.Uri, imageUrl.Kind, ae);
+                        CacheError(imageUrl, ae.Message);
                         return null;
                     }
                 }
             }
             catch (HttpRequestException hre)
             {
-                Log.ThumbnailNetworkError(referrer, imageUri, hre);
+                Log.ThumbnailNetworkError(referrer, imageUrl.Uri, imageUrl.Kind, hre);
+                CacheError(imageUrl, hre.Message);
                 return null;
+            }
+        }
+
+        static Image CacheSuccess(ImageUrl imageUrl, Image image)
+        {
+            // Bypass the cache if the image is too big.
+            if (image.Width * image.Height >= 5000) { return image; }
+
+            CacheItem existing = imageCache.AddOrGetExisting(
+                new CacheItem(imageUrl.Uri.AbsoluteUri, image),
+                new CacheItemPolicy { AbsoluteExpiration = DateTimeOffset.UtcNow + SuccessCacheLifetime });
+            if (existing == null) { return image; }
+
+            // N.B.: If we raced with another success this will just return the successful image. If we raced with
+            //       a failure this will return null, as appropriate.
+            image.Dispose();
+            return existing.Value as Image;
+        }
+
+        static void CacheError(ImageUrl imageUrl, string message)
+        {
+            CacheItem existing = imageCache.AddOrGetExisting(
+                new CacheItem(imageUrl.Uri.AbsoluteUri, message),
+                new CacheItemPolicy { AbsoluteExpiration = DateTimeOffset.UtcNow + ErrorCacheLifetime });
+            if (existing != null)
+            {
+                existing.Value = message;
             }
         }
 
@@ -1040,7 +1163,7 @@ namespace onceandfuture
         {
             Uri thumbnail;
 
-            if (src == null) { return null; }
+            if (String.IsNullOrWhiteSpace(src)) { return null; }
             if (!Uri.TryCreate(src, UriKind.RelativeOrAbsolute, out thumbnail)) { return null; }
             if (!thumbnail.IsAbsoluteUri)
             {
@@ -1072,7 +1195,6 @@ namespace onceandfuture
             public string Kind;
             public Uri Uri;
         }
-
     }
 
     class FetchResult
@@ -1301,6 +1423,11 @@ namespace onceandfuture
 
         static RiverFeed HandleAtomLink(RiverFeed feed, XElement link)
         {
+            if (link.Attribute(XNames.Atom.Rel) == null)
+            {
+                feed = new RiverFeed(feed, websiteUrl: link.Attribute(XNames.Atom.Href)?.Value);
+            }
+
             if (
                 link.Attribute(XNames.Atom.Rel)?.Value == "alternate"
                 && link.Attribute(XNames.Atom.Type)?.Value == "text/html"
@@ -1314,6 +1441,11 @@ namespace onceandfuture
 
         static RiverItem HandleAtomLink(RiverItem item, XElement link)
         {
+            if (link.Attribute(XNames.Atom.Rel) == null)
+            {
+                item = new RiverItem(item, link: link.Attribute(XNames.Atom.Href)?.Value);
+            }
+
             if (link.Attribute(XNames.Atom.Rel)?.Value == "alternate" &&
                 link.Attribute(XNames.Atom.Type)?.Value == "text/html")
             {
@@ -1431,11 +1563,14 @@ namespace onceandfuture
         {
             if (feed == null) { return null; }
 
+            Stopwatch loadTimer = Stopwatch.StartNew();
+            Log.BeginLoadThumbnails(feed);
             Task<RiverItem>[] itemTasks =
                 (from item in feed.Items
                  select ThumbnailExtractor.GetItemThumbnailAsync(item, feed.FeedUrl, token)).ToArray();
 
             RiverItem[] items = await Task.WhenAll(itemTasks);
+            Log.EndLoadThumbnails(feed, items, loadTimer);
             return new RiverFeed(feed, items: items);
         }
 
@@ -1582,25 +1717,32 @@ namespace onceandfuture
                      where elem.Attribute(XNames.OPML.XmlUrl) != null
                      select OpmlEntry.FromXml(elem)).ToList();
 
-                foreach (var feed in feeds)
-                {
-                    Console.WriteLine("Working on {0} next...", feed.XmlUrl);
-                    Console.ReadLine();
-                    FetchAndUpdateRiver(feed.XmlUrl, CancellationToken.None).Wait();
-                    Console.WriteLine("Done.");
-                    Console.ReadLine();
-                }
+                //foreach (var feed in feeds)
+                //{
+                //    //if (feed.XmlUrl.Host != "totalpartydeath.typepad.com") { continue; }
+                //    Console.WriteLine("Working on {0} next...", feed.XmlUrl);
+                //    Console.ReadLine();
+                //    FetchAndUpdateRiver(feed.XmlUrl, CancellationToken.None).Wait();
+                //    Console.WriteLine("Done.");
+                //    Console.ReadLine();
+                //}
 
-                //var parses =
-                //    from entry in feeds
-                //    select new
-                //    {
-                //        url = entry.XmlUrl,
-                //        task = FetchAndUpdateRiver(entry.XmlUrl, CancellationToken.None),
-                //    };
+                Stopwatch loadTimer = Stopwatch.StartNew();
+                Console.WriteLine("Starting {0} feeds...", feeds.Count);
+                var parses =
+                    (from entry in feeds
+                     select new
+                     {
+                         url = entry.XmlUrl,
+                         task = FetchAndUpdateRiver(entry.XmlUrl, CancellationToken.None),
+                     }).ToList();
+                Task.WaitAll(parses.Select(p => p.task).ToArray());
+                Console.WriteLine("Refreshed {0} feeds in {1}", feeds.Count, loadTimer.Elapsed);
 
                 //Uri uri = new Uri("http://davepeck.org/feed/");
                 //var parses = new[] { new { url = uri, task = FetchAndUpdateRiver(uri, CancellationToken.None) } };
+
+
 
                 //foreach (var parse in parses.ToList())
                 //{
