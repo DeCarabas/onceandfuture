@@ -891,9 +891,22 @@ namespace onceandfuture
             });
         }
 
-        // TODO: Thumbs only for new items.
+        public static async Task<RiverFeed> LoadItemThumbnailsAsync(RiverFeed feed, CancellationToken token)
+        {
+            if (feed == null) { return null; }
 
-        public static async Task<RiverItem> GetItemThumbnailAsync(RiverItem item, Uri baseUri, CancellationToken token)
+            Stopwatch loadTimer = Stopwatch.StartNew();
+            Log.BeginLoadThumbnails(feed);
+            Task<RiverItem>[] itemTasks =
+                (from item in feed.Items
+                 select ThumbnailExtractor.GetItemThumbnailAsync(item, feed.FeedUrl, token)).ToArray();
+
+            RiverItem[] items = await Task.WhenAll(itemTasks);
+            Log.EndLoadThumbnails(feed, items, loadTimer);
+            return new RiverFeed(feed, items: items);
+        }
+
+        static async Task<RiverItem> GetItemThumbnailAsync(RiverItem item, Uri baseUri, CancellationToken token)
         {
             if (item.Thumbnail != null) { return item; }
             if (item.Link == null) { return item; }
@@ -921,7 +934,7 @@ namespace onceandfuture
             );
         }
 
-        private static ImageData MakeThumbnail(ImageData sourceImage)
+        static ImageData MakeThumbnail(ImageData sourceImage)
         {
             // TODO: Crop square using entropy, &c.
             return sourceImage;
@@ -929,30 +942,36 @@ namespace onceandfuture
 
         static async Task<ImageData> FindThumbnailAsync(Uri uri, CancellationToken cancellationToken)
         {
-            HttpResponseMessage response = await client.GetAsync(uri);
-            using (response)
+            try
             {
-                if (response.IsSuccessStatusCode)
+                HttpResponseMessage response = await client.GetAsync(uri);
+                using (response)
                 {
-                    string mediaType = response.Content.Headers.ContentType?.MediaType ?? "";
-                    if (mediaType.Contains("image"))
+                    if (response.IsSuccessStatusCode)
                     {
-                        var iu = new ImageUrl { Uri = uri, Kind = "Direct" };
-                        return await FetchThumbnailAsync(iu, uri, cancellationToken);
-                    }
-
-                    if (mediaType.Contains("html"))
-                    {
-                        using (Stream stream = await response.Content.ReadAsStreamAsync())
+                        string mediaType = response.Content.Headers.ContentType?.MediaType ?? "";
+                        if (mediaType.Contains("image"))
                         {
-                            var parser = new HtmlParser();
-                            IHtmlDocument document = await parser.ParseAsync(stream);
+                            var iu = new ImageUrl { Uri = uri, Kind = "Direct" };
+                            return await FetchThumbnailAsync(iu, uri, cancellationToken);
+                        }
 
-                            return await FindThumbnailInSoupAsync(uri, document, cancellationToken);
+                        if (mediaType.Contains("html"))
+                        {
+                            using (Stream stream = await response.Content.ReadAsStreamAsync())
+                            {
+                                var parser = new HtmlParser();
+                                IHtmlDocument document = await parser.ParseAsync(stream);
+
+                                return await FindThumbnailInSoupAsync(uri, document, cancellationToken);
+                            }
                         }
                     }
                 }
             }
+            // TODO: Logg errors
+            catch (TaskCanceledException) { }
+            catch (HttpRequestException) { }
 
             return null;
         }
@@ -1102,7 +1121,7 @@ namespace onceandfuture
             ImageUrl imageUrl,
             Uri referrer,
             CancellationToken cancellationToken)
-        {            
+        {
             try
             {
                 object cachedObject = imageCache.Get(imageUrl.Uri.AbsoluteUri);
@@ -1147,7 +1166,7 @@ namespace onceandfuture
                     }
                 }
             }
-            catch(TaskCanceledException tce)
+            catch (TaskCanceledException tce)
             {
                 Log.ThumbnailTimeout(referrer, imageUrl.Uri, imageUrl.Kind);
                 CacheError(imageUrl, tce.Message);
@@ -1302,7 +1321,6 @@ namespace onceandfuture
 
         static RiverFeedParser()
         {
-            // TODO: Caching.
             HttpClientHandler httpClientHandler = new HttpClientHandler();
             httpClientHandler.AllowAutoRedirect = false;
 
@@ -1416,8 +1434,6 @@ namespace onceandfuture
 
                     string newEtag = response.Headers.ETag?.Tag;
                     DateTimeOffset? newLastModified = response.Content.Headers.LastModified;
-
-                    result = await LoadItemThumbnails(result, cancellationToken);
 
                     return new FetchResult(
                         feed: result,
@@ -1597,22 +1613,6 @@ namespace onceandfuture
             }
             return guid;
         }
-
-        static async Task<RiverFeed> LoadItemThumbnails(RiverFeed feed, CancellationToken token)
-        {
-            if (feed == null) { return null; }
-
-            Stopwatch loadTimer = Stopwatch.StartNew();
-            Log.BeginLoadThumbnails(feed);
-            Task<RiverItem>[] itemTasks =
-                (from item in feed.Items
-                 select ThumbnailExtractor.GetItemThumbnailAsync(item, feed.FeedUrl, token)).ToArray();
-
-            RiverItem[] items = await Task.WhenAll(itemTasks);
-            Log.EndLoadThumbnails(feed, items, loadTimer);
-            return new RiverFeed(feed, items: items);
-        }
-
     }
 
     static class RiverThumbnailStore
@@ -1654,7 +1654,6 @@ namespace onceandfuture
     {
         static string GetNameForUri(Uri feedUri)
         {
-            // TODO: Normalize URI?
             return Util.HashString(feedUri.AbsoluteUri);
         }
 
@@ -1715,6 +1714,7 @@ namespace onceandfuture
                 if (newItems.Count > 0)
                 {
                     feed = new RiverFeed(feed, items: newItems);
+                    feed = await ThumbnailExtractor.LoadItemThumbnailsAsync(feed, cancellationToken);
                     updatedFeeds = new UpdatedFeeds(
                         river.UpdatedFeeds,
                         feeds: river.UpdatedFeeds.Feeds.Insert(0, feed));
