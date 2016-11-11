@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -109,6 +111,42 @@ namespace onceandfuture
                 loadTimer.ElapsedMilliseconds,
                 response.Headers.Location));
         }
+
+        public static void ConsideringImage(Uri baseUrl, Uri uri, int area, float ratio)
+        {
+            Trace.WriteLine(
+                String.Format("{0}: Considering image {1} (area: {2}, ratio: {3})", baseUrl, uri, area, ratio)
+            );
+        }
+
+        public static void NewBestImage(Uri baseUrl, Uri uri, int area, float ratio)
+        {
+            Trace.WriteLine(
+                String.Format("{0}: New best image: {1} (area: {2}, ratio: {3})", baseUrl, uri, area, ratio)
+            );
+        }
+
+        public static void ThumbnailErrorResponse(Uri baseUrl, Uri imageUri, HttpResponseMessage response)
+        {
+            Trace.WriteLine(String.Format(
+                "{0}: {1}: Error From Host: {2} {3}", baseUrl, imageUri, response.StatusCode, response.ReasonPhrase
+            ));
+        }
+
+        public static void InvalidThumbnailImageFormat(Uri baseUrl, Uri imageUri, ArgumentException ae)
+        {
+            Trace.WriteLine(String.Format("{0}: {1}: Is not a valid image ({2})", baseUrl, imageUri, ae.Message));
+        }
+
+        internal static void ThumbnailNetworkError(Uri baseUrl, Uri imageUri, HttpRequestException hre)
+        {
+            Trace.WriteLine(String.Format("{0}: {1}: Network Error: {2}", baseUrl, imageUri, hre.Message));
+        }
+
+        internal static void FoundThumbnail(Uri baseUrl, Uri uri, string kind)
+        {
+            Trace.WriteLine(String.Format("{0}: Found thumbnail {1} ({2})", baseUrl, uri, kind));
+        }
     }
 
     public static class Util
@@ -163,6 +201,11 @@ namespace onceandfuture
             {"jan", 1}, {"feb", 2}, {"mar", 3}, {"apr", 4}, {"may", 5}, {"jun", 6},
             {"jul", 7}, {"aug", 8}, {"sep", 9}, {"oct", 10}, {"nov", 11}, {"dec", 12},
         };
+
+        public static IEnumerable<TItem> ConcatSequence<TItem>(params IEnumerable<TItem>[] sequences)
+        {
+            return sequences.SelectMany(x => x);
+        }
 
         public static string HashString(string input)
         {
@@ -745,6 +788,293 @@ namespace onceandfuture
         public RiverFeedMeta Metadata { get; }
     }
 
+    static class ThumbnailExtractor
+    {
+        static readonly HttpClient client;
+
+        static readonly string[] BadThumbnails = new string[]
+        {
+            "addgoogle2.gif",
+            "blank.jpg",
+        };
+
+        static readonly string[] BadThumbnailHosts = new string[]
+        {
+            "amazon-adsystem.com",
+            "doubleclick.net",
+            "googleadservices.com",
+            "gravatar.com",
+        };
+
+        static ThumbnailExtractor()
+        {
+            // TODO: Caching.
+            client = new HttpClient();
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
+        }
+
+        public static async Task<RiverItem> GetItemThumbnailAsync(
+            RiverItem item, Uri baseUri, CancellationToken token)
+        {
+            if (item.Thumbnail != null) { return item; }
+            if (item.Link == null) { return null; }
+
+            Uri itemLink;
+            if (!Uri.TryCreate(item.Link, UriKind.RelativeOrAbsolute, out itemLink)) { return null; }
+            if (!itemLink.IsAbsoluteUri)
+            {
+                Uri relativeUri = itemLink;
+                if (!Uri.TryCreate(relativeUri, baseUri, out itemLink)) { return null; }
+            }
+
+            Image sourceImage = await FindThumbnailAsync(itemLink, token);
+            if (sourceImage == null) { return item; }
+            Image thumbnail = MakeThumbnail(sourceImage);
+
+            Uri thumbnailUri = await RiverThumbnailStore.StoreImage(thumbnail);
+            return new RiverItem(
+                item,
+                thumbnail: new RiverItemThumbnail(
+                    url: thumbnailUri.AbsoluteUri,
+                    width: thumbnail.Width,
+                    height: thumbnail.Height
+                )
+            );
+        }
+
+        private static Image MakeThumbnail(Image sourceImage)
+        {
+            // TODO: Crop square using entropy, &c.
+            return sourceImage;
+        }
+
+        static async Task<Image> FindThumbnailAsync(Uri uri, CancellationToken cancellationToken)
+        {
+            HttpResponseMessage response = await client.GetAsync(uri);
+            using (response)
+            {
+                if (response.IsSuccessStatusCode)
+                {
+                    string mediaType = response.Content.Headers.ContentType?.MediaType ?? "";
+                    if (mediaType.Contains("image"))
+                    {
+                        return await FetchThumbnailAsync(uri, null, cancellationToken);
+                    }
+
+                    if (mediaType.Contains("html"))
+                    {
+                        using (Stream stream = await response.Content.ReadAsStreamAsync())
+                        {
+                            var parser = new HtmlParser();
+                            IHtmlDocument document = await parser.ParseAsync(stream);
+
+                            return await FindThumbnailInSoupAsync(uri, document, cancellationToken);
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        static async Task<Image> FindThumbnailInSoupAsync(
+            Uri baseUrl, IHtmlDocument document, CancellationToken cancellationToken)
+        {
+            // These get preferential treatment; if we find them then great otherwise we have to search the whole doc.
+            // (Note that they also still have to pass the URL filter.)
+            ImageUrl easyUri = Util.ConcatSequence(
+                ExtractOpenGraphImageUrls(baseUrl, document),
+                ExtractTwitterImageUrls(baseUrl, document),
+                ExtractLinkRelImageUrls(baseUrl, document),
+                ExtractKnownGoodnessImageUrls(baseUrl, document)
+            ).FirstOrDefault();
+
+            if (easyUri != null)
+            {
+                Log.FoundThumbnail(baseUrl, easyUri.Uri, easyUri.Kind);
+                return await FetchThumbnailAsync(easyUri.Uri, baseUrl, cancellationToken);
+            }
+
+            Uri[] imageUrls =
+                (from element in document.GetElementsByTagName("img")
+                 let src = MakeThumbnailUrl(baseUrl, element.Attributes["src"]?.Value)
+                 where src != null
+                 select src).ToArray();
+
+            var potentialThumbnails = new Task<Image>[imageUrls.Length];
+            for (int i = 0; i < potentialThumbnails.Length; i++)
+            {
+                potentialThumbnails[i] = FetchThumbnailAsync(imageUrls[i], baseUrl, cancellationToken);
+            }
+
+            Image[] images = await Task.WhenAll(potentialThumbnails);
+
+            Uri bestImageUrl = null;
+            Image bestImage = null;
+            int bestArea = 0;
+            for (int i = 0; i < images.Length; i++)
+            {
+                Image image = images[i];
+                if (image == null) { continue; } // It was invalid.
+
+                int width = image.Width;
+                int height = image.Height;
+                int area = width * height;
+                if (area < 5000) { continue; } // Too small!
+
+                float ratio = (float)Math.Max(width, height) / (float)Math.Min(width, height);
+                if (ratio > 2.25f) { continue; } // Too oblong!
+
+                if (imageUrls[i].AbsolutePath.Contains("sprite")) { area /= 10; } // Penalize images named "sprite"
+
+                Log.ConsideringImage(baseUrl, imageUrls[i], area, ratio);
+                if (area > bestArea)
+                {
+                    if (bestImage != null) { bestImage.Dispose(); }
+                    bestArea = area;
+                    bestImage = image;
+                    bestImageUrl = imageUrls[i];
+                    Log.NewBestImage(baseUrl, bestImageUrl, area, ratio);
+                }
+                else
+                {
+                    image.Dispose();
+                }
+            }
+
+            if (bestImage != null) { Log.FoundThumbnail(baseUrl, bestImageUrl, "ImgTag"); }
+            return bestImage;
+        }
+
+        static IEnumerable<ImageUrl> ExtractKnownGoodnessImageUrls(Uri baseUrl, IHtmlDocument document)
+        {
+            IElement element = document.QuerySelector("section.comic-art");
+            if (element != null)
+            {
+                Uri uri = MakeThumbnailUrl(baseUrl, element.QuerySelector("img")?.GetAttribute("src"));
+                if (uri != null) { yield return new ImageUrl { Uri = uri, Kind = "KnownGood" }; }
+            }
+        }
+
+        static IEnumerable<ImageUrl> ExtractLinkRelImageUrls(Uri baseUrl, IHtmlDocument document)
+        {
+            return
+                from element in document.All
+                where element.LocalName == "link"
+                where element.Attributes["rel"]?.Value == "image_src"
+                let thumbnail = MakeThumbnailUrl(baseUrl, element.Attributes["href"]?.Value)
+                where thumbnail != null
+                select new ImageUrl { Uri = thumbnail, Kind = "RelImage" };
+        }
+
+        static IEnumerable<ImageUrl> ExtractTwitterImageUrls(Uri baseUrl, IHtmlDocument document)
+        {
+            return
+                from element in document.All
+                where element.LocalName == "meta"
+                where
+                    element.Attributes["name"]?.Value == "twitter:image" ||
+                    element.Attributes["property"]?.Value == "twitter:image"
+                let thumbnail = MakeThumbnailUrl(baseUrl, element.Attributes["content"]?.Value)
+                where thumbnail != null
+                select new ImageUrl { Uri = thumbnail, Kind = "TwitterImage" };
+        }
+
+        static IEnumerable<ImageUrl> ExtractOpenGraphImageUrls(Uri baseUrl, IHtmlDocument document)
+        {
+            return
+                from element in document.All
+                where element.LocalName == "meta"
+                where
+                    element.Attributes["name"]?.Value == "og:image" ||
+                    element.Attributes["property"]?.Value == "og:image" ||
+                    element.Attributes["name"]?.Value == "og:image:url" ||
+                    element.Attributes["property"]?.Value == "og:image:url"
+                let thumbnail = MakeThumbnailUrl(baseUrl, element.Attributes["content"]?.Value)
+                where thumbnail != null
+                select new ImageUrl { Uri = thumbnail, Kind = "OpenGraph" };
+        }
+
+        static async Task<Image> FetchThumbnailAsync(
+            Uri imageUri,
+            Uri referrer,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                var request = new HttpRequestMessage(HttpMethod.Get, imageUri);
+                if (referrer != null) { request.Headers.Referrer = referrer; }
+
+
+                HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    Log.ThumbnailErrorResponse(referrer, imageUri, response);
+                    return null;
+                }
+
+                await response.Content.LoadIntoBufferAsync();
+                using (var stream = await response.Content.ReadAsStreamAsync())
+                {
+                    try
+                    {
+                        Image streamImage = Image.FromStream(stream);
+                        // Need to duplicate because reasons. (Thanks System.Drawing!)
+                        return new Bitmap(streamImage);
+                    }
+                    catch (ArgumentException ae)
+                    {
+                        Log.InvalidThumbnailImageFormat(referrer, imageUri, ae);
+                        return null;
+                    }
+                }
+            }
+            catch (HttpRequestException hre)
+            {
+                Log.ThumbnailNetworkError(referrer, imageUri, hre);
+                return null;
+            }
+        }
+
+        static Uri MakeThumbnailUrl(Uri baseUrl, string src)
+        {
+            Uri thumbnail;
+
+            if (src == null) { return null; }
+            if (!Uri.TryCreate(src, UriKind.RelativeOrAbsolute, out thumbnail)) { return null; }
+            if (!thumbnail.IsAbsoluteUri)
+            {
+                Uri relativeUrl = thumbnail;
+                if (!Uri.TryCreate(baseUrl, relativeUrl, out thumbnail)) { return null; }
+            }
+
+            for (int i = 0; i < BadThumbnails.Length; i++)
+            {
+                if (thumbnail.AbsolutePath.EndsWith(BadThumbnails[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    return null;
+                }
+            }
+
+            for (int i = 0; i < BadThumbnailHosts.Length; i++)
+            {
+                if (thumbnail.Host.EndsWith(BadThumbnailHosts[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    return null;
+                }
+            }
+
+            return thumbnail;
+        }
+
+        class ImageUrl
+        {
+            public string Kind;
+            public Uri Uri;
+        }
+
+    }
+
     class FetchResult
     {
         public FetchResult(
@@ -822,6 +1152,7 @@ namespace onceandfuture
 
         static RiverFeedParser()
         {
+            // TODO: Caching.
             HttpClientHandler httpClientHandler = new HttpClientHandler();
             httpClientHandler.AllowAutoRedirect = false;
 
@@ -935,6 +1266,8 @@ namespace onceandfuture
 
                     string newEtag = response.Headers.ETag?.Tag;
                     DateTimeOffset? newLastModified = response.Content.Headers.LastModified;
+
+                    result = await LoadItemThumbnails(result, cancellationToken);
 
                     return new FetchResult(
                         feed: result,
@@ -1066,7 +1399,7 @@ namespace onceandfuture
             }
 
             if (ri.PermaLink == null) { ri = new RiverItem(ri, permaLink: ri.Link); }
-            if (ri.Id == null) { ri = new RiverItem(ri, id: CreateId(ri)); }
+            if (ri.Id == null) { ri = new RiverItem(ri, id: CreateItemId(ri)); }
             if (String.IsNullOrWhiteSpace(ri.Title))
             {
                 string title = null;
@@ -1076,14 +1409,10 @@ namespace onceandfuture
 
                 if (title != null) { ri = new RiverItem(ri, title: title); }
             }
-            if (ri.Thumbnail == null)
-            {
-                // Load the thumbnail.
-            }
             return ri;
         }
 
-        static string CreateId(RiverItem item)
+        static string CreateItemId(RiverItem item)
         {
             var guid = "";
             if (item.PubDate != null) { guid += item.PubDate.ToString(); }
@@ -1096,6 +1425,51 @@ namespace onceandfuture
                 guid = Convert.ToBase64String(hash);
             }
             return guid;
+        }
+
+        static async Task<RiverFeed> LoadItemThumbnails(RiverFeed feed, CancellationToken token)
+        {
+            if (feed == null) { return null; }
+
+            Task<RiverItem>[] itemTasks =
+                (from item in feed.Items
+                 select ThumbnailExtractor.GetItemThumbnailAsync(item, feed.FeedUrl, token)).ToArray();
+
+            RiverItem[] items = await Task.WhenAll(itemTasks);
+            return new RiverFeed(feed, items: items);
+        }
+
+    }
+
+    static class RiverThumbnailStore
+    {
+        public static async Task<Uri> StoreImage(Image image)
+        {
+            MemoryStream stream = new MemoryStream();
+            image.Save(stream, ImageFormat.Png);
+
+            stream.Position = 0;
+            byte[] hash = SHA1.Create().ComputeHash(stream);
+            string fileName = Convert.ToBase64String(hash).Replace('/', '-') + ".png";
+            for (int i = 0; i < 3; i++)
+            {
+                if (File.Exists(fileName)) { break; }
+                try
+                {
+                    using (FileStream outputFile = File.Create(fileName))
+                    {
+                        stream.Position = 0;
+                        await stream.CopyToAsync(outputFile);
+                    }
+                    break;
+                }
+                catch (IOException)
+                {
+                    await Task.Delay(100);
+                }
+            }
+
+            return new Uri(Path.GetFullPath(fileName));
         }
     }
 
@@ -1198,6 +1572,8 @@ namespace onceandfuture
         {
             try
             {
+                Trace.Listeners.Add(new ConsoleTraceListener());
+
                 XDocument doc = XDocument.Load(@"C:\Users\John\Downloads\NewsBlur-DeCarabas-2016-11-08");
                 XElement body = doc.Root.Element(XNames.OPML.Body);
 
@@ -1206,28 +1582,37 @@ namespace onceandfuture
                      where elem.Attribute(XNames.OPML.XmlUrl) != null
                      select OpmlEntry.FromXml(elem)).ToList();
 
-                var parses =
-                    from entry in feeds
-                    select new
-                    {
-                        url = entry.XmlUrl,
-                        task = FetchAndUpdateRiver(entry.XmlUrl, CancellationToken.None),
-                    };
+                foreach (var feed in feeds)
+                {
+                    Console.WriteLine("Working on {0} next...", feed.XmlUrl);
+                    Console.ReadLine();
+                    FetchAndUpdateRiver(feed.XmlUrl, CancellationToken.None).Wait();
+                    Console.WriteLine("Done.");
+                    Console.ReadLine();
+                }
+
+                //var parses =
+                //    from entry in feeds
+                //    select new
+                //    {
+                //        url = entry.XmlUrl,
+                //        task = FetchAndUpdateRiver(entry.XmlUrl, CancellationToken.None),
+                //    };
 
                 //Uri uri = new Uri("http://davepeck.org/feed/");
                 //var parses = new[] { new { url = uri, task = FetchAndUpdateRiver(uri, CancellationToken.None) } };
 
-                foreach (var parse in parses.ToList())
-                {
-                    parse.task.Wait();
+                //foreach (var parse in parses.ToList())
+                //{
+                //    parse.task.Wait();
 
-                    Console.WriteLine(parse.url);
-                    foreach (RiverFeed feed in parse.task.Result.UpdatedFeeds.Feeds)
-                    {
-                        DumpFeed(feed);
-                    }
-                    Console.ReadLine();
-                }
+                //    //Console.WriteLine(parse.url);
+                //    //foreach (RiverFeed feed in parse.task.Result.UpdatedFeeds.Feeds)
+                //    //{
+                //    //    DumpFeed(feed);
+                //    //}
+                //    //Console.ReadLine();
+                //}
             }
             catch (Exception e)
             {
