@@ -204,6 +204,21 @@ namespace onceandfuture
         {
             Trace.TraceError("{0}: {1} ({2}): Timeout", baseUrl, imageUri, kind);
         }
+
+        public static void FindThumbnailNetworkError(Uri uri, HttpRequestException hre)
+        {
+            Trace.TraceError("{0}: Network Error: {1}", uri, hre.Message);
+        }
+
+        public static void FindThumbnailTimeout(Uri uri)
+        {
+            Trace.TraceError("{0}: Timeout", uri);
+        }
+
+        public static void FindThumbnailServerError(Uri uri, HttpResponseMessage response)
+        {
+            Trace.TraceError("{0}: Server error: {1} {2}", uri, response.StatusCode, response.ReasonPhrase);
+        }
     }
 
     public static class Util
@@ -947,31 +962,39 @@ namespace onceandfuture
                 HttpResponseMessage response = await client.GetAsync(uri);
                 using (response)
                 {
-                    if (response.IsSuccessStatusCode)
+                    if (!response.IsSuccessStatusCode)
                     {
-                        string mediaType = response.Content.Headers.ContentType?.MediaType ?? "";
-                        if (mediaType.Contains("image"))
-                        {
-                            var iu = new ImageUrl { Uri = uri, Kind = "Direct" };
-                            return await FetchThumbnailAsync(iu, uri, cancellationToken);
-                        }
+                        Log.FindThumbnailServerError(uri, response);
+                        return null;
+                    }
 
-                        if (mediaType.Contains("html"))
-                        {
-                            using (Stream stream = await response.Content.ReadAsStreamAsync())
-                            {
-                                var parser = new HtmlParser();
-                                IHtmlDocument document = await parser.ParseAsync(stream);
+                    string mediaType = response.Content.Headers.ContentType?.MediaType ?? "";
+                    if (mediaType.Contains("image"))
+                    {
+                        var iu = new ImageUrl { Uri = uri, Kind = "Direct" };
+                        return await FetchThumbnailAsync(iu, uri, cancellationToken);
+                    }
 
-                                return await FindThumbnailInSoupAsync(uri, document, cancellationToken);
-                            }
+                    if (mediaType.Contains("html"))
+                    {
+                        using (Stream stream = await response.Content.ReadAsStreamAsync())
+                        {
+                            var parser = new HtmlParser();
+                            IHtmlDocument document = await parser.ParseAsync(stream);
+
+                            return await FindThumbnailInSoupAsync(uri, document, cancellationToken);
                         }
                     }
                 }
             }
-            // TODO: Logg errors
-            catch (TaskCanceledException) { }
-            catch (HttpRequestException) { }
+            catch (TaskCanceledException)
+            {
+                Log.FindThumbnailTimeout(uri);
+            }
+            catch (HttpRequestException hre)
+            {
+                Log.FindThumbnailNetworkError(uri, hre);
+            }
 
             return null;
         }
