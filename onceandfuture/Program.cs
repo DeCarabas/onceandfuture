@@ -835,6 +835,19 @@ namespace onceandfuture
         public RiverFeedMeta Metadata { get; }
     }
 
+    class ImageData
+    {
+        public ImageData(int width, int height, byte[] data)
+        {
+            Width = width;
+            Height = height;
+            Data = data;
+        }
+        public int Width { get; }
+        public int Height { get; }
+        public byte[] Data { get; }
+    }
+
     static class ThumbnailExtractor
     {
         static readonly HttpClient client;
@@ -883,9 +896,9 @@ namespace onceandfuture
                 if (!Uri.TryCreate(relativeUri, baseUri, out itemLink)) { return item; }
             }
 
-            Image sourceImage = await FindThumbnailAsync(itemLink, token);
+            ImageData sourceImage = await FindThumbnailAsync(itemLink, token);
             if (sourceImage == null) { return item; }
-            Image thumbnail = MakeThumbnail(sourceImage);
+            ImageData thumbnail = MakeThumbnail(sourceImage);
 
             Uri thumbnailUri = await RiverThumbnailStore.StoreImage(thumbnail);
             return new RiverItem(
@@ -898,13 +911,13 @@ namespace onceandfuture
             );
         }
 
-        private static Image MakeThumbnail(Image sourceImage)
+        private static ImageData MakeThumbnail(ImageData sourceImage)
         {
             // TODO: Crop square using entropy, &c.
             return sourceImage;
         }
 
-        static async Task<Image> FindThumbnailAsync(Uri uri, CancellationToken cancellationToken)
+        static async Task<ImageData> FindThumbnailAsync(Uri uri, CancellationToken cancellationToken)
         {
             HttpResponseMessage response = await client.GetAsync(uri);
             using (response)
@@ -934,7 +947,7 @@ namespace onceandfuture
             return null;
         }
 
-        static async Task<Image> FindThumbnailInSoupAsync(
+        static async Task<ImageData> FindThumbnailInSoupAsync(
             Uri baseUrl, IHtmlDocument document, CancellationToken cancellationToken)
         {
             // These get preferential treatment; if we find them then great otherwise we have to search the whole doc.
@@ -964,22 +977,22 @@ namespace onceandfuture
 
             Stopwatch loadTimer = Stopwatch.StartNew();
             Log.BeginGetThumbsFromSoup(baseUrl, imageUrls.Length);
-            var potentialThumbnails = new Task<Image>[imageUrls.Length];
+            var potentialThumbnails = new Task<ImageData>[imageUrls.Length];
             for (int i = 0; i < potentialThumbnails.Length; i++)
             {
                 potentialThumbnails[i] = FetchThumbnailAsync(imageUrls[i], baseUrl, cancellationToken);
             }
 
-            Image[] images = await Task.WhenAll(potentialThumbnails);
+            ImageData[] images = await Task.WhenAll(potentialThumbnails);
             Log.EndGetThumbsFromSoup(baseUrl, imageUrls.Length, loadTimer);
 
             ImageUrl bestImageUrl = null;
-            Image bestImage = null;
+            ImageData bestImage = null;
             int bestArea = 0;
             for (int i = 0; i < images.Length; i++)
             {
                 ImageUrl imageUrl = imageUrls[i];
-                Image image = images[i];
+                ImageData image = images[i];
                 if (image == null) { continue; } // It was invalid.
 
                 int width = image.Width;
@@ -1075,7 +1088,7 @@ namespace onceandfuture
         static readonly TimeSpan ErrorCacheLifetime = TimeSpan.FromSeconds(30);
         static readonly TimeSpan SuccessCacheLifetime = TimeSpan.FromHours(1);
 
-        static async Task<Image> FetchThumbnailAsync(
+        static async Task<ImageData> FetchThumbnailAsync(
             ImageUrl imageUrl,
             Uri referrer,
             CancellationToken cancellationToken)
@@ -1088,10 +1101,10 @@ namespace onceandfuture
                     Log.ThumbnailErrorCacheHit(referrer, imageUrl.Uri, cachedObject);
                     return null;
                 }
-                if (cachedObject is Image)
+                if (cachedObject is ImageData)
                 {
                     Log.ThumbnailSuccessCacheHit(referrer, imageUrl.Uri);
-                    return (Image)cachedObject;
+                    return (ImageData)cachedObject;
                 }
 
                 var request = new HttpRequestMessage(HttpMethod.Get, imageUrl.Uri);
@@ -1105,15 +1118,15 @@ namespace onceandfuture
                     return null;
                 }
 
-                await response.Content.LoadIntoBufferAsync();
-                using (var stream = await response.Content.ReadAsStreamAsync())
+                byte[] imageBytes = await response.Content.ReadAsByteArrayAsync();
+                using (var stream = new MemoryStream(imageBytes))
                 {
                     try
                     {
                         using (Image streamImage = Image.FromStream(stream))
                         {
-                            // Need to duplicate because reasons. (Thanks System.Drawing!)
-                            return CacheSuccess(imageUrl, new Bitmap(streamImage));
+                            return CacheSuccess(
+                                imageUrl, new ImageData(streamImage.Width, streamImage.Height, imageBytes));
                         }
                     }
                     catch (ArgumentException ae)
@@ -1132,7 +1145,7 @@ namespace onceandfuture
             }
         }
 
-        static Image CacheSuccess(ImageUrl imageUrl, Image image)
+        static ImageData CacheSuccess(ImageUrl imageUrl, ImageData image)
         {
             // Bypass the cache if the image is too big.
             if (image.Width * image.Height >= 5000) { return image; }
@@ -1144,8 +1157,7 @@ namespace onceandfuture
 
             // N.B.: If we raced with another success this will just return the successful image. If we raced with
             //       a failure this will return null, as appropriate.
-            image.Dispose();
-            return existing.Value as Image;
+            return existing.Value as ImageData;
         }
 
         static void CacheError(ImageUrl imageUrl, string message)
@@ -1578,10 +1590,13 @@ namespace onceandfuture
 
     static class RiverThumbnailStore
     {
-        public static async Task<Uri> StoreImage(Image image)
+        public static async Task<Uri> StoreImage(ImageData image)
         {
             MemoryStream stream = new MemoryStream();
-            image.Save(stream, ImageFormat.Png);
+            using (Image source = Image.FromStream(new MemoryStream(image.Data)))
+            {
+                source.Save(stream, ImageFormat.Png);
+            }
 
             stream.Position = 0;
             byte[] hash = SHA1.Create().ComputeHash(stream);
