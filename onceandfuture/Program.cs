@@ -1070,6 +1070,7 @@ namespace onceandfuture
                 Log.ConsideringImage(baseUrl, imageUrl.Uri, imageUrl.Kind, area, ratio);
                 if (ratio > bestArea)
                 {
+                    if (bestImageUrl != null) { CacheError(bestImageUrl, "Not the best"); }
                     bestArea = area;
                     bestImage = image;
                     bestImageUrl = imageUrls[i];
