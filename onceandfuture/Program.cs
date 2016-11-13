@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
@@ -11,6 +12,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.Caching;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -873,6 +875,216 @@ namespace onceandfuture
         public byte[] Data { get; }
     }
 
+    static class EntropyCropper
+    {
+        const int MaximumSlice = 10;
+
+        static byte[] ToGreyscale(Bitmap image)
+        {
+            byte[] values = new byte[image.Width * image.Height];
+            int[] lineBuffer = new int[image.Width];
+            BitmapData data = image.LockBits(
+                new Rectangle(0, 0, image.Width, image.Height),
+                ImageLockMode.ReadOnly,
+                PixelFormat.Format32bppArgb); // Just... easiest?
+            try
+            {
+                // If stride is negative then we're bottom up.
+                int targetIdx, lineSize;
+                if (data.Stride < 0)
+                {
+                    targetIdx = (data.Height - 1) * data.Width;
+                    lineSize = -data.Width;
+                }
+                else
+                {
+                    targetIdx = 0;
+                    lineSize = data.Width;
+                }
+
+                int actualStride = Math.Abs(data.Stride);
+                for (int y = 0; y < data.Height; y++)
+                {
+                    IntPtr scanLine = data.Scan0 + (y * actualStride);
+                    Marshal.Copy(scanLine, lineBuffer, 0, lineBuffer.Length);
+
+                    for (int x = 0; x < data.Width; x++)
+                    {
+                        // Extract RGB.
+                        // AARRGGBB
+                        int pix = lineBuffer[x];
+                        var r = (byte)((0x00FF0000 & pix) >> 16);
+                        var g = (byte)((0x0000FF00 & pix) >> 8);
+                        var b = (byte)((0x000000FF & pix) >> 0);
+
+                        // This is a terrible intensity function, but it works.
+                        float i = (r + b + g) / (3.0f);
+
+                        var ii = (int)i;
+                        float ri = i - ii;
+                        if (ri > 0.5f)
+                        {
+                            ii += 1;
+                        }
+
+                        values[targetIdx + x] = (byte)ii;
+                    }
+                    targetIdx += lineSize;
+                }
+            }
+            finally
+            {
+                image.UnlockBits(data);
+            }
+            return values;
+        }
+
+        static double Entropy(byte[] pix, int stride, int[] hist, int left, int top, int right, int bottom)
+        {
+            Array.Clear(hist, 0, hist.Length);
+            for (int iy = top; iy < bottom; iy++)
+            {
+                int idx = (iy * stride) + left;
+                for (int ix = left; ix < right; ix++)
+                {
+                    hist[pix[idx]]++;
+                    idx++;
+                }
+            }
+
+            double sum = 0;
+
+            // In the math this is sum(hist), but that's weird because it's really just the area of the bitmap.
+            double area = (right - left) * (bottom - top);
+            for (int i = 0; i < hist.Length; i++)
+            {
+                if (hist[i] != 0)
+                {
+                    double v = ((double)hist[i]) / area;
+                    sum += v * Math.Log(v, 2.0);
+                }
+            }
+            return -sum;
+        }
+
+        static void CropVertical(byte[] pix, int width, int height, int targetHeight, out int top, out int bottom)
+        {
+            int[] hist = new int[256];
+            top = 0;
+            bottom = height;
+            while (bottom - top > targetHeight)
+            {
+                int sliceHeight = Math.Min((bottom - top) - targetHeight, MaximumSlice);
+
+                double topEntropy = Entropy(
+                    pix, width, hist,
+                    0, top,
+                    width, top + sliceHeight);
+
+                double bottomEntropy = Entropy(
+                    pix, width, hist,
+                    0, bottom - sliceHeight,
+                    width, bottom);
+                if (topEntropy < bottomEntropy)
+                {
+                    // Top has less entropy, cut it by moving top down.
+                    top += sliceHeight;
+                }
+                else
+                {
+                    // Bottom has less entropy, cut it by moving bottom up.
+                    bottom -= sliceHeight;
+                }
+            }
+        }
+
+        static void CropHorizontal(byte[] pix, int width, int height, int targetWidth, out int left, out int right)
+        {
+            int[] hist = new int[256];
+            left = 0;
+            right = width;
+            while (right - left > targetWidth)
+            {
+                int sliceWidth = Math.Min((right - left) - targetWidth, MaximumSlice);
+
+                double leftEntropy = Entropy(
+                    pix, width, hist,
+                    left, 0,
+                    left + sliceWidth, height);
+
+                double rightEntropy = Entropy(
+                    pix, width, hist,
+                    right - sliceWidth, 0,
+                    right, height);
+                if (leftEntropy < rightEntropy)
+                {
+                    // Left has less entropy, cut it by moving left.
+                    left += sliceWidth;
+                }
+                else
+                {
+                    // Right has less entropy, cut it by moving right.
+                    right -= sliceWidth;
+                }
+            }
+        }
+
+        static void CropSquare(
+            byte[] pix, int width, int height, out int left, out int top, out int right, out int bottom)
+        {
+            if (width > height)
+            {
+                top = 0; bottom = height;
+                CropHorizontal(pix, width, height, height, out left, out right);
+            }
+            else
+            {
+                left = 0; right = width;
+                CropVertical(pix, width, height, width, out top, out bottom);
+            }
+        }
+
+        public static Bitmap Crop(Bitmap image, int targetSize)
+        {
+            byte[] values = ToGreyscale(image);
+            int width = image.Width;
+            int height = image.Height;
+
+            int left, right, top, bottom;
+            CropSquare(values, width, height, out left, out top, out right, out bottom);
+
+            var destPixelFormat = image.PixelFormat;
+            if ((destPixelFormat & PixelFormat.Indexed) != 0) { destPixelFormat = PixelFormat.Format32bppArgb; }
+
+            var destRect = new Rectangle(0, 0, targetSize, targetSize);
+            var destImage = new Bitmap(targetSize, targetSize, destPixelFormat);
+
+            // StackOverflow suggests this but this doesn't work on Mono so I ain't doing it.
+            // destImage.SetResolution(image.HorizontalResolution, image.VerticalResolution);
+
+            using (var graphics = Graphics.FromImage(destImage))
+            {
+                graphics.CompositingMode = CompositingMode.SourceCopy;
+                graphics.CompositingQuality = CompositingQuality.HighQuality;
+                graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                graphics.SmoothingMode = SmoothingMode.HighQuality;
+                graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+                using (var wrapMode = new ImageAttributes())
+                {
+                    wrapMode.SetWrapMode(WrapMode.TileFlipXY);
+                    graphics.DrawImage(
+                        image,
+                        destRect,
+                        left, top, right - left, bottom - top,
+                        GraphicsUnit.Pixel,
+                        wrapMode);
+                }
+            }
+            return destImage;
+        }
+    }
+
     static class ThumbnailExtractor
     {
         static readonly HttpClient client;
@@ -951,8 +1163,17 @@ namespace onceandfuture
 
         static ImageData MakeThumbnail(ImageData sourceImage)
         {
-            // TODO: Crop square using entropy, &c.
-            return sourceImage;
+            using (var ss = new MemoryStream(sourceImage.Data))
+            using (var src = (Bitmap)Image.FromStream(ss))
+            using (var dst = EntropyCropper.Crop(src, 400))
+            using (var ds = new MemoryStream())
+            {
+                dst.Save(ds, ImageFormat.Png);
+                ds.Position = 0;
+                byte[] buffer = new byte[ds.Length];
+                ds.Read(buffer, 0, buffer.Length);
+                return new ImageData(dst.Width, dst.Height, buffer);
+            }
         }
 
         static async Task<ImageData> FindThumbnailAsync(Uri uri, CancellationToken cancellationToken)
