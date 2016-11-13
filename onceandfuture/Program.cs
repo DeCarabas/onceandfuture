@@ -312,6 +312,35 @@ namespace onceandfuture
             return null;
         }
 
+        public static Uri ParseLink(string value, XElement xe)
+        {
+            if (value == null) { return null; }
+
+            Uri result;
+            if (!Uri.TryCreate(value, UriKind.RelativeOrAbsolute, out result)) { return null; }
+            if (!result.IsAbsoluteUri)
+            {
+                Uri baseUri;
+                if (!String.IsNullOrWhiteSpace(xe.BaseUri) && Uri.TryCreate(xe.BaseUri, UriKind.Absolute, out baseUri))
+                {
+                    Uri absUri;
+                    if (Uri.TryCreate(baseUri, result, out absUri)) { result = absUri; }
+                }
+            }
+            return result;
+        }
+
+        public static Uri Rebase(Uri link, Uri baseUri)
+        {
+            if (link == null) { return null; }
+            if (link.IsAbsoluteUri) { return link; }
+            if (baseUri == null) { return link; }
+
+            Uri absUri;
+            if (!Uri.TryCreate(baseUri, link, out absUri)) { return link; }
+            return baseUri;
+        }
+
         static string Slice(string str, int min, int max)
         {
             if (min >= str.Length) { return String.Empty; }
@@ -516,7 +545,7 @@ namespace onceandfuture
 
                 return true;
             }
-        }
+        }        
     }
 
     public static class XNames
@@ -681,25 +710,23 @@ namespace onceandfuture
         public ImmutableList<RiverItem> Items { get; }
     }
 
-    // TODO: Relative URLs.
-
     public class RiverItem
     {
         [JsonConstructor]
         public RiverItem(
             RiverItem existingItem = null,
             string title = null,
-            string link = null,
+            Uri link = null,
             string body = null,
             DateTime? pubDate = null,
-            string permaLink = null,
+            Uri permaLink = null,
             string comments = null,
             string id = null,
             RiverItemThumbnail thumbnail = null,
             IEnumerable<RiverItemEnclosure> enclosures = null)
         {
             Title = title ?? existingItem?.Title ?? String.Empty;
-            Link = link ?? existingItem?.Link ?? String.Empty;
+            Link = link ?? existingItem?.Link;
             Body = body ?? existingItem?.Body ?? String.Empty;
             PubDate = pubDate ?? existingItem?.PubDate;
             PermaLink = permaLink ?? existingItem?.PermaLink;
@@ -718,7 +745,7 @@ namespace onceandfuture
         public string Title { get; }
 
         [JsonProperty(PropertyName = "link")]
-        public string Link { get; }
+        public Uri Link { get; }
 
         [JsonProperty(PropertyName = "body")]
         public string Body { get; }
@@ -727,7 +754,7 @@ namespace onceandfuture
         public DateTime? PubDate { get; }
 
         [JsonProperty(PropertyName = "permaLink")]
-        public string PermaLink { get; }
+        public Uri PermaLink { get; }
 
         [JsonProperty(PropertyName = "comments")]
         public string Comments { get; }
@@ -769,7 +796,7 @@ namespace onceandfuture
     {
         public RiverItemEnclosure(
             RiverItemEnclosure existingEnclosure = null,
-            string url = null,
+            Uri url = null,
             string type = null,
             string length = null)
         {
@@ -779,7 +806,7 @@ namespace onceandfuture
         }
 
         [JsonProperty(PropertyName = "url")]
-        public string Url { get; }
+        public Uri Url { get; }
 
         [JsonProperty(PropertyName = "type")]
         public string Type { get; }
@@ -1136,14 +1163,7 @@ namespace onceandfuture
             if (item.Thumbnail != null) { return item; }
             if (item.Link == null) { return item; }
 
-            Uri itemLink;
-            if (!Uri.TryCreate(item.Link, UriKind.RelativeOrAbsolute, out itemLink)) { return item; }
-            if (!itemLink.IsAbsoluteUri)
-            {
-                Uri relativeUri = itemLink;
-                if (!Uri.TryCreate(relativeUri, baseUri, out itemLink)) { return item; }
-            }
-
+            Uri itemLink = Util.Rebase(item.Link, baseUri);
             ImageData sourceImage = await FindThumbnailAsync(itemLink, token);
             if (sourceImage == null) { return item; }
             ImageData thumbnail = MakeThumbnail(sourceImage);
@@ -1514,7 +1534,7 @@ namespace onceandfuture
             new Dictionary<XName, Func<RiverItem, XElement, RiverItem>>
             {
                 { XNames.RSS.Title,       (ri, xe) => new RiverItem(ri, title: Util.ParseBody(xe)) },
-                { XNames.RSS.Link,        (ri, xe) => new RiverItem(ri, link: xe.Value) },
+                { XNames.RSS.Link,        (ri, xe) => new RiverItem(ri, link: Util.ParseLink(xe.Value, xe)) },
                 { XNames.RSS.Description, (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
                 { XNames.RSS.Comments,    (ri, xe) => new RiverItem(ri, comments: xe.Value) },
                 { XNames.RSS.PubDate,     (ri, xe) => HandlePubDate(ri, xe) },
@@ -1522,7 +1542,7 @@ namespace onceandfuture
                 { XNames.RSS.Enclosure,   (ri, xe) => HandleEnclosure(ri, xe) },
 
                 { XNames.RSS10.Title,       (ri, xe) => new RiverItem(ri, title: Util.ParseBody(xe)) },
-                { XNames.RSS10.Link,        (ri, xe) => new RiverItem(ri, link: xe.Value) },
+                { XNames.RSS10.Link,        (ri, xe) => new RiverItem(ri, link: Util.ParseLink(xe.Value, xe)) },
                 { XNames.RSS10.Description, (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
                 { XNames.RSS10.Comments,    (ri, xe) => new RiverItem(ri, comments: xe.Value) },
                 { XNames.RSS10.PubDate,     (ri, xe) => HandlePubDate(ri, xe) },
@@ -1583,6 +1603,10 @@ namespace onceandfuture
                     {
                         baseUri = feed.FeedUrl;
                     }
+                    for(int i = 0; i < newItems.Length; i++)
+                    {
+                        newItems[i] = Rebase(newItems[i], baseUri);
+                    }
 
                     newItems = await ThumbnailExtractor.LoadItemThumbnailsAsync(baseUri, newItems, cancellationToken);
                     updatedFeeds = new UpdatedFeeds(
@@ -1595,6 +1619,18 @@ namespace onceandfuture
                 river,
                 updatedFeeds: updatedFeeds,
                 metadata: metadata);
+        }
+
+        static RiverItem Rebase(RiverItem item, Uri baseUri)
+        {
+            return new RiverItem(
+                item,
+                link: Util.Rebase(item.Link, baseUri),
+                permaLink: Util.Rebase(item.PermaLink, baseUri),
+                enclosures: item.Enclosures.Select(
+                    e => new RiverItemEnclosure(e, url: Util.Rebase(e.Url, baseUri))
+                )
+            );
         }
 
         static async Task<FetchResult> FetchAsync(
@@ -1626,7 +1662,6 @@ namespace onceandfuture
                     }
 
                     requestUri = response.Headers.Location;
-                    Console.WriteLine("Redirect {0} ==> {1}", uri, requestUri);
                 }
 
                 if (response.StatusCode == HttpStatusCode.NotModified)
@@ -1665,8 +1700,6 @@ namespace onceandfuture
                 }
 
                 Uri responseUri = response.RequestMessage.RequestUri;
-
-                // TODO: Character detection!
 
                 await response.Content.LoadIntoBufferAsync();
                 using (Stream responseStream = await response.Content.ReadAsStreamAsync())
@@ -1747,47 +1780,43 @@ namespace onceandfuture
 
         static RiverFeed HandleAtomLink(RiverFeed feed, XElement link)
         {
-            if (link.Attribute(XNames.Atom.Rel) == null)
+            string rel = link.Attribute(XNames.Atom.Rel)?.Value ?? "alternate";
+            string type = link.Attribute(XNames.Atom.Type)?.Value ?? "text/html";
+            string href = link.Attribute(XNames.Atom.Href)?.Value;
+
+            if (String.Equals(rel, "alternate", StringComparison.OrdinalIgnoreCase) &&
+                type.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
             {
                 feed = new RiverFeed(feed, websiteUrl: link.Attribute(XNames.Atom.Href)?.Value);
             }
-
-            if (
-                link.Attribute(XNames.Atom.Rel)?.Value == "alternate"
-                && link.Attribute(XNames.Atom.Type)?.Value == "text/html"
-            )
-            {
-                feed = new RiverFeed(feed, websiteUrl: link.Attribute(XNames.Atom.Href)?.Value);
-            }
-
+            
             return feed;
         }
 
         static RiverItem HandleAtomLink(RiverItem item, XElement link)
         {
-            if (link.Attribute(XNames.Atom.Rel) == null)
+            string rel = link.Attribute(XNames.Atom.Rel)?.Value ?? "alternate";
+            string type = link.Attribute(XNames.Atom.Type)?.Value ?? "text/html";
+            string href = link.Attribute(XNames.Atom.Href)?.Value;
+
+            if (String.Equals(rel, "alternate", StringComparison.OrdinalIgnoreCase) &&
+                type.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
             {
-                item = new RiverItem(item, link: link.Attribute(XNames.Atom.Href)?.Value);
+                item = new RiverItem(item, link: Util.ParseLink(href, link));
             }
 
-            if (link.Attribute(XNames.Atom.Rel)?.Value == "alternate" &&
-                link.Attribute(XNames.Atom.Type)?.Value == "text/html")
+            if (String.Equals(rel, "self", StringComparison.OrdinalIgnoreCase) && 
+                type.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
             {
-                item = new RiverItem(item, link: link.Attribute(XNames.Atom.Href)?.Value);
-            }
-
-            if (link.Attribute(XNames.Atom.Rel)?.Value == "self" &&
-                link.Attribute(XNames.Atom.Type)?.Value == "text/html")
-            {
-                item = new RiverItem(item, permaLink: link.Attribute(XNames.Atom.Href)?.Value);
+                item = new RiverItem(item, permaLink: Util.ParseLink(href, link));
             }
 
             if (link.Attribute(XNames.Atom.Rel)?.Value == "enclosure")
             {
                 item = new RiverItem(item, enclosures: item.Enclosures.Add(new RiverItemEnclosure(
                     length: link.Attribute(XNames.Atom.Length)?.Value,
-                    type: link.Attribute(XNames.Atom.Type)?.Value,
-                    url: link.Attribute(XNames.Atom.Href)?.Value
+                    type: type,
+                    url: Util.ParseLink(href, link)
                 )));
             }
             return item;
@@ -1800,17 +1829,18 @@ namespace onceandfuture
                 enclosures: item.Enclosures.Add(new RiverItemEnclosure(
                     length: element.Attribute(XNames.RSS.Length)?.Value,
                     type: element.Attribute(XNames.RSS.Type)?.Value,
-                    url: element.Attribute(XNames.RSS.Url)?.Value
+                    url: Util.ParseLink(element.Attribute(XNames.RSS.Url)?.Value, element)
                 )));
         }
 
         static RiverItem HandleGuid(RiverItem item, XElement element)
         {
             item = new RiverItem(item, id: element.Value);
+                        
             if (item.Id.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                 item.Id.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                item = new RiverItem(item, permaLink: item.Id);
+                item = new RiverItem(item, permaLink: Util.ParseLink(item.Id, element));
             }
             return item;
         }
@@ -1860,7 +1890,7 @@ namespace onceandfuture
             {
                 string title = null;
                 if (ri.PubDate != null) { title = ri.PubDate.ToString(); }
-                else if (ri.PermaLink != null) { title = ri.PermaLink; }
+                else if (ri.PermaLink != null) { title = ri.PermaLink.AbsoluteUri; }
                 else if (ri.Id != null) { title = ri.Id; }
 
                 if (title != null) { ri = new RiverItem(ri, title: title); }
@@ -1994,11 +2024,15 @@ namespace onceandfuture
             return river;
         }
 
+        // Bugs: 
+        //  - Post titles can still be way too long. (cap to say 64?)
+
+
         static void Main(string[] args)
         {
             try
             {
-                // Trace.Listeners.Add(new ConsoleTraceListener());
+                //Trace.Listeners.Add(new ConsoleTraceListener());
 
                 XDocument doc = XDocument.Load(@"C:\Users\John\Downloads\NewsBlur-DeCarabas-2016-11-08");
                 XElement body = doc.Root.Element(XNames.OPML.Body);
@@ -2019,7 +2053,7 @@ namespace onceandfuture
                 //}
 
                 Stopwatch loadTimer = Stopwatch.StartNew();
-                Console.WriteLine("Starting {0} feeds...", feeds.Count);
+
                 var parses =
                     (from entry in feeds
                      select new
@@ -2027,25 +2061,35 @@ namespace onceandfuture
                          url = entry.XmlUrl,
                          task = FetchAndUpdateRiver(entry.XmlUrl, CancellationToken.None),
                      }).ToList();
-                Task.WaitAll(parses.Select(p => p.task).ToArray());
-                Console.WriteLine("Refreshed {0} feeds in {1}", feeds.Count, loadTimer.Elapsed);
 
-                //Uri uri = new Uri("http://davepeck.org/feed/");
-                //var parses = new[] { new { url = uri, task = FetchAndUpdateRiver(uri, CancellationToken.None) } };
+                //Uri uri = new Uri("http://blog.golang.org/feeds/posts/default?alt=rss");
+                //var parses = new[] {
+                //    new { url = uri, task = FetchAndUpdateRiver(uri, CancellationToken.None) }
+                //}.ToList();
 
-
-
-                //foreach (var parse in parses.ToList())
+                Console.WriteLine("Started {0} feeds...", parses.Count);
+                Task<River[]> doneTask = Task.WhenAll(parses.Select(p => p.task).ToArray()).ContinueWith(t =>
+                {
+                    loadTimer.Stop();
+                    return t.Result;
+                });
+                
+                //foreach (var parse in parses)
                 //{
+                //    Console.WriteLine(parse.url);
                 //    parse.task.Wait();
 
-                //    //Console.WriteLine(parse.url);
-                //    //foreach (RiverFeed feed in parse.task.Result.UpdatedFeeds.Feeds)
-                //    //{
-                //    //    DumpFeed(feed);
-                //    //}
-                //    //Console.ReadLine();
+                //    foreach (RiverFeed feed in parse.task.Result.UpdatedFeeds.Feeds)
+                //    {
+                //        DumpFeed(feed);
+                //    }
+
+                //    Console.WriteLine("(Press enter to continue)");
+                //    Console.ReadLine();
                 //}
+
+                doneTask.Wait();
+                Console.WriteLine("Refreshed {0} feeds in {1}", parses.Count, loadTimer.Elapsed);
             }
             catch (Exception e)
             {
@@ -2067,8 +2111,21 @@ namespace onceandfuture
                 {
                     Console.WriteLine(item.Title);
                     Console.WriteLine(new String('-', item.Title.Length));
+                    Console.WriteLine("ID:        {0}", item.Id);
+                    Console.WriteLine("Link:      {0}", item.Link);
+                    Console.WriteLine("Permalink: {0}", item.PermaLink);
+                    Console.WriteLine();
                     Console.WriteLine(item.Body);
                     Console.WriteLine();
+                    if (item.Enclosures.Count > 0)
+                    {
+                        Console.WriteLine("  Enclosures:");
+                        foreach(RiverItemEnclosure e in item.Enclosures)
+                        {
+                            Console.WriteLine("    {0} ({1}): {2}", e.Type, e.Length, e.Url);
+                        }
+                        Console.WriteLine();
+                    }
                 }
             }
         }
