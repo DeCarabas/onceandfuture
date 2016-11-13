@@ -145,18 +145,16 @@ namespace onceandfuture
             Trace.TraceInformation("{0}: Found thumbnail {1} ({2})", baseUrl, uri, kind);
         }
 
-        public static void BeginLoadThumbnails(RiverFeed feed)
+        public static void BeginLoadThumbnails(Uri baseUri)
         {
-            Trace.TraceInformation(
-                "{0}: Loading thumbnails...",
-                feed.FeedUrl);
+            Trace.TraceInformation("{0}: Loading thumbnails...", baseUri);
         }
 
-        public static void EndLoadThumbnails(RiverFeed feed, RiverItem[] items, Stopwatch loadTimer)
+        public static void EndLoadThumbnails(Uri baseUri, RiverItem[] items, Stopwatch loadTimer)
         {
             Trace.TraceInformation(
                 "{0}: Finished loading thumbs for {1} items in {2} ms",
-                feed.FeedUrl,
+                baseUri,
                 items.Length,
                 loadTimer.ElapsedMilliseconds);
         }
@@ -684,7 +682,6 @@ namespace onceandfuture
     }
 
     // TODO: Relative URLs.
-    // TODO: Timeouts
 
     public class RiverItem
     {
@@ -1118,22 +1115,23 @@ namespace onceandfuture
             });
         }
 
-        public static async Task<RiverFeed> LoadItemThumbnailsAsync(RiverFeed feed, CancellationToken token)
+        public static async Task<RiverItem[]> LoadItemThumbnailsAsync(
+            Uri baseUri, RiverItem[] items, CancellationToken token)
         {
-            if (feed == null) { return null; }
-
             Stopwatch loadTimer = Stopwatch.StartNew();
-            Log.BeginLoadThumbnails(feed);
-            Task<RiverItem>[] itemTasks =
-                (from item in feed.Items
-                 select ThumbnailExtractor.GetItemThumbnailAsync(item, feed.FeedUrl, token)).ToArray();
+            Log.BeginLoadThumbnails(baseUri);
+            Task<RiverItem>[] itemTasks = new Task<RiverItem>[items.Length];
+            for (int i = 0; i < itemTasks.Length; i++)
+            {
+                itemTasks[i] = GetItemThumbnailAsync(baseUri, items[i], token);
+            }
 
-            RiverItem[] items = await Task.WhenAll(itemTasks);
-            Log.EndLoadThumbnails(feed, items, loadTimer);
-            return new RiverFeed(feed, items: items);
+            RiverItem[] newItems = await Task.WhenAll(itemTasks);
+            Log.EndLoadThumbnails(baseUri, newItems, loadTimer);
+            return newItems;
         }
 
-        static async Task<RiverItem> GetItemThumbnailAsync(RiverItem item, Uri baseUri, CancellationToken token)
+        static async Task<RiverItem> GetItemThumbnailAsync(Uri baseUri, RiverItem item, CancellationToken token)
         {
             if (item.Thumbnail != null) { return item; }
             if (item.Link == null) { return item; }
@@ -1489,29 +1487,6 @@ namespace onceandfuture
         }
     }
 
-    class FetchResult
-    {
-        public FetchResult(
-            RiverFeed feed,
-            HttpStatusCode status,
-            Uri feedUrl,
-            string etag,
-            DateTimeOffset? lastModified)
-        {
-            Feed = feed;
-            Status = status;
-            FeedUrl = feedUrl;
-            Etag = etag;
-            LastModified = lastModified;
-        }
-
-        public RiverFeed Feed { get; }
-        public HttpStatusCode Status { get; }
-        public Uri FeedUrl { get; }
-        public string Etag { get; }
-        public DateTimeOffset? LastModified { get; }
-    }
-
     static class RiverFeedParser
     {
         static readonly HttpClient client;
@@ -1573,7 +1548,56 @@ namespace onceandfuture
             client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
         }
 
-        public static async Task<FetchResult> FetchAsync(
+        public static async Task<River> UpddateAsync(River river, CancellationToken cancellationToken)
+        {
+            FetchResult fetchResult = await FetchAsync(
+                river.Metadata.OriginUrl,
+                river.Metadata.Etag,
+                river.Metadata.LastModified,
+                cancellationToken
+            );
+
+            var updatedFeeds = river.UpdatedFeeds;
+            var metadata = new RiverFeedMeta(
+                river.Metadata,
+                etag: fetchResult.Etag,
+                lastModified: fetchResult.LastModified,
+                originUrl: fetchResult.FeedUrl,
+                lastStatus: fetchResult.Status);
+
+            if (fetchResult.Feed != null)
+            {
+                var feed = fetchResult.Feed;
+                var existingItems = new HashSet<string>(
+                    from existingFeed in river.UpdatedFeeds.Feeds
+                    from item in existingFeed.Items
+                    where item.Id != null
+                    select item.Id
+                );
+                RiverItem[] newItems = feed.Items.Where(item => !existingItems.Contains(item.Id)).ToArray();
+                if (newItems.Length > 0)
+                {
+                    Uri baseUri;
+                    if (String.IsNullOrWhiteSpace(feed.WebsiteUrl) ||
+                        !Uri.TryCreate(feed.WebsiteUrl, UriKind.Absolute, out baseUri))
+                    {
+                        baseUri = feed.FeedUrl;
+                    }
+
+                    newItems = await ThumbnailExtractor.LoadItemThumbnailsAsync(baseUri, newItems, cancellationToken);
+                    updatedFeeds = new UpdatedFeeds(
+                        river.UpdatedFeeds,
+                        feeds: river.UpdatedFeeds.Feeds.Insert(0, feed));
+                }
+            }
+
+            return new River(
+                river,
+                updatedFeeds: updatedFeeds,
+                metadata: metadata);
+        }
+
+        static async Task<FetchResult> FetchAsync(
             Uri uri,
             string etag,
             DateTimeOffset? lastModified,
@@ -1858,6 +1882,29 @@ namespace onceandfuture
             }
             return guid;
         }
+
+        class FetchResult
+        {
+            public FetchResult(
+                RiverFeed feed,
+                HttpStatusCode status,
+                Uri feedUrl,
+                string etag,
+                DateTimeOffset? lastModified)
+            {
+                Feed = feed;
+                Status = status;
+                FeedUrl = feedUrl;
+                Etag = etag;
+                LastModified = lastModified;
+            }
+
+            public RiverFeed Feed { get; }
+            public HttpStatusCode Status { get; }
+            public Uri FeedUrl { get; }
+            public string Etag { get; }
+            public DateTimeOffset? LastModified { get; }
+        }
     }
 
     static class RiverThumbnailStore
@@ -1929,56 +1976,13 @@ namespace onceandfuture
 
     class Program
     {
-        public static async Task<River> UpdateRiver(River river, CancellationToken cancellationToken)
-        {
-            FetchResult fetchResult = await RiverFeedParser.FetchAsync(
-                river.Metadata.OriginUrl,
-                river.Metadata.Etag,
-                river.Metadata.LastModified,
-                cancellationToken
-            );
-
-            var updatedFeeds = river.UpdatedFeeds;
-            var metadata = new RiverFeedMeta(
-                river.Metadata,
-                etag: fetchResult.Etag,
-                lastModified: fetchResult.LastModified,
-                originUrl: fetchResult.FeedUrl,
-                lastStatus: fetchResult.Status);
-
-            if (fetchResult.Feed != null)
-            {
-                var feed = fetchResult.Feed;
-                var existingItems = new HashSet<string>(
-                    from existingFeed in river.UpdatedFeeds.Feeds
-                    from item in existingFeed.Items
-                    where item.Id != null
-                    select item.Id
-                );
-                var newItems = feed.Items.RemoveAll(item => existingItems.Contains(item.Id));
-                if (newItems.Count > 0)
-                {
-                    feed = new RiverFeed(feed, items: newItems);
-                    feed = await ThumbnailExtractor.LoadItemThumbnailsAsync(feed, cancellationToken);
-                    updatedFeeds = new UpdatedFeeds(
-                        river.UpdatedFeeds,
-                        feeds: river.UpdatedFeeds.Feeds.Insert(0, feed));
-                }
-            }
-
-            return new River(
-                river,
-                updatedFeeds: updatedFeeds,
-                metadata: metadata);
-        }
-
         public static async Task<River> FetchAndUpdateRiver(Uri uri, CancellationToken cancellationToken)
         {
             River river = await RiverFeedStore.LoadRiverForFeed(uri);
             if ((river.Metadata.LastStatus != HttpStatusCode.MovedPermanently) &&
                 (river.Metadata.LastStatus != HttpStatusCode.Gone))
             {
-                river = await UpdateRiver(river, cancellationToken);
+                river = await RiverFeedParser.UpddateAsync(river, cancellationToken);
                 await RiverFeedStore.WriteRiver(uri, river);
             }
 
