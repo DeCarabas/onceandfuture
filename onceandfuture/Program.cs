@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.Specialized;
@@ -12,6 +13,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.Caching;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -24,34 +26,39 @@ using AngleSharp.Dom.Html;
 using AngleSharp.Extensions;
 using AngleSharp.Parser.Html;
 using Newtonsoft.Json;
+using Serilog;
+
+// TODO: Save/load to blob stores
 
 namespace onceandfuture
 {
     static class Log
     {
+        readonly static ConcurrentDictionary<string, ILogger> TaggedLoggers =
+            new ConcurrentDictionary<string, ILogger>();
+        readonly static Func<string, ILogger> logCreator = Create;
+
+        static ILogger Create(string tag) => Serilog.Log.Logger.ForContext("tag", tag);
+        static ILogger Get([CallerMemberName]string tag = null) => TaggedLoggers.GetOrAdd(tag, logCreator);
+
         public static void BadDate(string url, string date)
         {
-            Trace.TraceWarning("{0}: Unparsable date encountered: {1}", url, date);
+            Get().Warning("{url}: Unparsable date encountered: {date}", url, date);
         }
 
         public static void NetworkError(Uri uri, HttpRequestException requestException, Stopwatch loadTimer)
         {
-            Trace.TraceError(
-                "{0}: {2} ms: Network Error: {1}",
-                uri,
-                requestException.Message,
-                loadTimer.ElapsedMilliseconds
-            );
+            Get().Error(requestException, "{uri}: {elapsed} ms: Network Error", uri, loadTimer.ElapsedMilliseconds);
         }
 
         public static void XmlError(Uri uri, XmlException xmlException, Stopwatch loadTimer)
         {
-            Trace.TraceError("{0}: {2} ms: XML Error: {1}", uri, xmlException.Message, loadTimer.ElapsedMilliseconds);
+            Get().Error(xmlException, "{uri}: {elapsed} ms: XML Error", uri, loadTimer.ElapsedMilliseconds);
         }
 
         public static void BeginGetFeed(Uri uri)
         {
-            Trace.TraceInformation("{0}: Begin fetching feed", uri);
+            Get().Information("{uri}: Begin fetching feed", uri);
         }
 
         public static void EndGetFeed(
@@ -62,8 +69,8 @@ namespace onceandfuture
             Stopwatch loadTimer
         )
         {
-            Trace.TraceInformation(
-                "{0}: Fetched {1} items from {2} feed in {3} ms",
+            Get().Information(
+                "{uri}: Fetched {item_count} items from {feed} feed in {elapsed} ms",
                 uri,
                 result.Items.Count,
                 version,
@@ -73,8 +80,8 @@ namespace onceandfuture
 
         public static void UnrecognizableFeed(Uri uri, HttpResponseMessage response, string body, Stopwatch loadTimer)
         {
-            Trace.TraceError(
-                "{0}: Could not identify feed type in {1} ms: {2}",
+            Get().Error(
+                "{uri}: Could not identify feed type in {elapsed} ms: {body}",
                 uri,
                 loadTimer.ElapsedMilliseconds,
                 body
@@ -83,8 +90,8 @@ namespace onceandfuture
 
         public static void EndGetFeedFailure(Uri uri, HttpResponseMessage response, string body, Stopwatch loadTimer)
         {
-            Trace.TraceError(
-                "{0}: Got failure status code {1} in {2} ms: {3}",
+            Get().Error(
+                "{uri}: Got failure status code {code} in {elapsed} ms: {body}",
                 uri,
                 response.StatusCode,
                 loadTimer.ElapsedMilliseconds,
@@ -94,66 +101,63 @@ namespace onceandfuture
 
         public static void EndGetFeedNotModified(Uri uri, HttpResponseMessage response, Stopwatch loadTimer)
         {
-            Trace.TraceInformation("{0}: Got feed not modified in {1} ms", uri, loadTimer.ElapsedMilliseconds);
+            Get().Information("{uri}: Got feed not modified in {elapsed} ms", uri, loadTimer.ElapsedMilliseconds);
         }
 
         public static void EndGetFeedMovedPermanently(Uri uri, HttpResponseMessage response, Stopwatch loadTimer)
         {
-            Trace.TraceInformation(
-                "{0}: Feed moved permanently to {2} in {1} ms",
+            Get().Information(
+                "{uri}: Feed moved permanently to {location} in {elapsed} ms",
                 uri,
-                loadTimer.ElapsedMilliseconds,
-                response.Headers.Location);
+                response.Headers.Location,
+                loadTimer.ElapsedMilliseconds);
         }
 
         public static void ConsideringImage(Uri baseUrl, Uri uri, string kind, int area, float ratio)
         {
-            Trace.TraceInformation(
-                "{0}: Considering image {1} ({2}) (area: {3}, ratio: {4})", baseUrl, uri, kind, area, ratio);
+            Get().Information(
+                "{baseUrl}: Considering image {url} ({kind}) (area: {area}, ratio: {ratio})",
+                baseUrl, uri, kind, area, ratio);
         }
 
         public static void NewBestImage(Uri baseUrl, Uri uri, string kind, int area, float ratio)
         {
-            Trace.TraceInformation(
-                "{0}: New best image: {1} ({2}) (area: {3}, ratio: {4})", baseUrl, uri, kind, area, ratio);
+            Get().Information(
+                "{baseurl}: New best image: {url} ({kind}) (area: {area}, ratio: {ratio})",
+                baseUrl, uri, kind, area, ratio);
         }
 
         public static void ThumbnailErrorResponse(Uri baseUrl, Uri imageUri, string kind, HttpResponseMessage response)
         {
-            Trace.TraceError(
-                "{0}: {1} ({4}): Error From Host: {2} {3}",
-                baseUrl,
-                imageUri,
-                response.StatusCode,
-                response.ReasonPhrase,
-                kind
-            );
+            Get().Error(
+                "{baseUrl}: {url} ({kind}): Error From Host: {status} {reason}",
+                baseUrl, imageUri, kind, response.StatusCode, response.ReasonPhrase);
         }
 
         public static void InvalidThumbnailImageFormat(Uri baseUrl, Uri imageUri, string kind, ArgumentException ae)
         {
-            Trace.TraceError("{0}: {1} ({2}): Is not a valid image ({3})", baseUrl, imageUri, kind, ae.Message);
+            Get().Error(ae, "{baseUrl}: {url} ({kind}): Is not a valid image", baseUrl, imageUri, kind);
         }
 
         public static void ThumbnailNetworkError(Uri baseUrl, Uri imageUri, string kind, HttpRequestException hre)
         {
-            Trace.TraceError("{0}: {1} ({3}): Network Error: {2}", baseUrl, imageUri, hre.Message, kind);
+            Get().Error(hre, "{baseUrl}: {url} ({kind}): Network Error", baseUrl, imageUri, kind);
         }
 
         public static void FoundThumbnail(Uri baseUrl, Uri uri, string kind)
         {
-            Trace.TraceInformation("{0}: Found thumbnail {1} ({2})", baseUrl, uri, kind);
+            Get().Information("{baseUrl}: Found thumbnail {url} ({kind})", baseUrl, uri, kind);
         }
 
         public static void BeginLoadThumbnails(Uri baseUri)
         {
-            Trace.TraceInformation("{0}: Loading thumbnails...", baseUri);
+            Get().Information("{baseUrl}: Loading thumbnails...", baseUri);
         }
 
         public static void EndLoadThumbnails(Uri baseUri, RiverItem[] items, Stopwatch loadTimer)
         {
-            Trace.TraceInformation(
-                "{0}: Finished loading thumbs for {1} items in {2} ms",
+            Get().Information(
+                "{baseUrl}: Finished loading thumbs for {count} items in {elapsed} ms",
                 baseUri,
                 items.Length,
                 loadTimer.ElapsedMilliseconds);
@@ -161,63 +165,64 @@ namespace onceandfuture
 
         public static void NoThumbnailFound(Uri baseUrl)
         {
-            Trace.TraceWarning("{0}: No suitable thumbnails found.", baseUrl);
+            Get().Warning("{baseUrl}: No suitable thumbnails found.", baseUrl);
         }
 
         public static void EndGetThumbsFromSoup(Uri baseUrl, int length, Stopwatch loadTimer)
         {
-            Trace.TraceInformation(
-                "{0}: Loaded {1} thumbnails in {2}ms", baseUrl, length, loadTimer.ElapsedMilliseconds);
+            Get().Information(
+                "{baseUrl}: Loaded {length} thumbnails in {elapsed} ms",
+                baseUrl, length, loadTimer.ElapsedMilliseconds);
         }
 
         public static void BeginGetThumbsFromSoup(Uri baseUrl, int length)
         {
-            Trace.TraceInformation("{0}: Loading {1} thumbnails...", baseUrl, length);
+            Get().Information("{baseUrl}: Checking {length} thumbnails...", baseUrl, length);
         }
 
         public static void ThumbnailTooSmall(Uri baseUrl, Uri uri, string kind, int area)
         {
-            Trace.TraceInformation("{0}: {1} ({2}): Too small ({3})", baseUrl, uri, kind, area);
+            Get().Information("{baseUrl}: {url} ({kind}): Too small ({area})", baseUrl, uri, kind, area);
         }
 
         public static void ThumbnailTooOblong(Uri baseUrl, Uri uri, string kind, float ratio)
         {
-            Trace.TraceInformation("{0}: {1} ({2}): Too oblong ({3})", baseUrl, uri, kind, ratio);
+            Get().Information("{baseUrl}: {url} ({kind}): Too oblong ({ratio})", baseUrl, uri, kind, ratio);
         }
 
         public static void ThumbnailSuccessCacheHit(Uri baseUrl, Uri imageUrl)
         {
-            Trace.TraceInformation("{0}: {1} Cached Success", baseUrl, imageUrl);
+            Get().Information("{baseUrl}: {url}: Cached Success", baseUrl, imageUrl);
         }
 
         public static void ThumbnailErrorCacheHit(Uri baseUrl, Uri imageUrl, object cachedObject)
         {
-            Trace.TraceInformation("{0}: {1} Cached Error: {2}", baseUrl, imageUrl, cachedObject);
+            Get().Information("{baseUrl}: {url}: Cached Error: {error}", baseUrl, imageUrl, (string)cachedObject);
         }
 
         public static void FeedTimeout(Uri uri, Stopwatch loadTimer)
         {
-            Trace.TraceError("{0}: Timeout after {1}ms", uri, loadTimer.ElapsedMilliseconds);
+            Get().Error("{url}: Timeout after {elapsed} ms", uri, loadTimer.ElapsedMilliseconds);
         }
 
         public static void ThumbnailTimeout(Uri baseUrl, Uri imageUri, string kind)
         {
-            Trace.TraceError("{0}: {1} ({2}): Timeout", baseUrl, imageUri, kind);
+            Get().Error("{baseUrl}: {url} ({kind}): Timeout", baseUrl, imageUri, kind);
         }
 
         public static void FindThumbnailNetworkError(Uri uri, HttpRequestException hre)
         {
-            Trace.TraceError("{0}: Network Error: {1}", uri, hre.Message);
+            Get().Error(hre, "{url}: Network Error", uri);
         }
 
         public static void FindThumbnailTimeout(Uri uri)
         {
-            Trace.TraceError("{0}: Timeout", uri);
+            Get().Error("{url}: Timeout", uri);
         }
 
         public static void FindThumbnailServerError(Uri uri, HttpResponseMessage response)
         {
-            Trace.TraceError("{0}: Server error: {1} {2}", uri, response.StatusCode, response.ReasonPhrase);
+            Get().Error("{url}: Server error: {code} {reason}", uri, response.StatusCode, response.ReasonPhrase);
         }
     }
 
@@ -545,7 +550,7 @@ namespace onceandfuture
 
                 return true;
             }
-        }        
+        }
     }
 
     public static class XNames
@@ -1603,7 +1608,7 @@ namespace onceandfuture
                     {
                         baseUri = feed.FeedUrl;
                     }
-                    for(int i = 0; i < newItems.Length; i++)
+                    for (int i = 0; i < newItems.Length; i++)
                     {
                         newItems[i] = Rebase(newItems[i], baseUri);
                     }
@@ -1789,7 +1794,7 @@ namespace onceandfuture
             {
                 feed = new RiverFeed(feed, websiteUrl: link.Attribute(XNames.Atom.Href)?.Value);
             }
-            
+
             return feed;
         }
 
@@ -1805,7 +1810,7 @@ namespace onceandfuture
                 item = new RiverItem(item, link: Util.ParseLink(href, link));
             }
 
-            if (String.Equals(rel, "self", StringComparison.OrdinalIgnoreCase) && 
+            if (String.Equals(rel, "self", StringComparison.OrdinalIgnoreCase) &&
                 type.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
             {
                 item = new RiverItem(item, permaLink: Util.ParseLink(href, link));
@@ -1836,7 +1841,7 @@ namespace onceandfuture
         static RiverItem HandleGuid(RiverItem item, XElement element)
         {
             item = new RiverItem(item, id: element.Value);
-                        
+
             if (item.Id.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                 item.Id.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
@@ -2033,6 +2038,10 @@ namespace onceandfuture
             try
             {
                 //Trace.Listeners.Add(new ConsoleTraceListener());
+                Serilog.Log.Logger = new LoggerConfiguration()
+                    .MinimumLevel.Error()
+                    .WriteTo.LiterateConsole()
+                    .CreateLogger();
 
                 XDocument doc = XDocument.Load(@"C:\Users\John\Downloads\NewsBlur-DeCarabas-2016-11-08");
                 XElement body = doc.Root.Element(XNames.OPML.Body);
@@ -2073,7 +2082,7 @@ namespace onceandfuture
                     loadTimer.Stop();
                     return t.Result;
                 });
-                
+
                 //foreach (var parse in parses)
                 //{
                 //    Console.WriteLine(parse.url);
@@ -2120,7 +2129,7 @@ namespace onceandfuture
                     if (item.Enclosures.Count > 0)
                     {
                         Console.WriteLine("  Enclosures:");
-                        foreach(RiverItemEnclosure e in item.Enclosures)
+                        foreach (RiverItemEnclosure e in item.Enclosures)
                         {
                             Console.WriteLine("    {0} ({1}): {2}", e.Type, e.Length, e.Url);
                         }
