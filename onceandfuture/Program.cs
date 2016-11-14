@@ -26,6 +26,7 @@ using AngleSharp.Dom.Html;
 using AngleSharp.Extensions;
 using AngleSharp.Parser.Html;
 using Newtonsoft.Json;
+using Polly;
 using Serilog;
 
 // TODO: Save/load to blob stores
@@ -136,7 +137,8 @@ namespace onceandfuture
 
         public static void InvalidThumbnailImageFormat(Uri baseUrl, Uri imageUri, string kind, ArgumentException ae)
         {
-            Get().Error(ae, "{baseUrl}: {url} ({kind}): Is not a valid image", baseUrl, imageUri, kind);
+            // N.B.: Logging the ArgumentException is pointless.
+            Get().Warning("{baseUrl}: {url} ({kind}): Is not a valid image", baseUrl, imageUri, kind);
         }
 
         public static void ThumbnailNetworkError(Uri baseUrl, Uri imageUri, string kind, HttpRequestException hre)
@@ -165,7 +167,7 @@ namespace onceandfuture
 
         public static void NoThumbnailFound(Uri baseUrl)
         {
-            Get().Warning("{baseUrl}: No suitable thumbnails found.", baseUrl);
+            Get().Information("{baseUrl}: No suitable thumbnails found.", baseUrl);
         }
 
         public static void EndGetThumbsFromSoup(Uri baseUrl, int length, Stopwatch loadTimer)
@@ -223,6 +225,15 @@ namespace onceandfuture
         public static void FindThumbnailServerError(Uri uri, HttpResponseMessage response)
         {
             Get().Error("{url}: Server error: {code} {reason}", uri, response.StatusCode, response.ReasonPhrase);
+        }
+
+        public static void HttpRetry(
+            Exception exception, TimeSpan timespan, int retryCount, Context context)
+        {
+            object url;
+            context.TryGetValue("uri", out url);
+            Get().Warning(
+                exception, "HTTP error detected from {url}, retry {retry} after {ts}", url, retryCount, timespan);
         }
     }
 
@@ -1114,6 +1125,41 @@ namespace onceandfuture
         }
     }
 
+    static class Policies
+    {
+        static Random random = new Random();
+
+        public static readonly ContextualPolicy HttpPolicy = Policy
+            .Handle<HttpRequestException>(ValidateHttpRequestException)
+            .Or<TaskCanceledException>()
+            .WaitAndRetryAsync(
+                retryCount: 3,
+                sleepDurationProvider: ExponentialRetryTimeWithJitter,
+                onRetry: (exc, ts, cnt, ctxt) => Log.HttpRetry(exc, ts, cnt, ctxt));
+        
+        static bool ValidateHttpRequestException(HttpRequestException hre)
+        {
+            var iwe = hre.InnerException as WebException;
+            if (iwe != null)
+            {
+                if (iwe.Message.Contains("The remote name could not be resolved")) { return false; }
+                if (iwe.Message.Contains("The server committed a protocol violation")) { return false; }
+            }
+
+            return true;
+        }
+
+        static TimeSpan ExponentialRetryTimeWithJitter(int retryAttempt)
+        {
+            var baseTime = TimeSpan.FromSeconds(Math.Pow(3, retryAttempt));
+
+            int jitterInterval = (int)(baseTime.TotalMilliseconds / 2.0);
+            var jitter = TimeSpan.FromMilliseconds(random.Next(-jitterInterval, jitterInterval));
+
+            return baseTime + jitter;
+        }
+    }
+
     static class ThumbnailExtractor
     {
         static readonly HttpClient client;
@@ -1203,7 +1249,10 @@ namespace onceandfuture
         {
             try
             {
-                HttpResponseMessage response = await client.GetAsync(uri);
+                HttpResponseMessage response = await Policies.HttpPolicy.ExecuteAsync(
+                    (ct) => client.GetAsync(uri, ct),
+                    new Dictionary<string, object> { { "uri", uri } },
+                    cancellationToken);
                 using (response)
                 {
                     if (!response.IsSuccessStatusCode)
@@ -1392,47 +1441,56 @@ namespace onceandfuture
         {
             try
             {
-                object cachedObject = imageCache.Get(imageUrl.Uri.AbsoluteUri);
-                if (cachedObject is string)
-                {
-                    Log.ThumbnailErrorCacheHit(referrer, imageUrl.Uri, cachedObject);
-                    return null;
-                }
-                if (cachedObject is ImageData)
-                {
-                    Log.ThumbnailSuccessCacheHit(referrer, imageUrl.Uri);
-                    return (ImageData)cachedObject;
-                }
-
-                var request = new HttpRequestMessage(HttpMethod.Get, imageUrl.Uri);
-                if (referrer != null) { request.Headers.Referrer = referrer; }
-
-                HttpResponseMessage response = await client.SendAsync(request, cancellationToken);
-                if (!response.IsSuccessStatusCode)
-                {
-                    Log.ThumbnailErrorResponse(referrer, imageUrl.Uri, imageUrl.Kind, response);
-                    CacheError(imageUrl, response.ReasonPhrase);
-                    return null;
-                }
-
-                byte[] imageBytes = await response.Content.ReadAsByteArrayAsync();
-                using (var stream = new MemoryStream(imageBytes))
-                {
-                    try
+                // N.B.: We put the whole bit of cache logic in here because somebody might succeed or fail altogether
+                //       while we wait on retries.
+                return await Policies.HttpPolicy.ExecuteAsync(async (ct) =>
                     {
-                        using (Image streamImage = Image.FromStream(stream))
+                        object cachedObject = imageCache.Get(imageUrl.Uri.AbsoluteUri);
+                        if (cachedObject is string)
                         {
-                            return CacheSuccess(
-                                imageUrl, new ImageData(streamImage.Width, streamImage.Height, imageBytes));
+                            Log.ThumbnailErrorCacheHit(referrer, imageUrl.Uri, cachedObject);
+                            return null;
                         }
-                    }
-                    catch (ArgumentException ae)
-                    {
-                        Log.InvalidThumbnailImageFormat(referrer, imageUrl.Uri, imageUrl.Kind, ae);
-                        CacheError(imageUrl, ae.Message);
-                        return null;
-                    }
-                }
+                        if (cachedObject is ImageData)
+                        {
+                            Log.ThumbnailSuccessCacheHit(referrer, imageUrl.Uri);
+                            return (ImageData)cachedObject;
+                        }
+
+                        var request = new HttpRequestMessage(HttpMethod.Get, imageUrl.Uri);
+                        if (referrer != null) { request.Headers.Referrer = referrer; }
+
+                        HttpResponseMessage response = await client.SendAsync(request, ct);
+
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            Log.ThumbnailErrorResponse(referrer, imageUrl.Uri, imageUrl.Kind, response);
+                            CacheError(imageUrl, response.ReasonPhrase);
+                            return null;
+                        }
+
+                        byte[] imageBytes = await response.Content.ReadAsByteArrayAsync();
+                        using (var stream = new MemoryStream(imageBytes))
+                        {
+                            try
+                            {
+                                using (Image streamImage = Image.FromStream(stream))
+                                {
+                                    return CacheSuccess(
+                                        imageUrl, new ImageData(streamImage.Width, streamImage.Height, imageBytes));
+                                }
+                            }
+                            catch (ArgumentException ae)
+                            {
+                                Log.InvalidThumbnailImageFormat(referrer, imageUrl.Uri, imageUrl.Kind, ae);
+                                CacheError(imageUrl, ae.Message);
+                                return null;
+                            }
+                        }
+
+                    },
+                    new Dictionary<string, object> { { "uri", imageUrl.Uri } },
+                    cancellationToken);
             }
             catch (TaskCanceledException tce)
             {
@@ -1614,6 +1672,7 @@ namespace onceandfuture
                     }
 
                     newItems = await ThumbnailExtractor.LoadItemThumbnailsAsync(baseUri, newItems, cancellationToken);
+                    feed = new RiverFeed(feed, items: newItems);
                     updatedFeeds = new UpdatedFeeds(
                         river.UpdatedFeeds,
                         feeds: river.UpdatedFeeds.Feeds.Insert(0, feed));
@@ -1654,11 +1713,17 @@ namespace onceandfuture
                 Uri requestUri = uri;
                 for (int i = 0; i < 30; i++)
                 {
-                    var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
-                    if (etag != null) { request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag)); }
-                    request.Headers.IfModifiedSince = lastModified;
+                    response = await Policies.HttpPolicy.ExecuteAsync((ct) =>
+                        {
+                            var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+                            if (etag != null) { request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag)); }
+                            request.Headers.IfModifiedSince = lastModified;
 
-                    response = await client.SendAsync(request, cancellationToken);
+                            return client.SendAsync(request, ct);
+                        },
+                        new Dictionary<string, object> { { "uri", requestUri } },
+                        cancellationToken);
+
                     if ((response.StatusCode != HttpStatusCode.TemporaryRedirect) &&
                         (response.StatusCode != HttpStatusCode.Found) &&
                         (response.StatusCode != HttpStatusCode.SeeOther))
@@ -1957,6 +2022,7 @@ namespace onceandfuture
             string fileName = Convert.ToBase64String(hash).Replace('/', '-') + ".png";
             for (int i = 0; i < 3; i++)
             {
+                // TODO: Polly logic
                 if (File.Exists(fileName)) { break; }
                 try
                 {
@@ -2032,7 +2098,6 @@ namespace onceandfuture
         // TODO: 
         //  - Post titles can still be way too long. (cap to say 64?)
 
-
         static void Main(string[] args)
         {
             try
@@ -2071,7 +2136,7 @@ namespace onceandfuture
                          task = FetchAndUpdateRiver(entry.XmlUrl, CancellationToken.None),
                      }).ToList();
 
-                //Uri uri = new Uri("http://blog.golang.org/feeds/posts/default?alt=rss");
+                //Uri uri = new Uri("https://www.jwz.org/blog/feed/?_=3781");
                 //var parses = new[] {
                 //    new { url = uri, task = FetchAndUpdateRiver(uri, CancellationToken.None) }
                 //}.ToList();
@@ -2083,19 +2148,19 @@ namespace onceandfuture
                     return t.Result;
                 });
 
-                //foreach (var parse in parses)
-                //{
-                //    Console.WriteLine(parse.url);
-                //    parse.task.Wait();
+                foreach (var parse in parses)
+                {
+                    Console.WriteLine(parse.url);
+                    parse.task.Wait();
 
-                //    foreach (RiverFeed feed in parse.task.Result.UpdatedFeeds.Feeds)
-                //    {
-                //        DumpFeed(feed);
-                //    }
+                    foreach (RiverFeed feed in parse.task.Result.UpdatedFeeds.Feeds)
+                    {
+                        DumpFeed(feed);
+                    }
 
-                //    Console.WriteLine("(Press enter to continue)");
-                //    Console.ReadLine();
-                //}
+                    Console.WriteLine("(Press enter to continue)");
+                    Console.ReadLine();
+                }
 
                 doneTask.Wait();
                 Console.WriteLine("Refreshed {0} feeds in {1}", parses.Count, loadTimer.Elapsed);
@@ -2123,6 +2188,7 @@ namespace onceandfuture
                     Console.WriteLine("ID:        {0}", item.Id);
                     Console.WriteLine("Link:      {0}", item.Link);
                     Console.WriteLine("Permalink: {0}", item.PermaLink);
+                    Console.WriteLine("Thumbnail: {0}", item.Thumbnail?.Url);
                     Console.WriteLine();
                     Console.WriteLine(item.Body);
                     Console.WriteLine();
