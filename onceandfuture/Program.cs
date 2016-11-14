@@ -2022,7 +2022,7 @@ namespace onceandfuture
             string fileName = Convert.ToBase64String(hash).Replace('/', '-') + ".png";
             for (int i = 0; i < 3; i++)
             {
-                // TODO: Polly logic
+                // N.B. No polly here because this is transient garbage.
                 if (File.Exists(fileName)) { break; }
                 try
                 {
