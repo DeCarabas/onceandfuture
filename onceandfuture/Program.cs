@@ -28,8 +28,10 @@ using AngleSharp.Parser.Html;
 using Newtonsoft.Json;
 using Polly;
 using Serilog;
+using Serilog.Events;
 
 // TODO: Save/load to blob stores
+// TODO: Post titles can still be way too long. (cap to say 64?)
 
 namespace onceandfuture
 {
@@ -1136,7 +1138,7 @@ namespace onceandfuture
                 retryCount: 3,
                 sleepDurationProvider: ExponentialRetryTimeWithJitter,
                 onRetry: (exc, ts, cnt, ctxt) => Log.HttpRetry(exc, ts, cnt, ctxt));
-        
+
         static bool ValidateHttpRequestException(HttpRequestException hre)
         {
             var iwe = hre.InnerException as WebException;
@@ -2077,6 +2079,22 @@ namespace onceandfuture
 
     class Program
     {
+        static readonly OptDef[] CommonOptions = new OptDef[]
+        {
+            new OptDef { Short='?', Long="help",    Help="Display this help." },
+            new OptDef { Short='v', Long="verbose", Help="Increase the verbosity level." },
+        };
+
+        static readonly Dictionary<string, OptDef[]> Verbs = new Dictionary<string, OptDef[]>
+        {
+            {
+                "update", new[]
+                {
+                    new OptDef { Short='f', Long="feed", Help="The single feed URL to update.", Value=true },
+                }
+            },
+        };
+
         public static async Task<River> FetchAndUpdateRiver(Uri uri, CancellationToken cancellationToken)
         {
             River river = await RiverFeedStore.LoadRiverForFeed(uri);
@@ -2095,84 +2113,107 @@ namespace onceandfuture
             return river;
         }
 
-        // TODO: 
-        //  - Post titles can still be way too long. (cap to say 64?)
+        static void DoUpdate(ParsedOpts args)
+        {
+            // TODO: Args
+            XDocument doc = XDocument.Load(@"C:\Users\John\Downloads\NewsBlur-DeCarabas-2016-11-08");
+            XElement body = doc.Root.Element(XNames.OPML.Body);
 
-        static void Main(string[] args)
+            List<OpmlEntry> feeds =
+                (from elem in body.Descendants(XNames.OPML.Outline)
+                 where elem.Attribute(XNames.OPML.XmlUrl) != null
+                 select OpmlEntry.FromXml(elem)).ToList();
+
+            //foreach (var feed in feeds)
+            //{
+            //    //if (feed.XmlUrl.Host != "totalpartydeath.typepad.com") { continue; }
+            //    Console.WriteLine("Working on {0} next...", feed.XmlUrl);
+            //    Console.ReadLine();
+            //    FetchAndUpdateRiver(feed.XmlUrl, CancellationToken.None).Wait();
+            //    Console.WriteLine("Done.");
+            //    Console.ReadLine();
+            //}
+
+            Stopwatch loadTimer = Stopwatch.StartNew();
+
+            var parses =
+                (from entry in feeds
+                 select new
+                 {
+                     url = entry.XmlUrl,
+                     task = FetchAndUpdateRiver(entry.XmlUrl, CancellationToken.None),
+                 }).ToList();
+
+            //Uri uri = new Uri("https://www.jwz.org/blog/feed/?_=3781");
+            //var parses = new[] {
+            //    new { url = uri, task = FetchAndUpdateRiver(uri, CancellationToken.None) }
+            //}.ToList();
+
+            Console.WriteLine("Started {0} feeds...", parses.Count);
+            Task<River[]> doneTask = Task.WhenAll(parses.Select(p => p.task).ToArray()).ContinueWith(t =>
+            {
+                loadTimer.Stop();
+                return t.Result;
+            });
+
+            foreach (var parse in parses)
+            {
+                Console.WriteLine(parse.url);
+                parse.task.Wait();
+
+                foreach (RiverFeed feed in parse.task.Result.UpdatedFeeds.Feeds)
+                {
+                    DumpFeed(feed);
+                }
+
+                Console.WriteLine("(Press enter to continue)");
+                Console.ReadLine();
+            }
+
+            doneTask.Wait();
+            Console.WriteLine("Refreshed {0} feeds in {1}", parses.Count, loadTimer.Elapsed);
+        }
+
+        static int Main(string[] args)
         {
             try
             {
-                //Trace.Listeners.Add(new ConsoleTraceListener());
+                ParsedOpts parsedArgs = ParseOptions(args, CommonOptions, Verbs);
+                if (parsedArgs.Error != null)
+                {
+                    Console.Error.WriteLine(parsedArgs.Error);
+                    PrintHelp(Console.Error, CommonOptions, Verbs);
+                    return 1;
+                }
+                if (parsedArgs["help"].Flag)
+                {
+                    PrintHelp(Console.Out, CommonOptions, Verbs);
+                    return 0;
+                }
+
+                var logLevel = (LogEventLevel)Math.Max((int)(LogEventLevel.Error - parsedArgs["verbose"].Count), 0);
+
+
                 Serilog.Log.Logger = new LoggerConfiguration()
-                    .MinimumLevel.Error()
+                    .MinimumLevel.Is(logLevel)
                     .WriteTo.LiterateConsole()
                     .CreateLogger();
 
-                XDocument doc = XDocument.Load(@"C:\Users\John\Downloads\NewsBlur-DeCarabas-2016-11-08");
-                XElement body = doc.Root.Element(XNames.OPML.Body);
-
-                List<OpmlEntry> feeds =
-                    (from elem in body.Descendants(XNames.OPML.Outline)
-                     where elem.Attribute(XNames.OPML.XmlUrl) != null
-                     select OpmlEntry.FromXml(elem)).ToList();
-
-                //foreach (var feed in feeds)
-                //{
-                //    //if (feed.XmlUrl.Host != "totalpartydeath.typepad.com") { continue; }
-                //    Console.WriteLine("Working on {0} next...", feed.XmlUrl);
-                //    Console.ReadLine();
-                //    FetchAndUpdateRiver(feed.XmlUrl, CancellationToken.None).Wait();
-                //    Console.WriteLine("Done.");
-                //    Console.ReadLine();
-                //}
-
-                Stopwatch loadTimer = Stopwatch.StartNew();
-
-                var parses =
-                    (from entry in feeds
-                     select new
-                     {
-                         url = entry.XmlUrl,
-                         task = FetchAndUpdateRiver(entry.XmlUrl, CancellationToken.None),
-                     }).ToList();
-
-                //Uri uri = new Uri("https://www.jwz.org/blog/feed/?_=3781");
-                //var parses = new[] {
-                //    new { url = uri, task = FetchAndUpdateRiver(uri, CancellationToken.None) }
-                //}.ToList();
-
-                Console.WriteLine("Started {0} feeds...", parses.Count);
-                Task<River[]> doneTask = Task.WhenAll(parses.Select(p => p.task).ToArray()).ContinueWith(t =>
+                switch (parsedArgs.Verb)
                 {
-                    loadTimer.Stop();
-                    return t.Result;
-                });
-
-                foreach (var parse in parses)
-                {
-                    Console.WriteLine(parse.url);
-                    parse.task.Wait();
-
-                    foreach (RiverFeed feed in parse.task.Result.UpdatedFeeds.Feeds)
-                    {
-                        DumpFeed(feed);
-                    }
-
-                    Console.WriteLine("(Press enter to continue)");
-                    Console.ReadLine();
+                case "update": DoUpdate(parsedArgs); break;
                 }
 
-                doneTask.Wait();
-                Console.WriteLine("Refreshed {0} feeds in {1}", parses.Count, loadTimer.Elapsed);
+                return 0;
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
+                return 99;
             }
-
         }
 
-        private static void DumpFeed(RiverFeed riverFeed)
+        static void DumpFeed(RiverFeed riverFeed)
         {
             if (riverFeed != null)
             {
@@ -2203,6 +2244,172 @@ namespace onceandfuture
                     }
                 }
             }
+        }
+
+        // Yeah command line.
+
+        class ParsedOpts
+        {
+            public string Error;
+            public string Verb;
+            public Dictionary<string, Opt> Opts { get; } = new Dictionary<string, Opt>();
+
+            public Opt this[string key] => this.Opts[key];
+        }
+
+        class OptDef
+        {
+            public char Short;
+            public string Long;
+            public string Help;
+            public bool Value;
+        }
+
+        class Opt
+        {
+            public OptDef Option;
+            public string Value;
+            public int Count;
+            public bool Flag => Count > 0;
+        }
+
+        static ParsedOpts ParseOptions(string[] args, OptDef[] commonOptions, Dictionary<string, OptDef[]> verbs)
+        {
+            ParsedOpts results = new ParsedOpts();
+            for (int i = 0; i < commonOptions.Length; i++)
+            {
+                results.Opts[commonOptions[i].Long] = new Opt { Option = commonOptions[i] };
+            }
+
+            OptDef[] verbOptions = null;
+            for (int argIndex = 0; argIndex < args.Length; argIndex++)
+            {
+                OptDef opt;
+                string arg = args[argIndex];
+                if (arg.StartsWith("--", StringComparison.Ordinal))
+                {
+                    string[] parts = arg.Substring(2).Split(new char[] { '=' }, 2);
+                    string longArg = parts[0];
+
+                    string val = null;
+                    if (parts.Length == 2) { val = parts[1]; }
+
+                    opt = Array.Find(
+                        commonOptions,
+                        o => String.Equals(o.Long, arg, StringComparison.OrdinalIgnoreCase));
+                    if (opt == null && verbOptions != null)
+                    {
+                        opt = Array.Find(
+                            verbOptions, o => String.Equals(o.Long, arg, StringComparison.OrdinalIgnoreCase));
+                    }
+
+                    HandleOpt(results, arg, opt, val);
+                }
+                else if (arg[0] == '-')
+                {
+                    if (arg.Length == 1)
+                    {
+                        results.Error = String.Format("Unrecognized argument: '{0}'", arg);
+                    }
+                    else
+                    {
+                        for (int flagIndex = 1; flagIndex < arg.Length; flagIndex++)
+                        {
+                            string val = null;
+                            char flag = arg[flagIndex];
+                            if (flagIndex + 1 < arg.Length && arg[flagIndex] == '=')
+                            {
+                                val = arg.Substring(flagIndex + 2);
+                                flagIndex = arg.Length;
+                            }
+
+                            opt = Array.Find(commonOptions, o => o.Short == flag);
+                            if (opt == null && verbOptions != null)
+                            {
+                                opt = Array.Find(verbOptions, o => o.Short == flag);
+                            }
+
+                            HandleOpt(results, flag.ToString(), opt, val);
+                            if (results.Error != null) { break; }
+                        }
+                    }
+                }
+                else
+                {
+                    if (results.Verb == null && verbs != null)
+                    {
+                        if (!verbs.TryGetValue(arg, out verbOptions))
+                        {
+                            results.Error = String.Format("Unknown verb: {0}", arg);
+                        }
+                        else
+                        {
+                            for (int verbOptionIndex = 0; verbOptionIndex < verbOptions.Length; verbOptionIndex++)
+                            {
+                                results.Opts[verbOptions[verbOptionIndex].Long] = new Opt
+                                {
+                                    Option = verbOptions[verbOptionIndex]
+                                };
+                            }
+                            results.Verb = arg;
+                        }
+                    }
+                    else
+                    {
+                        results.Error = String.Format("Unrecognized argument: '{0}'", arg);
+                    }
+                }
+
+                if (results.Error != null) { break; }
+            }
+
+            if (results.Error == null && results.Verb == null && verbs != null)
+            {
+                results.Error = String.Format(
+                    "Did not find a verb; specify one of: {0}", String.Join(", ", verbs.Keys));
+            }
+
+            return results;
+        }
+
+        static void HandleOpt(ParsedOpts results, string arg, OptDef opt, string value)
+        {
+            if (opt != null)
+            {
+                Opt optVal = results.Opts[opt.Long];
+                if (value != null)
+                {
+                    if (!opt.Value)
+                    {
+                        results.Error = String.Format("Argument '{0}' doesn't take a value", arg);
+                    }
+                    else if (optVal.Value != null)
+                    {
+                        results.Error = String.Format("Multiple values found for '{0}'", arg);
+                    }
+                    else
+                    {
+                        optVal.Value = value;
+                    }
+                }
+                else if (opt.Value)
+                {
+                    results.Error = String.Format("Argument '{0}' requires a value", arg);
+                }
+                else
+                {
+                    optVal.Count++;
+                }
+            }
+            else
+            {
+                results.Error = String.Format("Unrecognized argument: '{0}'", arg);
+            }
+        }
+
+        static void PrintHelp(TextWriter error, OptDef[] commonOptions, Dictionary<string, OptDef[]> verbs)
+        {
+            throw new NotImplementedException();
         }
     }
 }
