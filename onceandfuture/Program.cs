@@ -21,6 +21,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using Amazon;
+using Amazon.S3;
+using Amazon.S3.Model;
 using AngleSharp.Dom;
 using AngleSharp.Dom.Html;
 using AngleSharp.Extensions;
@@ -236,6 +239,31 @@ namespace onceandfuture
             context.TryGetValue("uri", out url);
             Get().Warning(
                 exception, "HTTP error detected from {url}, retry {retry} after {ts}", url, retryCount, timespan);
+        }
+        
+        public static void PutObjectComplete(string bucket, string name, string type, Stopwatch timer)
+        {
+            Get().Information(
+                "Put Object: {bucket}/{name} ({type}) in {elapsed}ms", 
+                bucket, name, type, timer.ElapsedMilliseconds
+            );
+        }
+
+        public static void GetObjectComplete(string bucket, string name, Stopwatch timer)
+        {
+            Get().Information(
+                "Get Object: {bucket}/{name} in {elapsed}ms",
+                bucket, name, timer.ElapsedMilliseconds
+            );
+        }
+
+        public static void PutObjectError(string bucket, string name, string type, Exception error, Stopwatch timer)
+        {
+            Get().Error(
+                error,
+                "Put Object: ERROR {bucket}/{name} ({type}) in {elapsed}ms",
+                bucket, name, type, timer.ElapsedMilliseconds
+            );
         }
     }
 
@@ -1162,8 +1190,10 @@ namespace onceandfuture
         }
     }
 
-    static class ThumbnailExtractor
+    class ThumbnailExtractor
     {
+        readonly RiverThumbnailStore thumbnailStore = new RiverThumbnailStore();
+
         static readonly HttpClient client;
         static readonly MemoryCache imageCache;
 
@@ -1195,7 +1225,7 @@ namespace onceandfuture
             });
         }
 
-        public static async Task<RiverItem[]> LoadItemThumbnailsAsync(
+        public async Task<RiverItem[]> LoadItemThumbnailsAsync(
             Uri baseUri, RiverItem[] items, CancellationToken token)
         {
             Stopwatch loadTimer = Stopwatch.StartNew();
@@ -1211,7 +1241,7 @@ namespace onceandfuture
             return newItems;
         }
 
-        static async Task<RiverItem> GetItemThumbnailAsync(Uri baseUri, RiverItem item, CancellationToken token)
+        async Task<RiverItem> GetItemThumbnailAsync(Uri baseUri, RiverItem item, CancellationToken token)
         {
             if (item.Thumbnail != null) { return item; }
             if (item.Link == null) { return item; }
@@ -1221,7 +1251,7 @@ namespace onceandfuture
             if (sourceImage == null) { return item; }
             ImageData thumbnail = MakeThumbnail(sourceImage);
 
-            Uri thumbnailUri = await RiverThumbnailStore.StoreImage(thumbnail);
+            Uri thumbnailUri = await this.thumbnailStore.StoreImage(thumbnail);
             return new RiverItem(
                 item,
                 thumbnail: new RiverItemThumbnail(
@@ -1572,8 +1602,9 @@ namespace onceandfuture
         }
     }
 
-    static class RiverFeedParser
+    class RiverFeedParser
     {
+        readonly ThumbnailExtractor thumbnailExtractor = new ThumbnailExtractor();
         static readonly HttpClient client;
 
         static readonly Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>> FeedElements =
@@ -1633,7 +1664,7 @@ namespace onceandfuture
             client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
         }
 
-        public static async Task<River> UpddateAsync(River river, CancellationToken cancellationToken)
+        public async Task<River> UpddateAsync(River river, CancellationToken cancellationToken)
         {
             FetchResult fetchResult = await FetchAsync(
                 river.Metadata.OriginUrl,
@@ -1673,7 +1704,8 @@ namespace onceandfuture
                         newItems[i] = Rebase(newItems[i], baseUri);
                     }
 
-                    newItems = await ThumbnailExtractor.LoadItemThumbnailsAsync(baseUri, newItems, cancellationToken);
+                    newItems = await this.thumbnailExtractor.LoadItemThumbnailsAsync(
+                        baseUri, newItems, cancellationToken);
                     feed = new RiverFeed(feed, items: newItems);
                     updatedFeeds = new UpdatedFeeds(
                         river.UpdatedFeeds,
@@ -2009,9 +2041,70 @@ namespace onceandfuture
         }
     }
 
-    static class RiverThumbnailStore
+    class BlobStore
     {
-        public static async Task<Uri> StoreImage(ImageData image)
+        readonly string bucket;
+        readonly AmazonS3Client client;
+
+        // In deployment, use this?
+        // Credentials stored in the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.
+        public BlobStore(string bucket)
+        {
+            this.bucket = bucket;
+            this.client = new AmazonS3Client(region: RegionEndpoint.USWest2);            
+        }
+
+        public Uri GetObjectUri(string name)
+        {            
+            return new Uri("https://s3-us-west-2.amazonaws.com/" + this.bucket + "/" + Uri.EscapeUriString(name));
+        }
+
+        public async Task<byte[]> GetObject(string name)
+        {
+            Stopwatch timer = Stopwatch.StartNew();
+            using (GetObjectResponse response = await this.client.GetObjectAsync(this.bucket, name))
+            {
+                byte[] data = new byte[response.ResponseStream.Length];
+                int cursor = 0;
+                while (cursor != data.Length)
+                {
+                    int read = await response.ResponseStream.ReadAsync(data, cursor, data.Length - cursor);
+                    if (read == 0) { break; }
+                    cursor += read;
+                }
+                Log.GetObjectComplete(this.bucket, name, timer);
+                return data;
+            }
+        }
+
+        public async Task PutObject(string name, string type, Stream stream)
+        {
+            Stopwatch timer = Stopwatch.StartNew();
+            try
+            {
+                await this.client.PutObjectAsync(new PutObjectRequest
+                {
+                    AutoCloseStream = false,
+                    BucketName = this.bucket,
+                    Key = name,
+                    ContentType = type,
+                    InputStream = stream,
+                });
+                Log.PutObjectComplete(this.bucket, name, type, timer);
+            }
+            catch(Exception e)
+            {
+                Log.PutObjectError(this.bucket, name, type, e, timer);
+                throw;
+            }
+        }
+    }
+
+    class RiverThumbnailStore
+    {
+        readonly BlobStore blobStore = new BlobStore("onceandfuture-thumbs");
+
+        public async Task<Uri> StoreImage(ImageData image)
         {
             MemoryStream stream = new MemoryStream();
             using (Image source = Image.FromStream(new MemoryStream(image.Data)))
@@ -2022,30 +2115,13 @@ namespace onceandfuture
             stream.Position = 0;
             byte[] hash = SHA1.Create().ComputeHash(stream);
             string fileName = Convert.ToBase64String(hash).Replace('/', '-') + ".png";
-            for (int i = 0; i < 3; i++)
-            {
-                // N.B. No polly here because this is transient garbage.
-                if (File.Exists(fileName)) { break; }
-                try
-                {
-                    using (FileStream outputFile = File.Create(fileName))
-                    {
-                        stream.Position = 0;
-                        await stream.CopyToAsync(outputFile);
-                    }
-                    break;
-                }
-                catch (IOException)
-                {
-                    await Task.Delay(100);
-                }
-            }
 
-            return new Uri(Path.GetFullPath(fileName));
+            await this.blobStore.PutObject(fileName, "image/png", stream);
+            return this.blobStore.GetObjectUri(fileName);
         }
     }
 
-    static class RiverFeedStore
+    class RiverFeedStore
     {
         static string GetNameForUri(Uri feedUri)
         {
@@ -2100,19 +2176,20 @@ namespace onceandfuture
             },
         };
 
-        public static async Task<River> FetchAndUpdateRiver(Uri uri, CancellationToken cancellationToken)
+        public static async Task<River> FetchAndUpdateRiver(
+            RiverFeedParser parser, Uri uri, CancellationToken cancellationToken)
         {
             River river = await RiverFeedStore.LoadRiverForFeed(uri);
             if ((river.Metadata.LastStatus != HttpStatusCode.MovedPermanently) &&
                 (river.Metadata.LastStatus != HttpStatusCode.Gone))
             {
-                river = await RiverFeedParser.UpddateAsync(river, cancellationToken);
+                river = await parser.UpddateAsync(river, cancellationToken);
                 await RiverFeedStore.WriteRiver(uri, river);
             }
 
             if (river.Metadata.LastStatus == HttpStatusCode.MovedPermanently)
             {
-                return await FetchAndUpdateRiver(river.Metadata.OriginUrl, cancellationToken);
+                return await FetchAndUpdateRiver(parser, river.Metadata.OriginUrl, cancellationToken);
             }
 
             return river;
@@ -2120,7 +2197,6 @@ namespace onceandfuture
 
         static int DoUpdate(ParsedOpts args)
         {
-            // TODO: Args
             List<OpmlEntry> feeds;
             if (args["feed"].Value != null)
             {
@@ -2145,12 +2221,13 @@ namespace onceandfuture
 
             Stopwatch loadTimer = Stopwatch.StartNew();
 
+            var parser = new RiverFeedParser();
             var parses =
                 (from entry in feeds
                  select new
                  {
                      url = entry.XmlUrl,
-                     task = FetchAndUpdateRiver(entry.XmlUrl, CancellationToken.None),
+                     task = FetchAndUpdateRiver(parser, entry.XmlUrl, CancellationToken.None),
                  }).ToList();
 
             Console.WriteLine("Started {0} feeds...", parses.Count);
