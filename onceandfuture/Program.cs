@@ -2082,7 +2082,11 @@ namespace onceandfuture
         static readonly OptDef[] CommonOptions = new OptDef[]
         {
             new OptDef { Short='?', Long="help",    Help="Display this help." },
-            new OptDef { Short='v', Long="verbose", Help="Increase the verbosity level." },
+            new OptDef {
+                Short ='v',
+                Long ="verbose",
+                Help ="Increase the verbosity level; specify more than once for more verbosity."
+            },
         };
 
         static readonly Dictionary<string, OptDef[]> Verbs = new Dictionary<string, OptDef[]>
@@ -2091,6 +2095,7 @@ namespace onceandfuture
                 "update", new[]
                 {
                     new OptDef { Short='f', Long="feed", Help="The single feed URL to update.", Value=true },
+                    new OptDef { Short='s', Long="show", Help="Display the feeds afterwards." },
                 }
             },
         };
@@ -2113,26 +2118,30 @@ namespace onceandfuture
             return river;
         }
 
-        static void DoUpdate(ParsedOpts args)
+        static int DoUpdate(ParsedOpts args)
         {
             // TODO: Args
-            XDocument doc = XDocument.Load(@"C:\Users\John\Downloads\NewsBlur-DeCarabas-2016-11-08");
-            XElement body = doc.Root.Element(XNames.OPML.Body);
+            List<OpmlEntry> feeds;
+            if (args["feed"].Value != null)
+            {
+                Uri feedUrl;
+                if (!Uri.TryCreate(args["feed"].Value, UriKind.Absolute, out feedUrl))
+                {
+                    Console.Error.WriteLine("Feed not a valid url: {0}", args["feed"].Value);
+                    return 100;
+                }
+                feeds = new List<OpmlEntry> { new OpmlEntry(xmlUrl: feedUrl) };
+            }
+            else
+            {
+                XDocument doc = XDocument.Load(@"C:\Users\John\Downloads\NewsBlur-DeCarabas-2016-11-08");
+                XElement body = doc.Root.Element(XNames.OPML.Body);
 
-            List<OpmlEntry> feeds =
-                (from elem in body.Descendants(XNames.OPML.Outline)
-                 where elem.Attribute(XNames.OPML.XmlUrl) != null
-                 select OpmlEntry.FromXml(elem)).ToList();
-
-            //foreach (var feed in feeds)
-            //{
-            //    //if (feed.XmlUrl.Host != "totalpartydeath.typepad.com") { continue; }
-            //    Console.WriteLine("Working on {0} next...", feed.XmlUrl);
-            //    Console.ReadLine();
-            //    FetchAndUpdateRiver(feed.XmlUrl, CancellationToken.None).Wait();
-            //    Console.WriteLine("Done.");
-            //    Console.ReadLine();
-            //}
+                feeds =
+                    (from elem in body.Descendants(XNames.OPML.Outline)
+                     where elem.Attribute(XNames.OPML.XmlUrl) != null
+                     select OpmlEntry.FromXml(elem)).ToList();
+            }
 
             Stopwatch loadTimer = Stopwatch.StartNew();
 
@@ -2144,11 +2153,6 @@ namespace onceandfuture
                      task = FetchAndUpdateRiver(entry.XmlUrl, CancellationToken.None),
                  }).ToList();
 
-            //Uri uri = new Uri("https://www.jwz.org/blog/feed/?_=3781");
-            //var parses = new[] {
-            //    new { url = uri, task = FetchAndUpdateRiver(uri, CancellationToken.None) }
-            //}.ToList();
-
             Console.WriteLine("Started {0} feeds...", parses.Count);
             Task<River[]> doneTask = Task.WhenAll(parses.Select(p => p.task).ToArray()).ContinueWith(t =>
             {
@@ -2156,22 +2160,26 @@ namespace onceandfuture
                 return t.Result;
             });
 
-            foreach (var parse in parses)
+            if (args["show"].Flag)
             {
-                Console.WriteLine(parse.url);
-                parse.task.Wait();
-
-                foreach (RiverFeed feed in parse.task.Result.UpdatedFeeds.Feeds)
+                foreach (var parse in parses)
                 {
-                    DumpFeed(feed);
-                }
+                    Console.WriteLine(parse.url);
+                    parse.task.Wait();
 
-                Console.WriteLine("(Press enter to continue)");
-                Console.ReadLine();
+                    foreach (RiverFeed feed in parse.task.Result.UpdatedFeeds.Feeds)
+                    {
+                        DumpFeed(feed);
+                    }
+
+                    Console.WriteLine("(Press enter to continue)");
+                    Console.ReadLine();
+                }
             }
 
             doneTask.Wait();
             Console.WriteLine("Refreshed {0} feeds in {1}", parses.Count, loadTimer.Elapsed);
+            return 0;
         }
 
         static int Main(string[] args)
@@ -2192,8 +2200,6 @@ namespace onceandfuture
                 }
 
                 var logLevel = (LogEventLevel)Math.Max((int)(LogEventLevel.Error - parsedArgs["verbose"].Count), 0);
-
-
                 Serilog.Log.Logger = new LoggerConfiguration()
                     .MinimumLevel.Is(logLevel)
                     .WriteTo.LiterateConsole()
@@ -2201,10 +2207,10 @@ namespace onceandfuture
 
                 switch (parsedArgs.Verb)
                 {
-                case "update": DoUpdate(parsedArgs); break;
+                case "update": return DoUpdate(parsedArgs);
                 }
 
-                return 0;
+                throw new NotSupportedException();
             }
             catch (Exception e)
             {
@@ -2296,11 +2302,11 @@ namespace onceandfuture
 
                     opt = Array.Find(
                         commonOptions,
-                        o => String.Equals(o.Long, arg, StringComparison.OrdinalIgnoreCase));
+                        o => String.Equals(o.Long, longArg, StringComparison.OrdinalIgnoreCase));
                     if (opt == null && verbOptions != null)
                     {
                         opt = Array.Find(
-                            verbOptions, o => String.Equals(o.Long, arg, StringComparison.OrdinalIgnoreCase));
+                            verbOptions, o => String.Equals(o.Long, longArg, StringComparison.OrdinalIgnoreCase));
                     }
 
                     HandleOpt(results, arg, opt, val);
@@ -2407,9 +2413,9 @@ namespace onceandfuture
             }
         }
 
-        static void PrintHelp(TextWriter error, OptDef[] commonOptions, Dictionary<string, OptDef[]> verbs)
+        static void PrintHelp(TextWriter output, OptDef[] commonOptions, Dictionary<string, OptDef[]> verbs)
         {
-            throw new NotImplementedException();
+            output.WriteLine("TBD: Help");
         }
     }
 }
