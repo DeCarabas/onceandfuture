@@ -240,11 +240,11 @@ namespace onceandfuture
             Get().Warning(
                 exception, "HTTP error detected from {url}, retry {retry} after {ts}", url, retryCount, timespan);
         }
-        
+
         public static void PutObjectComplete(string bucket, string name, string type, Stopwatch timer)
         {
             Get().Information(
-                "Put Object: {bucket}/{name} ({type}) in {elapsed}ms", 
+                "Put Object: {bucket}/{name} ({type}) in {elapsed}ms",
                 bucket, name, type, timer.ElapsedMilliseconds
             );
         }
@@ -2051,12 +2051,12 @@ namespace onceandfuture
         public BlobStore(string bucket)
         {
             this.bucket = bucket;
-            this.client = new AmazonS3Client(region: RegionEndpoint.USWest2);            
+            this.client = new AmazonS3Client(region: RegionEndpoint.USWest2);
         }
 
         public Uri GetObjectUri(string name)
-        {            
-            return new Uri("https://s3-us-west-2.amazonaws.com/" + this.bucket + "/" + Uri.EscapeUriString(name));
+        {
+            return new Uri("https://s3-us-west-2.amazonaws.com/" + this.bucket + "/" + Uri.EscapeDataString(name));
         }
 
         public async Task<byte[]> GetObject(string name)
@@ -2092,7 +2092,7 @@ namespace onceandfuture
                 });
                 Log.PutObjectComplete(this.bucket, name, type, timer);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Log.PutObjectError(this.bucket, name, type, e, timer);
                 throw;
@@ -2171,9 +2171,14 @@ namespace onceandfuture
                 "update", new[]
                 {
                     new OptDef { Short='f', Long="feed", Help="The single feed URL to update.", Value=true },
-                    new OptDef { Short='s', Long="show", Help="Display the feeds afterwards." },
                 }
             },
+            {
+                "show", new []
+                {
+                    new OptDef { Short='f', Long="feed", Help="The single feed URL to show.", Value=true },
+                }
+            }
         };
 
         public static async Task<River> FetchAndUpdateRiver(
@@ -2193,6 +2198,51 @@ namespace onceandfuture
             }
 
             return river;
+        }
+
+        static int DoShow(ParsedOpts args)
+        {
+            List<OpmlEntry> feeds;
+            if (args["feed"].Value != null)
+            {
+                Uri feedUrl;
+                if (!Uri.TryCreate(args["feed"].Value, UriKind.Absolute, out feedUrl))
+                {
+                    Console.Error.WriteLine("Feed not a valid url: {0}", args["feed"].Value);
+                    return 100;
+                }
+                feeds = new List<OpmlEntry> { new OpmlEntry(xmlUrl: feedUrl) };
+            }
+            else
+            {
+                XDocument doc = XDocument.Load(@"C:\Users\John\Downloads\NewsBlur-DeCarabas-2016-11-08");
+                XElement body = doc.Root.Element(XNames.OPML.Body);
+
+                feeds =
+                    (from elem in body.Descendants(XNames.OPML.Outline)
+                     where elem.Attribute(XNames.OPML.XmlUrl) != null
+                     select OpmlEntry.FromXml(elem)).ToList();
+            }
+
+            foreach (var entry in feeds)
+            {
+                River river = RiverFeedStore.LoadRiverForFeed(entry.XmlUrl).Result;
+                if (river.UpdatedFeeds.Feeds.Count > 0)
+                {
+                    foreach (RiverFeed feed in river.UpdatedFeeds.Feeds)
+                    {
+                        DumpFeed(feed);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("No data for {0}", entry.XmlUrl);
+                }
+
+                Console.WriteLine("(Press enter to continue)");
+                Console.ReadLine();
+            }
+            return 0;
         }
 
         static int DoUpdate(ParsedOpts args)
@@ -2237,23 +2287,6 @@ namespace onceandfuture
                 return t.Result;
             });
 
-            if (args["show"].Flag)
-            {
-                foreach (var parse in parses)
-                {
-                    Console.WriteLine(parse.url);
-                    parse.task.Wait();
-
-                    foreach (RiverFeed feed in parse.task.Result.UpdatedFeeds.Feeds)
-                    {
-                        DumpFeed(feed);
-                    }
-
-                    Console.WriteLine("(Press enter to continue)");
-                    Console.ReadLine();
-                }
-            }
-
             doneTask.Wait();
             Console.WriteLine("Refreshed {0} feeds in {1}", parses.Count, loadTimer.Elapsed);
             return 0;
@@ -2285,6 +2318,7 @@ namespace onceandfuture
                 switch (parsedArgs.Verb)
                 {
                 case "update": return DoUpdate(parsedArgs);
+                case "show": return DoShow(parsedArgs);
                 }
 
                 throw new NotSupportedException();
