@@ -624,7 +624,11 @@ namespace onceandfuture
         public static class OPML
         {
             public static readonly XName Body = XName.Get("body");
+            public static readonly XName DateCreated = XName.Get("dateCreated");
+            public static readonly XName DateModified = XName.Get("dateModified");
+            public static readonly XName Opml = XName.Get("opml");
             public static readonly XName Outline = XName.Get("outline");
+            public static readonly XName Head = XName.Get("head");
             public static readonly XName HtmlUrl = XName.Get("htmlUrl");
             public static readonly XName Text = XName.Get("title");
             public static readonly XName Title = XName.Get("title");
@@ -2081,7 +2085,7 @@ namespace onceandfuture
         {
             Stopwatch timer = Stopwatch.StartNew();
             try
-            {                
+            {
                 using (GetObjectResponse response = await this.client.GetObjectAsync(this.bucket, name))
                 {
                     byte[] data = new byte[response.ResponseStream.Length];
@@ -2212,6 +2216,14 @@ namespace onceandfuture
                 {
                     new OptDef { Short='f', Long="feed", Help="The single feed URL to show.", Value=true },
                 }
+            },
+            {
+                "subscribe", new[]
+                {
+                    new OptDef { Short='u', Long="user",  Help="The user to add a subscription for", Value=true },
+                    new OptDef { Short='r', Long="river", Help="The river to add a subscription to", Value=true },
+                    new OptDef { Short='f', Long="feed",  Help="The feed to add a subscription for", Value=true },
+                }
             }
         };
 
@@ -2328,6 +2340,124 @@ namespace onceandfuture
 
             doneTask.Wait();
             Console.WriteLine("Refreshed {0} feeds in {1}", parses.Count, loadTimer.Elapsed);
+            return 0;
+        }
+
+        static async Task<XElement> GetSubscriptionsFor(string user)
+        {
+            try
+            {
+                using (TextReader reader = File.OpenText(user))
+                {
+                    string body = await reader.ReadToEndAsync();
+                    XDocument doc = XDocument.Parse(body);
+                    return doc.Root.Element(XNames.OPML.Body) ?? new XElement(XNames.OPML.Body);
+                }
+            }
+            catch(FileNotFoundException)
+            {
+                return new XElement(XNames.OPML.Body);
+            }
+            throw new NotImplementedException();
+        }
+
+        static Task SaveSubscriptionsFor(string user, XElement opmlBody)
+        {
+            XDocument doc = new XDocument(
+                new XElement(
+                    XNames.OPML.Opml,
+                    new XAttribute(XNames.OPML.Version, "1.1"),
+                    new XElement(
+                        XNames.OPML.Head,
+                        new XElement(XNames.OPML.Title, "Feeds for " + user),
+                        new XElement(XNames.OPML.DateCreated, DateTimeOffset.UtcNow),
+                        new XElement(XNames.OPML.DateModified, DateTimeOffset.UtcNow)),
+                    opmlBody));
+            using (XmlWriter writer = XmlWriter.Create(user))
+            {
+                doc.WriteTo(writer);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        static int DoSubscribe(ParsedOpts args)
+        {
+            string user = args["user"].Value;
+            string riverName = args["river"].Value;
+            string feed = args["feed"].Value;
+
+            // Check feed.
+            var parser = new RiverFeedParser();
+            var feedStore = new RiverFeedStore();
+            River feedRiver = FetchAndUpdateRiver(feedStore, parser, new Uri(feed), CancellationToken.None).Result;
+            if (feedRiver.Metadata.LastStatus < (HttpStatusCode)200 ||
+                feedRiver.Metadata.LastStatus >= (HttpStatusCode)400)
+            {
+                Console.Error.WriteLine("Could not fetch feed {0}", feed);
+                return -1;
+            }
+
+
+            string text = feed;
+            string htmlUrl = feed;
+            string xmlUrl = feedRiver.Metadata.OriginUrl.AbsoluteUri;
+            if (feedRiver.UpdatedFeeds.Feeds.Count > 0)
+            {
+                RiverFeed rf = feedRiver.UpdatedFeeds.Feeds[0];
+                text = rf.FeedTitle;
+                htmlUrl = rf.WebsiteUrl;
+            }
+
+            XElement feedElement = new XElement(
+                XNames.OPML.Outline,
+                new XAttribute(XNames.OPML.HtmlUrl, htmlUrl),
+                new XAttribute(XNames.OPML.Type, "rss"),
+                new XAttribute(XNames.OPML.Version, "RSS"),
+                new XAttribute(XNames.OPML.Title, text),
+                new XAttribute(XNames.OPML.Text, text),
+                new XAttribute(XNames.OPML.XmlUrl, xmlUrl));
+
+            XElement opmlBody = GetSubscriptionsFor(user).Result;
+
+            // Find the river element. 
+            XElement riverElement;
+            if (String.Equals("main", riverName, StringComparison.OrdinalIgnoreCase))
+            {
+                riverElement = opmlBody;
+            }
+            else
+            {
+                riverElement =
+                    (from element in opmlBody.Elements(XNames.OPML.Outline)
+                     where element.Attribute(XNames.OPML.Text)?.Value == riverName
+                     where element.Attribute(XNames.OPML.XmlUrl) == null
+                     select element).FirstOrDefault();
+            }
+
+            if (riverElement == null)
+            {
+                riverElement = new XElement(
+                    XNames.OPML.Outline,
+                    new XAttribute(XNames.OPML.Title, riverName),
+                    new XAttribute(XNames.OPML.Text, riverName));
+                opmlBody.Add(riverElement);
+            }
+
+            XElement existingFeedElement =
+                (from element in riverElement.Elements(XNames.OPML.Outline)
+                 where element.Attribute(XNames.OPML.XmlUrl)?.Value == xmlUrl
+                 select element).FirstOrDefault();
+            if (existingFeedElement != null)
+            {
+                existingFeedElement.ReplaceWith(feedElement);
+            }
+            else
+            {
+                riverElement.Add(feedElement);
+            }
+
+            SaveSubscriptionsFor(user, opmlBody).Wait();
             return 0;
         }
 
