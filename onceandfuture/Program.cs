@@ -243,7 +243,7 @@ namespace onceandfuture
 
         public static void PutObjectComplete(string bucket, string name, string type, Stopwatch timer)
         {
-            Get().Information(
+            Get().Verbose(
                 "Put Object: {bucket}/{name} ({type}) in {elapsed}ms",
                 bucket, name, type, timer.ElapsedMilliseconds
             );
@@ -251,18 +251,36 @@ namespace onceandfuture
 
         public static void GetObjectComplete(string bucket, string name, Stopwatch timer)
         {
-            Get().Information(
+            Get().Verbose(
                 "Get Object: {bucket}/{name} in {elapsed}ms",
                 bucket, name, timer.ElapsedMilliseconds
             );
         }
 
-        public static void PutObjectError(string bucket, string name, string type, Exception error, Stopwatch timer)
+        public static void PutObjectError(
+            string bucket, string name, string type, AmazonS3Exception error, Stopwatch timer)
         {
             Get().Error(
                 error,
-                "Put Object: ERROR {bucket}/{name} ({type}) in {elapsed}ms",
-                bucket, name, type, timer.ElapsedMilliseconds
+                "Put Object: ERROR {bucket}/{name} ({type}) in {elapsed}ms: {code}: {body}",
+                bucket, name, type, timer.ElapsedMilliseconds, error.ErrorCode, error.ResponseBody
+            );
+        }
+
+        public static void GetObjectError(string bucket, string name, AmazonS3Exception error, Stopwatch timer)
+        {
+            Get().Error(
+                error,
+                "Get Object: ERROR {bucket}/{name} in {elapsed}ms: {code}: {body}",
+                bucket, name, timer.ElapsedMilliseconds, error.ErrorCode, error.ResponseBody
+            );
+        }
+
+        public static void GetObjectNotFound(string bucket, string name, Stopwatch timer)
+        {
+            Get().Information(
+                "Object {name} not found in S3 bucket {bucket} ({elapsed}ms)",
+                name, bucket, timer.ElapsedMilliseconds
             );
         }
     }
@@ -2062,18 +2080,31 @@ namespace onceandfuture
         public async Task<byte[]> GetObject(string name)
         {
             Stopwatch timer = Stopwatch.StartNew();
-            using (GetObjectResponse response = await this.client.GetObjectAsync(this.bucket, name))
-            {
-                byte[] data = new byte[response.ResponseStream.Length];
-                int cursor = 0;
-                while (cursor != data.Length)
+            try
+            {                
+                using (GetObjectResponse response = await this.client.GetObjectAsync(this.bucket, name))
                 {
-                    int read = await response.ResponseStream.ReadAsync(data, cursor, data.Length - cursor);
-                    if (read == 0) { break; }
-                    cursor += read;
+                    byte[] data = new byte[response.ResponseStream.Length];
+                    int cursor = 0;
+                    while (cursor != data.Length)
+                    {
+                        int read = await response.ResponseStream.ReadAsync(data, cursor, data.Length - cursor);
+                        if (read == 0) { break; }
+                        cursor += read;
+                    }
+                    Log.GetObjectComplete(this.bucket, name, timer);
+                    return data;
                 }
-                Log.GetObjectComplete(this.bucket, name, timer);
-                return data;
+            }
+            catch (Amazon.S3.AmazonS3Exception s3e)
+            {
+                if (s3e.ErrorCode == "NoSuchKey")
+                {
+                    Log.GetObjectNotFound(this.bucket, name, timer);
+                    return null;
+                }
+                Log.GetObjectError(this.bucket, name, s3e, timer);
+                throw;
             }
         }
 
@@ -2092,7 +2123,7 @@ namespace onceandfuture
                 });
                 Log.PutObjectComplete(this.bucket, name, type, timer);
             }
-            catch (Exception e)
+            catch (AmazonS3Exception e)
             {
                 Log.PutObjectError(this.bucket, name, type, e, timer);
                 throw;
@@ -2123,32 +2154,35 @@ namespace onceandfuture
 
     class RiverFeedStore
     {
+        readonly BlobStore blobStore = new BlobStore("onceandfuture");
+
         static string GetNameForUri(Uri feedUri)
         {
             return Util.HashString(feedUri.AbsoluteUri);
         }
 
-        public static async Task<River> LoadRiverForFeed(Uri feedUri)
+        public async Task<River> LoadRiverForFeed(Uri feedUri)
         {
-            try
-            {
-                using (var stream = File.OpenText(GetNameForUri(feedUri)))
-                {
-                    string text = await stream.ReadToEndAsync();
-                    return JsonConvert.DeserializeObject<River>(text);
-                }
-            }
-            catch (FileNotFoundException)
+            byte[] blob = await this.blobStore.GetObject(GetNameForUri(feedUri));
+            if (blob == null)
             {
                 return new River(metadata: new RiverFeedMeta(originUrl: feedUri));
             }
+
+            using (var memoryStream = new MemoryStream(blob))
+            using (var reader = new StreamReader(memoryStream, Encoding.UTF8))
+            {
+                string text = reader.ReadToEnd();
+                return JsonConvert.DeserializeObject<River>(text);
+            }
         }
 
-        public static async Task WriteRiver(Uri uri, River river)
+        public async Task WriteRiver(Uri uri, River river)
         {
-            using (var stream = File.CreateText(GetNameForUri(uri)))
+            byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(river));
+            using (var memoryStream = new MemoryStream(data))
             {
-                await stream.WriteAsync(JsonConvert.SerializeObject(river));
+                await this.blobStore.PutObject(GetNameForUri(uri), "application/json", memoryStream);
             }
         }
     }
@@ -2182,19 +2216,22 @@ namespace onceandfuture
         };
 
         public static async Task<River> FetchAndUpdateRiver(
-            RiverFeedParser parser, Uri uri, CancellationToken cancellationToken)
+            RiverFeedStore feedStore,
+            RiverFeedParser parser,
+            Uri uri,
+            CancellationToken cancellationToken)
         {
-            River river = await RiverFeedStore.LoadRiverForFeed(uri);
+            River river = await feedStore.LoadRiverForFeed(uri);
             if ((river.Metadata.LastStatus != HttpStatusCode.MovedPermanently) &&
                 (river.Metadata.LastStatus != HttpStatusCode.Gone))
             {
                 river = await parser.UpddateAsync(river, cancellationToken);
-                await RiverFeedStore.WriteRiver(uri, river);
+                await feedStore.WriteRiver(uri, river);
             }
 
             if (river.Metadata.LastStatus == HttpStatusCode.MovedPermanently)
             {
-                return await FetchAndUpdateRiver(parser, river.Metadata.OriginUrl, cancellationToken);
+                return await FetchAndUpdateRiver(feedStore, parser, river.Metadata.OriginUrl, cancellationToken);
             }
 
             return river;
@@ -2224,9 +2261,10 @@ namespace onceandfuture
                      select OpmlEntry.FromXml(elem)).ToList();
             }
 
+            var feedStore = new RiverFeedStore();
             foreach (var entry in feeds)
             {
-                River river = RiverFeedStore.LoadRiverForFeed(entry.XmlUrl).Result;
+                River river = feedStore.LoadRiverForFeed(entry.XmlUrl).Result;
                 if (river.UpdatedFeeds.Feeds.Count > 0)
                 {
                     foreach (RiverFeed feed in river.UpdatedFeeds.Feeds)
@@ -2272,12 +2310,13 @@ namespace onceandfuture
             Stopwatch loadTimer = Stopwatch.StartNew();
 
             var parser = new RiverFeedParser();
+            var feedStore = new RiverFeedStore();
             var parses =
                 (from entry in feeds
                  select new
                  {
                      url = entry.XmlUrl,
-                     task = FetchAndUpdateRiver(parser, entry.XmlUrl, CancellationToken.None),
+                     task = FetchAndUpdateRiver(feedStore, parser, entry.XmlUrl, CancellationToken.None),
                  }).ToList();
 
             Console.WriteLine("Started {0} feeds...", parses.Count);
