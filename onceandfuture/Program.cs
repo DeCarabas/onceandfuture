@@ -630,7 +630,7 @@ namespace onceandfuture
             public static readonly XName Outline = XName.Get("outline");
             public static readonly XName Head = XName.Get("head");
             public static readonly XName HtmlUrl = XName.Get("htmlUrl");
-            public static readonly XName Text = XName.Get("title");
+            public static readonly XName Text = XName.Get("text");
             public static readonly XName Title = XName.Get("title");
             public static readonly XName Type = XName.Get("type");
             public static readonly XName Version = XName.Get("version");
@@ -2218,11 +2218,17 @@ namespace onceandfuture
                 }
             },
             {
-                "subscribe", new[]
+                "sub", new[]
                 {
-                    new OptDef { Short='u', Long="user",  Help="The user to add a subscription for", Value=true },
-                    new OptDef { Short='r', Long="river", Help="The river to add a subscription to", Value=true },
-                    new OptDef { Short='f', Long="feed",  Help="The feed to add a subscription for", Value=true },
+                    new OptDef { Short='u', Long="user",  Help="The user to add a subscription for", Value=true, Required=true },
+                    new OptDef { Short='r', Long="river", Help="The river to add a subscription to", Value=true, Default="main" },
+                    new OptDef { Short='f', Long="feed",  Help="The feed to add a subscription for", Value=true, Required=true },
+                }
+            },
+            {
+                "list", new[]
+                {
+                    new OptDef { Short='u', Long="user",  Help="The user to list the subscriptions for", Value=true, Required=true },
                 }
             }
         };
@@ -2354,7 +2360,7 @@ namespace onceandfuture
                     return doc.Root.Element(XNames.OPML.Body) ?? new XElement(XNames.OPML.Body);
                 }
             }
-            catch(FileNotFoundException)
+            catch (FileNotFoundException)
             {
                 return new XElement(XNames.OPML.Body);
             }
@@ -2384,8 +2390,8 @@ namespace onceandfuture
         static int DoSubscribe(ParsedOpts args)
         {
             string user = args["user"].Value;
-            string riverName = args["river"].Value;
             string feed = args["feed"].Value;
+            string riverName = args["river"].Value;
 
             // Check feed.
             var parser = new RiverFeedParser();
@@ -2461,6 +2467,14 @@ namespace onceandfuture
             return 0;
         }
 
+        static int DoList(ParsedOpts args)
+        {
+            string user = args["user"].Value;
+            XElement opmlBody = GetSubscriptionsFor(user).Result;
+            Console.WriteLine(opmlBody.ToString());
+            return 0;
+        }
+
         static int Main(string[] args)
         {
             try
@@ -2488,6 +2502,8 @@ namespace onceandfuture
                 {
                 case "update": return DoUpdate(parsedArgs);
                 case "show": return DoShow(parsedArgs);
+                case "sub": return DoSubscribe(parsedArgs);
+                case "list": return DoList(parsedArgs);
                 }
 
                 throw new NotSupportedException();
@@ -2549,14 +2565,23 @@ namespace onceandfuture
             public string Long;
             public string Help;
             public bool Value;
+            public string Default;
+            public bool Required;
         }
 
         class Opt
         {
-            public OptDef Option;
             public string Value;
             public int Count;
+
+            public Opt(OptDef optDef)
+            {
+                this.Option = optDef;
+                this.Value = optDef.Default;
+            }
+
             public bool Flag => Count > 0;
+            public OptDef Option { get; }
         }
 
         static ParsedOpts ParseOptions(string[] args, OptDef[] commonOptions, Dictionary<string, OptDef[]> verbs)
@@ -2564,7 +2589,7 @@ namespace onceandfuture
             ParsedOpts results = new ParsedOpts();
             for (int i = 0; i < commonOptions.Length; i++)
             {
-                results.Opts[commonOptions[i].Long] = new Opt { Option = commonOptions[i] };
+                results.Opts[commonOptions[i].Long] = new Opt(commonOptions[i]);
             }
 
             OptDef[] verbOptions = null;
@@ -2632,10 +2657,8 @@ namespace onceandfuture
                         {
                             for (int verbOptionIndex = 0; verbOptionIndex < verbOptions.Length; verbOptionIndex++)
                             {
-                                results.Opts[verbOptions[verbOptionIndex].Long] = new Opt
-                                {
-                                    Option = verbOptions[verbOptionIndex]
-                                };
+                                results.Opts[verbOptions[verbOptionIndex].Long] =
+                                    new Opt(verbOptions[verbOptionIndex]);
                             }
                             results.Verb = arg;
                         }
@@ -2649,10 +2672,24 @@ namespace onceandfuture
                 if (results.Error != null) { break; }
             }
 
+            // Check for missing verb
             if (results.Error == null && results.Verb == null && verbs != null)
             {
                 results.Error = String.Format(
                     "Did not find a verb; specify one of: {0}", String.Join(", ", verbs.Keys));
+            }
+
+            // Check for missing required option
+            if (results.Error == null)
+            {
+                foreach (Opt opt in results.Opts.Values)
+                {
+                    if (opt.Option.Required && opt.Count == 0)
+                    {
+                        results.Error = String.Format("Missing required option {0}", opt.Option.Long);
+                        break;
+                    }
+                }
             }
 
             return results;
@@ -2669,7 +2706,7 @@ namespace onceandfuture
                     {
                         results.Error = String.Format("Argument '{0}' doesn't take a value", arg);
                     }
-                    else if (optVal.Value != null)
+                    else if (optVal.Count > 0)
                     {
                         results.Error = String.Format("Multiple values found for '{0}'", arg);
                     }
@@ -2682,10 +2719,7 @@ namespace onceandfuture
                 {
                     results.Error = String.Format("Argument '{0}' requires a value", arg);
                 }
-                else
-                {
-                    optVal.Count++;
-                }
+                optVal.Count++;
             }
             else
             {
