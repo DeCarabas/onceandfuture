@@ -2212,46 +2212,134 @@ namespace onceandfuture
         }
     }
 
+    class RiverDefinition
+    {
+        public RiverDefinition(
+            RiverDefinition otherRiver = null,
+            string name = null,
+            IEnumerable<Uri> feeds = null)
+        {
+            Name = name ?? otherRiver?.Name;
+            Feeds = ImmutableList.CreateRange(
+                feeds ?? otherRiver?.Feeds ?? Enumerable.Empty<Uri>());
+        }
+        [JsonProperty("name")]
+        public string Name { get; }
+        [JsonProperty("feeds")]
+        public ImmutableList<Uri> Feeds { get; }
+    }
+
+    class UserProfile
+    {
+        public UserProfile(
+            UserProfile otherProfile = null,
+            IEnumerable<RiverDefinition> rivers = null)
+        {
+            Rivers = ImmutableList.CreateRange(
+                rivers ?? otherProfile?.Rivers ?? Enumerable.Empty<RiverDefinition>());
+        }
+
+        [JsonProperty("rivers")]
+        public ImmutableList<RiverDefinition> Rivers { get; }
+
+        public static UserProfile ImportXml(UserProfile profile, XDocument opml)
+        {
+            //string text = feed;
+            //string htmlUrl = feed;
+            //string xmlUrl = feedRiver.Metadata.OriginUrl.AbsoluteUri;
+            //if (feedRiver.UpdatedFeeds.Feeds.Count > 0)
+            //{
+            //    RiverFeed rf = feedRiver.UpdatedFeeds.Feeds[0];
+            //    text = rf.FeedTitle;
+            //    htmlUrl = rf.WebsiteUrl;
+            //}
+
+            //XElement feedElement = new XElement(
+            //    XNames.OPML.Outline,
+            //    new XAttribute(XNames.OPML.HtmlUrl, htmlUrl),
+            //    new XAttribute(XNames.OPML.Type, "rss"),
+            //    new XAttribute(XNames.OPML.Version, "RSS"),
+            //    new XAttribute(XNames.OPML.Title, text),
+            //    new XAttribute(XNames.OPML.Text, text),
+            //    new XAttribute(XNames.OPML.XmlUrl, xmlUrl));
+
+            //XElement opmlBody = SubscriptionStore.GetSubscriptionsFor(user).Result;
+
+            //// Find the river element. 
+            //XElement riverElement;
+            //if (String.Equals("main", riverName, StringComparison.OrdinalIgnoreCase))
+            //{
+            //    riverElement = opmlBody;
+            //}
+            //else
+            //{
+            //    riverElement =
+            //        (from element in opmlBody.Elements(XNames.OPML.Outline)
+            //         where element.Attribute(XNames.OPML.Text)?.Value == riverName
+            //         where element.Attribute(XNames.OPML.XmlUrl) == null
+            //         select element).FirstOrDefault();
+            //}
+
+            //if (riverElement == null)
+            //{
+            //    riverElement = new XElement(
+            //        XNames.OPML.Outline,
+            //        new XAttribute(XNames.OPML.Title, riverName),
+            //        new XAttribute(XNames.OPML.Text, riverName));
+            //    opmlBody.Add(riverElement);
+            //}
+
+            //XElement existingFeedElement =
+            //    (from element in riverElement.Elements(XNames.OPML.Outline)
+            //     where element.Attribute(XNames.OPML.XmlUrl)?.Value == xmlUrl
+            //     select element).FirstOrDefault();
+            //if (existingFeedElement != null)
+            //{
+            //    existingFeedElement.ReplaceWith(feedElement);
+            //}
+            //else
+            //{
+            //    riverElement.Add(feedElement);
+            //}
+
+            //SubscriptionStore.SaveSubscriptionsFor(user, opmlBody).Wait();
+
+
+            throw new NotImplementedException();
+        }
+
+        public static XDocument ExportXml(UserProfile profile)
+        {
+            throw new NotImplementedException();
+        }
+    }
 
 
     static class SubscriptionStore
     {
-        public static async Task<XElement> GetSubscriptionsFor(string user)
+        public static async Task<UserProfile> GetProfileFor(string user)
         {
             try
             {
                 using (TextReader reader = File.OpenText(user))
                 {
                     string body = await reader.ReadToEndAsync();
-                    XDocument doc = XDocument.Parse(body);
-                    return doc.Root.Element(XNames.OPML.Body) ?? new XElement(XNames.OPML.Body);
+                    return JsonConvert.DeserializeObject<UserProfile>(body);
                 }
             }
             catch (FileNotFoundException)
             {
-                return new XElement(XNames.OPML.Body);
+                return new UserProfile();
             }
-            throw new NotImplementedException();
         }
 
-        public static Task SaveSubscriptionsFor(string user, XElement opmlBody)
+        public static async Task SaveProfileFor(string user, UserProfile profile)
         {
-            XDocument doc = new XDocument(
-                new XElement(
-                    XNames.OPML.Opml,
-                    new XAttribute(XNames.OPML.Version, "1.1"),
-                    new XElement(
-                        XNames.OPML.Head,
-                        new XElement(XNames.OPML.Title, "Feeds for " + user),
-                        new XElement(XNames.OPML.DateCreated, DateTimeOffset.UtcNow),
-                        new XElement(XNames.OPML.DateModified, DateTimeOffset.UtcNow)),
-                    opmlBody));
-            using (XmlWriter writer = XmlWriter.Create(user))
+            string data = JsonConvert.SerializeObject(profile);
+            using (var writer = File.CreateText(user))
             {
-                doc.WriteTo(writer);
+                await writer.WriteAsync(data);
             }
-
-            return Task.CompletedTask;
         }
     }
 
@@ -2268,6 +2356,7 @@ namespace onceandfuture
             },
         };
 
+        // TODO: Verbdef.
         static readonly Dictionary<string, OptDef[]> Verbs = new Dictionary<string, OptDef[]>
         {
             {
@@ -2354,7 +2443,7 @@ namespace onceandfuture
 
         static int DoUpdate(ParsedOpts args)
         {
-            List<OpmlEntry> feeds;
+            List<Uri> feeds;
             if (args["feed"].Value != null)
             {
                 Uri feedUrl;
@@ -2363,16 +2452,12 @@ namespace onceandfuture
                     Console.Error.WriteLine("Feed not a valid url: {0}", args["feed"].Value);
                     return 100;
                 }
-                feeds = new List<OpmlEntry> { new OpmlEntry(xmlUrl: feedUrl) };
+                feeds = new List<Uri> { feedUrl };
             }
             else if (args["user"].Value != null)
             {
-                XElement body = SubscriptionStore.GetSubscriptionsFor(args["user"].Value).Result;
-
-                feeds =
-                    (from elem in body.Descendants(XNames.OPML.Outline)
-                     where elem.Attribute(XNames.OPML.XmlUrl) != null
-                     select OpmlEntry.FromXml(elem)).ToList();
+                UserProfile profile = SubscriptionStore.GetProfileFor(args["user"].Value).Result;
+                feeds = (from river in profile.Rivers from feed in river.Feeds select feed).ToList();
             }
             else
             {
@@ -2388,8 +2473,8 @@ namespace onceandfuture
                 (from entry in feeds
                  select new
                  {
-                     url = entry.XmlUrl,
-                     task = parser.FetchAndUpdateRiver(feedStore, entry.XmlUrl, CancellationToken.None),
+                     url = entry,
+                     task = parser.FetchAndUpdateRiver(feedStore, entry, CancellationToken.None),
                  }).ToList();
 
             Console.WriteLine("Started {0} feeds...", parses.Count);
@@ -2422,65 +2507,32 @@ namespace onceandfuture
             }
 
 
-            string text = feed;
-            string htmlUrl = feed;
-            string xmlUrl = feedRiver.Metadata.OriginUrl.AbsoluteUri;
-            if (feedRiver.UpdatedFeeds.Feeds.Count > 0)
+            UserProfile profile = SubscriptionStore.GetProfileFor(user).Result;
+            RiverDefinition river = profile.Rivers.FirstOrDefault(r => r.Name == riverName);
+
+            UserProfile newProfile;
+            if (river == null)
             {
-                RiverFeed rf = feedRiver.UpdatedFeeds.Feeds[0];
-                text = rf.FeedTitle;
-                htmlUrl = rf.WebsiteUrl;
-            }
-
-            XElement feedElement = new XElement(
-                XNames.OPML.Outline,
-                new XAttribute(XNames.OPML.HtmlUrl, htmlUrl),
-                new XAttribute(XNames.OPML.Type, "rss"),
-                new XAttribute(XNames.OPML.Version, "RSS"),
-                new XAttribute(XNames.OPML.Title, text),
-                new XAttribute(XNames.OPML.Text, text),
-                new XAttribute(XNames.OPML.XmlUrl, xmlUrl));
-
-            XElement opmlBody = SubscriptionStore.GetSubscriptionsFor(user).Result;
-
-            // Find the river element. 
-            XElement riverElement;
-            if (String.Equals("main", riverName, StringComparison.OrdinalIgnoreCase))
-            {
-                riverElement = opmlBody;
+                newProfile = new UserProfile(
+                    otherProfile: profile,
+                    rivers: profile.Rivers.Add(
+                        new RiverDefinition(
+                            name: riverName,
+                            feeds: new Uri[] { feedRiver.Metadata.OriginUrl })));
             }
             else
             {
-                riverElement =
-                    (from element in opmlBody.Elements(XNames.OPML.Outline)
-                     where element.Attribute(XNames.OPML.Text)?.Value == riverName
-                     where element.Attribute(XNames.OPML.XmlUrl) == null
-                     select element).FirstOrDefault();
+                var newRiver = new RiverDefinition(
+                    otherRiver: river,
+                    feeds: river.Feeds.Add(feedRiver.Metadata.OriginUrl));
+
+                newProfile = new UserProfile(
+                    otherProfile: profile,
+                    rivers: profile.Rivers.Replace(river, newRiver));
             }
 
-            if (riverElement == null)
-            {
-                riverElement = new XElement(
-                    XNames.OPML.Outline,
-                    new XAttribute(XNames.OPML.Title, riverName),
-                    new XAttribute(XNames.OPML.Text, riverName));
-                opmlBody.Add(riverElement);
-            }
+            SubscriptionStore.SaveProfileFor(user, newProfile).Wait();
 
-            XElement existingFeedElement =
-                (from element in riverElement.Elements(XNames.OPML.Outline)
-                 where element.Attribute(XNames.OPML.XmlUrl)?.Value == xmlUrl
-                 select element).FirstOrDefault();
-            if (existingFeedElement != null)
-            {
-                existingFeedElement.ReplaceWith(feedElement);
-            }
-            else
-            {
-                riverElement.Add(feedElement);
-            }
-
-            SubscriptionStore.SaveSubscriptionsFor(user, opmlBody).Wait();
             Console.WriteLine("OK");
             return 0;
         }
@@ -2488,53 +2540,38 @@ namespace onceandfuture
         static int DoList(ParsedOpts args)
         {
             string user = args["user"].Value;
-            XElement opmlBody = SubscriptionStore.GetSubscriptionsFor(user).Result;
-            Console.WriteLine(opmlBody.ToString());
+            UserProfile profile = SubscriptionStore.GetProfileFor(user).Result;
+            foreach (var river in profile.Rivers)
+            {
+                Console.WriteLine("{0}:", river.Name);
+                foreach (var feed in river.Feeds)
+                {
+                    Console.WriteLine("  {0}", feed);
+                }
+            }
             return 0;
         }
 
         static int DoUnsubscribe(ParsedOpts args)
         {
             string user = args["user"].Value;
-            string feed = args["feed"].Value;
+            Uri feed = new Uri(args["feed"].Value);
             string riverName = args["river"].Value;
 
-            XElement opmlBody = SubscriptionStore.GetSubscriptionsFor(user).Result;
-
-            // Find the river element. 
-            XElement riverElement;
-            if (String.Equals("main", riverName, StringComparison.OrdinalIgnoreCase))
-            {
-                riverElement = opmlBody;
-            }
-            else
-            {
-                riverElement =
-                    (from element in opmlBody.Elements(XNames.OPML.Outline)
-                     where element.Attribute(XNames.OPML.Text)?.Value == riverName
-                     where element.Attribute(XNames.OPML.XmlUrl) == null
-                     select element).FirstOrDefault();
-            }
-
-            if (riverElement == null)
+            UserProfile profile = SubscriptionStore.GetProfileFor(user).Result;
+            RiverDefinition river = profile.Rivers.FirstOrDefault(r => r.Name == riverName);
+            if (river == null)
             {
                 Console.WriteLine("River {0} not found.", riverName);
                 return 0;
             }
 
-            XElement feedElement =
-                (from element in riverElement.Elements(XNames.OPML.Outline)
-                 where element.Attribute(XNames.OPML.XmlUrl)?.Value == feed
-                 select element).FirstOrDefault();
-            if (feedElement == null)
-            {
-                Console.WriteLine("River {0} does not contain feed {1}.", riverName, feed);
-                return 0;
-            }
+            RiverDefinition newRiver = new RiverDefinition(otherRiver: river, feeds: river.Feeds.Remove(feed));
+            UserProfile newProfile = new UserProfile(
+                otherProfile: profile, 
+                rivers: profile.Rivers.Replace(river, newRiver));            
 
-            feedElement.Remove();
-
-            SubscriptionStore.SaveSubscriptionsFor(user, opmlBody).Wait();
+            SubscriptionStore.SaveProfileFor(user, newProfile).Wait();
             Console.WriteLine("OK");
             return 0;
         }
