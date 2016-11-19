@@ -2276,6 +2276,7 @@ namespace onceandfuture
                 "update", new[]
                 {
                     new OptDef { Short='f', Long="feed", Help="The single feed URL to update.", Value=true },
+                    new OptDef { Short='u', Long="user", Help="The user to update feeds for.", Value=true },
                 }
             },
             {
@@ -2359,15 +2360,19 @@ namespace onceandfuture
                 }
                 feeds = new List<OpmlEntry> { new OpmlEntry(xmlUrl: feedUrl) };
             }
-            else
+            else if (args["user"].Value != null)
             {
-                XDocument doc = XDocument.Load(@"C:\Users\John\Downloads\NewsBlur-DeCarabas-2016-11-08");
-                XElement body = doc.Root.Element(XNames.OPML.Body);
+                XElement body = SubscriptionStore.GetSubscriptionsFor(args["user"].Value).Result;
 
                 feeds =
                     (from elem in body.Descendants(XNames.OPML.Outline)
                      where elem.Attribute(XNames.OPML.XmlUrl) != null
                      select OpmlEntry.FromXml(elem)).ToList();
+            }
+            else
+            {
+                Console.Error.WriteLine("Must specify either user or feed.");
+                return -1;
             }
 
             Stopwatch loadTimer = Stopwatch.StartNew();
