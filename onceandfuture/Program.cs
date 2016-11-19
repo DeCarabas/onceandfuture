@@ -2258,10 +2258,6 @@ namespace onceandfuture
 
     class Program
     {
-
-
-        // ---
-
         static readonly OptDef[] CommonOptions = new OptDef[]
         {
             new OptDef { Short='?', Long="help",    Help="Display this help." },
