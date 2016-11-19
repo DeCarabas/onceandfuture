@@ -1815,8 +1815,8 @@ namespace onceandfuture
         }
 
         public async Task<River> FetchAndUpdateRiver(
-            RiverFeedStore feedStore, 
-            Uri uri, 
+            RiverFeedStore feedStore,
+            Uri uri,
             CancellationToken cancellationToken)
         {
             River river = await feedStore.LoadRiverForFeed(uri);
@@ -1836,7 +1836,7 @@ namespace onceandfuture
         }
 
         public async Task<River> UpdateAsync(River river, CancellationToken cancellationToken)
-        {         
+        {
             FetchResult fetchResult = await FetchAsync(
                 river.Metadata.OriginUrl,
                 river.Metadata.Etag,
@@ -2212,9 +2212,9 @@ namespace onceandfuture
         }
     }
 
-    class Program
+    static class SubscriptionStore
     {
-        static async Task<XElement> GetSubscriptionsFor(string user)
+        public static async Task<XElement> GetSubscriptionsFor(string user)
         {
             try
             {
@@ -2232,7 +2232,7 @@ namespace onceandfuture
             throw new NotImplementedException();
         }
 
-        static Task SaveSubscriptionsFor(string user, XElement opmlBody)
+        public static Task SaveSubscriptionsFor(string user, XElement opmlBody)
         {
             XDocument doc = new XDocument(
                 new XElement(
@@ -2251,6 +2251,11 @@ namespace onceandfuture
 
             return Task.CompletedTask;
         }
+    }
+
+
+    class Program
+    {
 
 
         // ---
@@ -2426,7 +2431,7 @@ namespace onceandfuture
                 new XAttribute(XNames.OPML.Text, text),
                 new XAttribute(XNames.OPML.XmlUrl, xmlUrl));
 
-            XElement opmlBody = GetSubscriptionsFor(user).Result;
+            XElement opmlBody = SubscriptionStore.GetSubscriptionsFor(user).Result;
 
             // Find the river element. 
             XElement riverElement;
@@ -2465,14 +2470,14 @@ namespace onceandfuture
                 riverElement.Add(feedElement);
             }
 
-            SaveSubscriptionsFor(user, opmlBody).Wait();
+            SubscriptionStore.SaveSubscriptionsFor(user, opmlBody).Wait();
             return 0;
         }
 
         static int DoList(ParsedOpts args)
         {
             string user = args["user"].Value;
-            XElement opmlBody = GetSubscriptionsFor(user).Result;
+            XElement opmlBody = SubscriptionStore.GetSubscriptionsFor(user).Result;
             Console.WriteLine(opmlBody.ToString());
             return 0;
         }
