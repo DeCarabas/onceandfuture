@@ -612,6 +612,78 @@ namespace onceandfuture
         }
     }
 
+    class BlobStore
+    {
+        readonly string bucket;
+        readonly AmazonS3Client client;
+
+        // In deployment, use this?
+        // Credentials stored in the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.
+        public BlobStore(string bucket)
+        {
+            this.bucket = bucket;
+            this.client = new AmazonS3Client(region: RegionEndpoint.USWest2);
+        }
+
+        public Uri GetObjectUri(string name)
+        {
+            return new Uri("https://s3-us-west-2.amazonaws.com/" + this.bucket + "/" + Uri.EscapeDataString(name));
+        }
+
+        public async Task<byte[]> GetObject(string name)
+        {
+            Stopwatch timer = Stopwatch.StartNew();
+            try
+            {
+                using (GetObjectResponse response = await this.client.GetObjectAsync(this.bucket, name))
+                {
+                    byte[] data = new byte[response.ResponseStream.Length];
+                    int cursor = 0;
+                    while (cursor != data.Length)
+                    {
+                        int read = await response.ResponseStream.ReadAsync(data, cursor, data.Length - cursor);
+                        if (read == 0) { break; }
+                        cursor += read;
+                    }
+                    Log.GetObjectComplete(this.bucket, name, timer);
+                    return data;
+                }
+            }
+            catch (Amazon.S3.AmazonS3Exception s3e)
+            {
+                if (s3e.ErrorCode == "NoSuchKey")
+                {
+                    Log.GetObjectNotFound(this.bucket, name, timer);
+                    return null;
+                }
+                Log.GetObjectError(this.bucket, name, s3e, timer);
+                throw;
+            }
+        }
+
+        public async Task PutObject(string name, string type, Stream stream)
+        {
+            Stopwatch timer = Stopwatch.StartNew();
+            try
+            {
+                await this.client.PutObjectAsync(new PutObjectRequest
+                {
+                    AutoCloseStream = false,
+                    BucketName = this.bucket,
+                    Key = name,
+                    ContentType = type,
+                    InputStream = stream,
+                });
+                Log.PutObjectComplete(this.bucket, name, type, timer);
+            }
+            catch (AmazonS3Exception e)
+            {
+                Log.PutObjectError(this.bucket, name, type, e, timer);
+                throw;
+            }
+        }
+    }
+
     public static class XNames
     {
         public static class Content
@@ -954,17 +1026,60 @@ namespace onceandfuture
         public RiverFeedMeta Metadata { get; }
     }
 
-    class ImageData
+    class RiverFeedStore
     {
-        public ImageData(int width, int height, byte[] data)
+        readonly BlobStore blobStore = new BlobStore("onceandfuture");
+
+        static string GetNameForUri(Uri feedUri)
         {
-            Width = width;
-            Height = height;
-            Data = data;
+            return Util.HashString(feedUri.AbsoluteUri);
         }
-        public int Width { get; }
-        public int Height { get; }
-        public byte[] Data { get; }
+
+        public async Task<River> LoadRiverForFeed(Uri feedUri)
+        {
+            byte[] blob = await this.blobStore.GetObject(GetNameForUri(feedUri));
+            if (blob == null)
+            {
+                return new River(metadata: new RiverFeedMeta(originUrl: feedUri));
+            }
+
+            using (var memoryStream = new MemoryStream(blob))
+            using (var reader = new StreamReader(memoryStream, Encoding.UTF8))
+            {
+                string text = reader.ReadToEnd();
+                return JsonConvert.DeserializeObject<River>(text);
+            }
+        }
+
+        public async Task WriteRiver(Uri uri, River river)
+        {
+            byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(river));
+            using (var memoryStream = new MemoryStream(data))
+            {
+                await this.blobStore.PutObject(GetNameForUri(uri), "application/json", memoryStream);
+            }
+        }
+    }
+
+    class RiverThumbnailStore
+    {
+        readonly BlobStore blobStore = new BlobStore("onceandfuture-thumbs");
+
+        public async Task<Uri> StoreImage(byte[] image)
+        {
+            MemoryStream stream = new MemoryStream();
+            using (Image source = Image.FromStream(new MemoryStream(image)))
+            {
+                source.Save(stream, ImageFormat.Png);
+            }
+
+            stream.Position = 0;
+            byte[] hash = SHA1.Create().ComputeHash(stream);
+            string fileName = Convert.ToBase64String(hash).Replace('/', '-') + ".png";
+
+            await this.blobStore.PutObject(fileName, "image/png", stream);
+            return this.blobStore.GetObjectUri(fileName);
+        }
     }
 
     static class EntropyCropper
@@ -1273,7 +1388,7 @@ namespace onceandfuture
             if (sourceImage == null) { return item; }
             ImageData thumbnail = MakeThumbnail(sourceImage);
 
-            Uri thumbnailUri = await this.thumbnailStore.StoreImage(thumbnail);
+            Uri thumbnailUri = await this.thumbnailStore.StoreImage(thumbnail.Data);
             return new RiverItem(
                 item,
                 thumbnail: new RiverItemThumbnail(
@@ -1617,6 +1732,19 @@ namespace onceandfuture
             return thumbnail;
         }
 
+        class ImageData
+        {
+            public ImageData(int width, int height, byte[] data)
+            {
+                Width = width;
+                Height = height;
+                Data = data;
+            }
+            public int Width { get; }
+            public int Height { get; }
+            public byte[] Data { get; }
+        }
+
         class ImageUrl
         {
             public string Kind;
@@ -1686,8 +1814,29 @@ namespace onceandfuture
             client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
         }
 
-        public async Task<River> UpddateAsync(River river, CancellationToken cancellationToken)
+        public async Task<River> FetchAndUpdateRiver(
+            RiverFeedStore feedStore, 
+            Uri uri, 
+            CancellationToken cancellationToken)
         {
+            River river = await feedStore.LoadRiverForFeed(uri);
+            if ((river.Metadata.LastStatus != HttpStatusCode.MovedPermanently) &&
+                (river.Metadata.LastStatus != HttpStatusCode.Gone))
+            {
+                river = await UpdateAsync(river, cancellationToken);
+                await feedStore.WriteRiver(uri, river);
+            }
+
+            if (river.Metadata.LastStatus == HttpStatusCode.MovedPermanently)
+            {
+                return await FetchAndUpdateRiver(feedStore, river.Metadata.OriginUrl, cancellationToken);
+            }
+
+            return river;
+        }
+
+        public async Task<River> UpdateAsync(River river, CancellationToken cancellationToken)
+        {         
             FetchResult fetchResult = await FetchAsync(
                 river.Metadata.OriginUrl,
                 river.Metadata.Etag,
@@ -2063,136 +2212,49 @@ namespace onceandfuture
         }
     }
 
-    class BlobStore
-    {
-        readonly string bucket;
-        readonly AmazonS3Client client;
-
-        // In deployment, use this?
-        // Credentials stored in the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.
-        public BlobStore(string bucket)
-        {
-            this.bucket = bucket;
-            this.client = new AmazonS3Client(region: RegionEndpoint.USWest2);
-        }
-
-        public Uri GetObjectUri(string name)
-        {
-            return new Uri("https://s3-us-west-2.amazonaws.com/" + this.bucket + "/" + Uri.EscapeDataString(name));
-        }
-
-        public async Task<byte[]> GetObject(string name)
-        {
-            Stopwatch timer = Stopwatch.StartNew();
-            try
-            {
-                using (GetObjectResponse response = await this.client.GetObjectAsync(this.bucket, name))
-                {
-                    byte[] data = new byte[response.ResponseStream.Length];
-                    int cursor = 0;
-                    while (cursor != data.Length)
-                    {
-                        int read = await response.ResponseStream.ReadAsync(data, cursor, data.Length - cursor);
-                        if (read == 0) { break; }
-                        cursor += read;
-                    }
-                    Log.GetObjectComplete(this.bucket, name, timer);
-                    return data;
-                }
-            }
-            catch (Amazon.S3.AmazonS3Exception s3e)
-            {
-                if (s3e.ErrorCode == "NoSuchKey")
-                {
-                    Log.GetObjectNotFound(this.bucket, name, timer);
-                    return null;
-                }
-                Log.GetObjectError(this.bucket, name, s3e, timer);
-                throw;
-            }
-        }
-
-        public async Task PutObject(string name, string type, Stream stream)
-        {
-            Stopwatch timer = Stopwatch.StartNew();
-            try
-            {
-                await this.client.PutObjectAsync(new PutObjectRequest
-                {
-                    AutoCloseStream = false,
-                    BucketName = this.bucket,
-                    Key = name,
-                    ContentType = type,
-                    InputStream = stream,
-                });
-                Log.PutObjectComplete(this.bucket, name, type, timer);
-            }
-            catch (AmazonS3Exception e)
-            {
-                Log.PutObjectError(this.bucket, name, type, e, timer);
-                throw;
-            }
-        }
-    }
-
-    class RiverThumbnailStore
-    {
-        readonly BlobStore blobStore = new BlobStore("onceandfuture-thumbs");
-
-        public async Task<Uri> StoreImage(ImageData image)
-        {
-            MemoryStream stream = new MemoryStream();
-            using (Image source = Image.FromStream(new MemoryStream(image.Data)))
-            {
-                source.Save(stream, ImageFormat.Png);
-            }
-
-            stream.Position = 0;
-            byte[] hash = SHA1.Create().ComputeHash(stream);
-            string fileName = Convert.ToBase64String(hash).Replace('/', '-') + ".png";
-
-            await this.blobStore.PutObject(fileName, "image/png", stream);
-            return this.blobStore.GetObjectUri(fileName);
-        }
-    }
-
-    class RiverFeedStore
-    {
-        readonly BlobStore blobStore = new BlobStore("onceandfuture");
-
-        static string GetNameForUri(Uri feedUri)
-        {
-            return Util.HashString(feedUri.AbsoluteUri);
-        }
-
-        public async Task<River> LoadRiverForFeed(Uri feedUri)
-        {
-            byte[] blob = await this.blobStore.GetObject(GetNameForUri(feedUri));
-            if (blob == null)
-            {
-                return new River(metadata: new RiverFeedMeta(originUrl: feedUri));
-            }
-
-            using (var memoryStream = new MemoryStream(blob))
-            using (var reader = new StreamReader(memoryStream, Encoding.UTF8))
-            {
-                string text = reader.ReadToEnd();
-                return JsonConvert.DeserializeObject<River>(text);
-            }
-        }
-
-        public async Task WriteRiver(Uri uri, River river)
-        {
-            byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(river));
-            using (var memoryStream = new MemoryStream(data))
-            {
-                await this.blobStore.PutObject(GetNameForUri(uri), "application/json", memoryStream);
-            }
-        }
-    }
-
     class Program
     {
+        static async Task<XElement> GetSubscriptionsFor(string user)
+        {
+            try
+            {
+                using (TextReader reader = File.OpenText(user))
+                {
+                    string body = await reader.ReadToEndAsync();
+                    XDocument doc = XDocument.Parse(body);
+                    return doc.Root.Element(XNames.OPML.Body) ?? new XElement(XNames.OPML.Body);
+                }
+            }
+            catch (FileNotFoundException)
+            {
+                return new XElement(XNames.OPML.Body);
+            }
+            throw new NotImplementedException();
+        }
+
+        static Task SaveSubscriptionsFor(string user, XElement opmlBody)
+        {
+            XDocument doc = new XDocument(
+                new XElement(
+                    XNames.OPML.Opml,
+                    new XAttribute(XNames.OPML.Version, "1.1"),
+                    new XElement(
+                        XNames.OPML.Head,
+                        new XElement(XNames.OPML.Title, "Feeds for " + user),
+                        new XElement(XNames.OPML.DateCreated, DateTimeOffset.UtcNow),
+                        new XElement(XNames.OPML.DateModified, DateTimeOffset.UtcNow)),
+                    opmlBody));
+            using (XmlWriter writer = XmlWriter.Create(user))
+            {
+                doc.WriteTo(writer);
+            }
+
+            return Task.CompletedTask;
+        }
+
+
+        // ---
+
         static readonly OptDef[] CommonOptions = new OptDef[]
         {
             new OptDef { Short='?', Long="help",    Help="Display this help." },
@@ -2232,28 +2294,6 @@ namespace onceandfuture
                 }
             }
         };
-
-        public static async Task<River> FetchAndUpdateRiver(
-            RiverFeedStore feedStore,
-            RiverFeedParser parser,
-            Uri uri,
-            CancellationToken cancellationToken)
-        {
-            River river = await feedStore.LoadRiverForFeed(uri);
-            if ((river.Metadata.LastStatus != HttpStatusCode.MovedPermanently) &&
-                (river.Metadata.LastStatus != HttpStatusCode.Gone))
-            {
-                river = await parser.UpddateAsync(river, cancellationToken);
-                await feedStore.WriteRiver(uri, river);
-            }
-
-            if (river.Metadata.LastStatus == HttpStatusCode.MovedPermanently)
-            {
-                return await FetchAndUpdateRiver(feedStore, parser, river.Metadata.OriginUrl, cancellationToken);
-            }
-
-            return river;
-        }
 
         static int DoShow(ParsedOpts args)
         {
@@ -2334,7 +2374,7 @@ namespace onceandfuture
                  select new
                  {
                      url = entry.XmlUrl,
-                     task = FetchAndUpdateRiver(feedStore, parser, entry.XmlUrl, CancellationToken.None),
+                     task = parser.FetchAndUpdateRiver(feedStore, entry.XmlUrl, CancellationToken.None),
                  }).ToList();
 
             Console.WriteLine("Started {0} feeds...", parses.Count);
@@ -2349,44 +2389,6 @@ namespace onceandfuture
             return 0;
         }
 
-        static async Task<XElement> GetSubscriptionsFor(string user)
-        {
-            try
-            {
-                using (TextReader reader = File.OpenText(user))
-                {
-                    string body = await reader.ReadToEndAsync();
-                    XDocument doc = XDocument.Parse(body);
-                    return doc.Root.Element(XNames.OPML.Body) ?? new XElement(XNames.OPML.Body);
-                }
-            }
-            catch (FileNotFoundException)
-            {
-                return new XElement(XNames.OPML.Body);
-            }
-            throw new NotImplementedException();
-        }
-
-        static Task SaveSubscriptionsFor(string user, XElement opmlBody)
-        {
-            XDocument doc = new XDocument(
-                new XElement(
-                    XNames.OPML.Opml,
-                    new XAttribute(XNames.OPML.Version, "1.1"),
-                    new XElement(
-                        XNames.OPML.Head,
-                        new XElement(XNames.OPML.Title, "Feeds for " + user),
-                        new XElement(XNames.OPML.DateCreated, DateTimeOffset.UtcNow),
-                        new XElement(XNames.OPML.DateModified, DateTimeOffset.UtcNow)),
-                    opmlBody));
-            using (XmlWriter writer = XmlWriter.Create(user))
-            {
-                doc.WriteTo(writer);
-            }
-
-            return Task.CompletedTask;
-        }
-
         static int DoSubscribe(ParsedOpts args)
         {
             string user = args["user"].Value;
@@ -2396,7 +2398,7 @@ namespace onceandfuture
             // Check feed.
             var parser = new RiverFeedParser();
             var feedStore = new RiverFeedStore();
-            River feedRiver = FetchAndUpdateRiver(feedStore, parser, new Uri(feed), CancellationToken.None).Result;
+            River feedRiver = parser.FetchAndUpdateRiver(feedStore, new Uri(feed), CancellationToken.None).Result;
             if (feedRiver.Metadata.LastStatus < (HttpStatusCode)200 ||
                 feedRiver.Metadata.LastStatus >= (HttpStatusCode)400)
             {
