@@ -2212,6 +2212,8 @@ namespace onceandfuture
         }
     }
 
+
+
     static class SubscriptionStore
     {
         public static async Task<XElement> GetSubscriptionsFor(string user)
@@ -2294,6 +2296,13 @@ namespace onceandfuture
                 }
             },
             {
+                "unsub", new[]
+                {
+                    new OptDef { Short='u', Long="user",  Help="The user to remove a subscription for", Value=true, Required=true },
+                    new OptDef { Short='r', Long="river", Help="The river to remove a subscription to", Value=true, Default="main" },
+                    new OptDef { Short='f', Long="feed",  Help="The feed to remove a subscription for", Value=true, Required=true },
+                }
+            },            {
                 "list", new[]
                 {
                     new OptDef { Short='u', Long="user",  Help="The user to list the subscriptions for", Value=true, Required=true },
@@ -2476,6 +2485,7 @@ namespace onceandfuture
             }
 
             SubscriptionStore.SaveSubscriptionsFor(user, opmlBody).Wait();
+            Console.WriteLine("OK");
             return 0;
         }
 
@@ -2487,6 +2497,52 @@ namespace onceandfuture
             return 0;
         }
 
+        static int DoUnsubscribe(ParsedOpts args)
+        {
+            string user = args["user"].Value;
+            string feed = args["feed"].Value;
+            string riverName = args["river"].Value;
+
+            XElement opmlBody = SubscriptionStore.GetSubscriptionsFor(user).Result;
+
+            // Find the river element. 
+            XElement riverElement;
+            if (String.Equals("main", riverName, StringComparison.OrdinalIgnoreCase))
+            {
+                riverElement = opmlBody;
+            }
+            else
+            {
+                riverElement =
+                    (from element in opmlBody.Elements(XNames.OPML.Outline)
+                     where element.Attribute(XNames.OPML.Text)?.Value == riverName
+                     where element.Attribute(XNames.OPML.XmlUrl) == null
+                     select element).FirstOrDefault();
+            }
+
+            if (riverElement == null)
+            {
+                Console.WriteLine("River {0} not found.", riverName);
+                return 0;
+            }
+
+            XElement feedElement =
+                (from element in riverElement.Elements(XNames.OPML.Outline)
+                 where element.Attribute(XNames.OPML.XmlUrl)?.Value == feed
+                 select element).FirstOrDefault();
+            if (feedElement == null)
+            {
+                Console.WriteLine("River {0} does not contain feed {1}.", riverName, feed);
+                return 0;
+            }
+
+            feedElement.Remove();
+
+            SubscriptionStore.SaveSubscriptionsFor(user, opmlBody).Wait();
+            Console.WriteLine("OK");
+            return 0;
+        }
+
         static int Main(string[] args)
         {
             try
@@ -2495,12 +2551,12 @@ namespace onceandfuture
                 if (parsedArgs.Error != null)
                 {
                     Console.Error.WriteLine(parsedArgs.Error);
-                    PrintHelp(Console.Error, CommonOptions, Verbs);
+                    PrintHelp(Console.Error, parsedArgs.Verb, CommonOptions, Verbs);
                     return 1;
                 }
                 if (parsedArgs["help"].Flag)
                 {
-                    PrintHelp(Console.Out, CommonOptions, Verbs);
+                    PrintHelp(Console.Out, parsedArgs.Verb, CommonOptions, Verbs);
                     return 0;
                 }
 
@@ -2516,6 +2572,7 @@ namespace onceandfuture
                 case "show": return DoShow(parsedArgs);
                 case "sub": return DoSubscribe(parsedArgs);
                 case "list": return DoList(parsedArgs);
+                case "unsub": return DoUnsubscribe(parsedArgs);
                 }
 
                 throw new NotSupportedException();
@@ -2739,7 +2796,12 @@ namespace onceandfuture
             }
         }
 
-        static void PrintHelp(TextWriter output, OptDef[] commonOptions, Dictionary<string, OptDef[]> verbs)
+        static void PrintHelp(
+            TextWriter output,
+            string verb,
+            OptDef[] commonOptions,
+            Dictionary<string, OptDef[]> verbs
+        )
         {
             output.WriteLine("TBD: Help");
         }
