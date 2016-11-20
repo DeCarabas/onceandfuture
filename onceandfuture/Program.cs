@@ -87,7 +87,50 @@ namespace onceandfuture
                 .AddOption("url", "The URL to listen on.", o => o.HasDefault("http://localhost:5000"))
                 .AddOption("environment", "The environment to run as.", o => o.HasDefault("Development"))
             )
-            ;        
+            ;
+
+        static int Main(string[] args)
+        {
+            try
+            {
+                ParsedOpts parsedArgs = Options.ParseArguments(args);
+                if (parsedArgs.Error != null)
+                {
+                    Console.Error.WriteLine(parsedArgs.Error);
+                    Console.Error.WriteLine(Options.GetHelp(parsedArgs.Verb));
+                    return 1;
+                }
+                if (parsedArgs["help"].Flag)
+                {
+                    Console.WriteLine(Options.GetHelp(parsedArgs.Verb));
+                    return 0;
+                }
+
+                var logLevel = (LogEventLevel)Math.Max((int)(LogEventLevel.Error - parsedArgs["verbose"].Count), 0);
+                Serilog.Log.Logger = new LoggerConfiguration()
+                    .Enrich.FromLogContext()
+                    .MinimumLevel.Is(logLevel)
+                    .WriteTo.LiterateConsole()
+                    .CreateLogger();
+
+                switch (parsedArgs.Verb)
+                {
+                case "update": return DoUpdate(parsedArgs);
+                case "show": return DoShow(parsedArgs);
+                case "sub": return DoSubscribe(parsedArgs);
+                case "list": return DoList(parsedArgs);
+                case "unsub": return DoUnsubscribe(parsedArgs);
+                case "serve": return DoServe(parsedArgs);
+                }
+
+                throw new NotSupportedException();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                return 99;
+            }
+        }
 
         static int DoShow(ParsedOpts args)
         {
@@ -289,49 +332,6 @@ namespace onceandfuture
                 .Build();
             host.Run();
             return 0;
-        }
-
-        static int Main(string[] args)
-        {
-            try
-            {
-                ParsedOpts parsedArgs = Options.ParseArguments(args);
-                if (parsedArgs.Error != null)
-                {
-                    Console.Error.WriteLine(parsedArgs.Error);
-                    Console.Error.WriteLine(Options.GetHelp(parsedArgs.Verb));
-                    return 1;
-                }
-                if (parsedArgs["help"].Flag)
-                {
-                    Console.WriteLine(Options.GetHelp(parsedArgs.Verb));
-                    return 0;
-                }
-
-                var logLevel = (LogEventLevel)Math.Max((int)(LogEventLevel.Error - parsedArgs["verbose"].Count), 0);
-                Serilog.Log.Logger = new LoggerConfiguration()
-                    .Enrich.FromLogContext()
-                    .MinimumLevel.Is(logLevel)
-                    .WriteTo.LiterateConsole()
-                    .CreateLogger();
-
-                switch (parsedArgs.Verb)
-                {
-                case "update": return DoUpdate(parsedArgs);
-                case "show": return DoShow(parsedArgs);
-                case "sub": return DoSubscribe(parsedArgs);
-                case "list": return DoList(parsedArgs);
-                case "unsub": return DoUnsubscribe(parsedArgs);
-                case "serve": return DoServe(parsedArgs);
-                }
-
-                throw new NotSupportedException();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                return 99;
-            }
         }
 
         static void DumpFeed(RiverFeed riverFeed)
