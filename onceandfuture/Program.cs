@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -26,6 +28,149 @@ namespace onceandfuture
         public IActionResult Index() => PhysicalFile(
             Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "index.html"),
             "text/html");
+    }
+
+    public class HealthController : Controller
+    {
+        static Func<Task<HealthResult>>[] HealthChecks = new Func<Task<HealthResult>>[] { DummyOne, DummyTwo };
+
+        static Task<HealthResult> DummyOne() => Task.FromResult(new HealthResult
+        {
+            Title = "Dummy One",
+            Healthy = false,
+            Log = {
+                "Checking...",
+                "Nope."
+            }
+        });
+
+        static Task<HealthResult> DummyTwo() => Task.FromResult(new HealthResult
+        {
+            Title = "Dummy Two",
+            Healthy = true,
+            Log = {
+                "Checking...",
+                "OK!"
+            }
+        });
+
+        [HttpGet("/health")]
+        public async Task<IActionResult> HealthView() 
+        {
+            HealthReport report = await CheckHealth();
+            XDocument document = new XDocument(
+                new XProcessingInstruction("xml-stylesheet", "type='text/xsl' href='/health.xslt'"),
+                report.ToXml());
+
+            var result = Content(document.ToString(), "text/xml", Encoding.UTF8);
+            if (report.Checks.Any(c => !c.Healthy))
+            {
+                result.StatusCode = (int)HttpStatusCode.InternalServerError;
+            }
+            return result;
+        }
+
+        async Task<HealthReport> CheckHealth()
+        {
+            HealthResult[] results = await Task.WhenAll(from check in HealthChecks select check());
+            return new HealthReport(results);
+        }
+
+        class HealthReport
+        {
+            public HealthReport(IEnumerable<HealthResult> checks)
+            {
+                Checks.AddRange(checks);
+            }
+
+            public HealthRuntimeSummary RuntimeSummary { get; } = new HealthRuntimeSummary();
+            public List<HealthResult> Checks { get; } = new List<HealthResult>();
+
+            public XElement ToXml() => new XElement(
+                "healthReport",
+                RuntimeSummary.ToXml(),
+                new XElement("checks", Checks.Select(c => c.ToXml())));
+        }
+
+        class RuntimeProperty
+        {
+            public string Name { get; set; }
+            public string Value { get; set; }
+
+            public XElement ToXml() => new XElement(
+                "runtimeProperty", 
+                new XAttribute("name", Name), 
+                new XAttribute("value", Value));
+        }
+
+        class HealthRuntimeSummary
+        {
+            public HealthRuntimeSummary()
+            {
+                Properties = new List<RuntimeProperty>
+                {
+                    new RuntimeProperty
+                    {
+                        Name = "Host Name",
+                        Value = Environment.MachineName  
+                    },
+                    new RuntimeProperty 
+                    {
+                         Name = "Framework Description", 
+                         Value = RuntimeInformation.FrameworkDescription
+                    },
+                    new RuntimeProperty 
+                    {
+                         Name = "OS Architecture", 
+                         Value = RuntimeInformation.OSArchitecture.ToString()
+                    },
+                    new RuntimeProperty
+                    {
+                        Name = "OS Description",
+                        Value = RuntimeInformation.OSDescription
+                    },
+                    new RuntimeProperty
+                    {
+                        Name = "Process Architecture",
+                        Value = RuntimeInformation.ProcessArchitecture.ToString()
+                    },
+                    new RuntimeProperty
+                    {
+                        Name = "Runtime Directory",
+                        Value = RuntimeEnvironment.GetRuntimeDirectory()
+                    },
+                    new RuntimeProperty
+                    {
+                        Name = "System Version",
+                        Value = RuntimeEnvironment.GetSystemVersion()
+                    },
+                    new RuntimeProperty
+                    {
+                        Name = "System Configuration File",
+                        Value = RuntimeEnvironment.SystemConfigurationFile
+                    },
+                };
+            }
+
+            public List<RuntimeProperty> Properties { get; } = new List<RuntimeProperty>();
+
+            public XElement ToXml() => new XElement(
+                "runtimeSummary",
+                Properties.Select(p => p.ToXml()));
+        }
+
+        class HealthResult
+        {
+            public string Title { get; set; }
+            public bool Healthy { get; set; }
+            public List<string> Log { get; } = new List<string>();
+
+            public XElement ToXml() => new XElement(
+                "healthResult",
+                new XElement("title", Title),
+                new XElement("healthy", Healthy ? "true" : "false"),
+                new XElement("log", Log.Select(line => new XElement("p", line))));
+        }
     }
 
     class WebStartup
