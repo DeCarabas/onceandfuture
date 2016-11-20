@@ -62,7 +62,7 @@ namespace onceandfuture
     {
         static ProgramOpts Options = new ProgramOpts()
             .AddOption("help", "Display this help.", o => o.Flag('?'))
-            .AddOption("verbose", "Increase the logging verbosity. (Specify more than once to be even more verbose.")
+            .AddOption("verbose", "Increase the logging verbosity. (Specify more than once to be even more verbose.)")
             .AddVerb("update", "Update one or more feeds.", v => v
                 .AddOption("feed", "The single feed URL to update.", o => o.AcceptValue())
                 .AddOption("user", "The user to update feeds for.", o => o.AcceptValue())
