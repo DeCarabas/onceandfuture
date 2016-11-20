@@ -33,6 +33,14 @@ using Polly;
 using Serilog;
 using Serilog.Events;
 
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+using ILogger = Serilog.ILogger; // Yay for generic names.
+
 // TODO: Save/load to blob stores
 // TODO: Post titles can still be way too long. (cap to say 64?)
 
@@ -2343,6 +2351,37 @@ namespace onceandfuture
         }
     }
 
+    class WebStartup
+    {
+        public void ConfigureServices(IServiceCollection services)
+        {
+            // enable MVC framework
+            services.AddMvc();
+        }
+
+        public void Configure(IApplicationBuilder app,  IHostingEnvironment env, ILoggerFactory loggerFactory)
+        {
+            // enable debug logging when not in production
+            // if (env.IsProduction())
+            // {
+            //     loggerFactory.AddConsole(LogLevel.Information);
+            // } else {
+            //     loggerFactory.AddConsole(LogLevel.Debug);
+            // }
+
+            // enable exception pages in development
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
+
+            // serve static files from wwwroot/*
+            app.UseStaticFiles();
+
+            // use MVC framework
+            app.UseMvc();
+        }
+    }
 
     class Program
     {
@@ -2387,11 +2426,15 @@ namespace onceandfuture
                     new OptDef { Short='r', Long="river", Help="The river to remove a subscription to", Value=true, Default="main" },
                     new OptDef { Short='f', Long="feed",  Help="The feed to remove a subscription for", Value=true, Required=true },
                 }
-            },            {
+            },            
+            {
                 "list", new[]
                 {
                     new OptDef { Short='u', Long="user",  Help="The user to list the subscriptions for", Value=true, Required=true },
                 }
+            },
+            {
+                "serve", new OptDef[] { }
             }
         };
 
@@ -2576,6 +2619,25 @@ namespace onceandfuture
             return 0;
         }
 
+        static int DoServe(ParsedOpts args)
+        {
+            // read configuration values from environment variables
+            var config = new ConfigurationBuilder()
+                //.AddCommandLine(args)
+                .AddEnvironmentVariables()
+                .Build();
+
+            // use Kestrel server with cwd content root
+            var host = new WebHostBuilder()
+                .UseConfiguration(config)
+                .UseKestrel()
+                .UseContentRoot(Directory.GetCurrentDirectory())
+                .UseStartup<WebStartup>()
+                .Build();
+            host.Run();
+            return 0;
+        }
+
         static int Main(string[] args)
         {
             try
@@ -2606,6 +2668,7 @@ namespace onceandfuture
                 case "sub": return DoSubscribe(parsedArgs);
                 case "list": return DoList(parsedArgs);
                 case "unsub": return DoUnsubscribe(parsedArgs);
+                case "serve": return DoServe(parsedArgs);
                 }
 
                 throw new NotSupportedException();
