@@ -2359,15 +2359,14 @@ namespace onceandfuture
             services.AddMvc();
         }
 
-        public void Configure(IApplicationBuilder app,  IHostingEnvironment env, ILoggerFactory loggerFactory)
+        public void Configure(
+            IApplicationBuilder app,  
+            IHostingEnvironment env, 
+            ILoggerFactory loggerFactory,
+            IApplicationLifetime appLifetime)
         {
-            // enable debug logging when not in production
-            // if (env.IsProduction())
-            // {
-            //     loggerFactory.AddConsole(LogLevel.Information);
-            // } else {
-            //     loggerFactory.AddConsole(LogLevel.Debug);
-            // }
+            loggerFactory.AddSerilog();
+            appLifetime.ApplicationStopped.Register(Serilog.Log.CloseAndFlush);
 
             // enable exception pages in development
             if (env.IsDevelopment())
@@ -2657,6 +2656,7 @@ namespace onceandfuture
 
                 var logLevel = (LogEventLevel)Math.Max((int)(LogEventLevel.Error - parsedArgs["verbose"].Count), 0);
                 Serilog.Log.Logger = new LoggerConfiguration()
+                    .Enrich.FromLogContext()
                     .MinimumLevel.Is(logLevel)
                     .WriteTo.LiterateConsole()
                     .CreateLogger();
