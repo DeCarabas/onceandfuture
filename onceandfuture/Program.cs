@@ -20,11 +20,12 @@ using Serilog.Events;
 
 namespace onceandfuture
 {
-
     public class HomeController : Controller
     {
         [HttpGet("/")]
-        public IActionResult Index() => Ok(); // Index.cshtml
+        public IActionResult Index() => PhysicalFile(
+            Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "index.html"),
+            "text/html");
     }
 
     class WebStartup
