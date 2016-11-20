@@ -32,27 +32,10 @@ namespace onceandfuture
 
     public class HealthController : Controller
     {
-        static Func<Task<HealthResult>>[] HealthChecks = new Func<Task<HealthResult>>[] { DummyOne, DummyTwo };
-
-        static Task<HealthResult> DummyOne() => Task.FromResult(new HealthResult
+        static Func<Task<HealthResult>>[] HealthChecks = new Func<Task<HealthResult>>[] 
         {
-            Title = "Dummy One",
-            Healthy = false,
-            Log = {
-                "Checking...",
-                "Nope."
-            }
-        });
-
-        static Task<HealthResult> DummyTwo() => Task.FromResult(new HealthResult
-        {
-            Title = "Dummy Two",
-            Healthy = true,
-            Log = {
-                "Checking...",
-                "OK!"
-            }
-        });
+            // TODO: Health checks
+        };
 
         [HttpGet("/health")]
         public async Task<IActionResult> HealthView() 
