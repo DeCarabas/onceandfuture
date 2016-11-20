@@ -35,6 +35,7 @@ using Serilog.Events;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -2349,6 +2350,12 @@ namespace onceandfuture
                 await writer.WriteAsync(data);
             }
         }
+    }
+
+    public class HomeController : Controller
+    {
+        [HttpGet("/")]
+        public IActionResult Index() => Ok(); // Index.cshtml
     }
 
     class WebStartup
