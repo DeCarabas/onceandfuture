@@ -1,0 +1,2 @@
+#!/bin/bash
+MONO_ENV_OPTIONS=--arch=64 dotnet run $*
