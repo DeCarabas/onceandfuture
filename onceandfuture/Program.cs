@@ -2433,7 +2433,11 @@ namespace onceandfuture
                 }
             },
             {
-                "serve", new OptDef[] { }
+                "serve", new OptDef[] 
+                {
+                    new OptDef { Short='u', Long="url",         Help="The URL to listen on",     Value=true, Default="http://localhost:5000" },
+                    new OptDef { Short='e', Long="environment", Help="The environment to serve", Value=true, Default="Production" }
+                }
             }
         };
 
@@ -2632,6 +2636,8 @@ namespace onceandfuture
                 .UseKestrel()
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .UseStartup<WebStartup>()
+                .UseUrls(args["url"].Value)
+                .UseEnvironment(args["environment"].Value)
                 .Build();
             host.Run();
             return 0;
