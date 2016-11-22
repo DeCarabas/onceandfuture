@@ -1,22 +1,32 @@
 <!DOCTYPE html>
-<html>
+<html style="height: 100%;">
   <head>
-    <title>Hello, Skyliner!</title>
-    <link href="/css/hello-skyliner.css" rel="stylesheet" type="text/css">
+    <meta charset="UTF-8" />
+    <title>Feeds</title>
+    <style>
+      * {
+        -webkit-box-sizing: border-box;
+           -moz-box-sizing: border-box;
+                box-sizing: border-box;
+      }
+
+      @keyframes move-progress {
+        0% {
+          background-position: 0 0;
+        }
+        100% {
+          background-position: 50px 50px;
+        }
+      }
+    </style>
+    <!-- TODO: Don't get so much, embed CSS. -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css">
   </head>
-  <body>
-    <a href="https://www.skyliner.io/">
-      <img src="/images/logo.svg" id="logo"/>
-    </a>
-    <img src="/images/headline.svg" id="headline">
-    <p>
-      You&rsquo;ve successfully deployed your first application with Skyliner!
-      You can modify the code in this repository to build your app.
-    </p>
-    <div>
-      <a class="button" href="https://www.skyliner.io/dashboard">
-        Take me back to Skyliner
-      </a>
-    </div>
+  <body style="margin: 0px; height: 100%;">
+    <div id="example" style="height: 100%;"></div>
+    <script>
+      require('babel-register');
+      require('./main.js');
+    </script>
   </body>
 </html>
