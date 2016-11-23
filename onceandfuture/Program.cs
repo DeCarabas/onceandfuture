@@ -18,27 +18,25 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
-
+using Microsoft.AspNetCore.Http;
 
 namespace onceandfuture
 {
-    public class HomeController : Controller
+    public class AppController : Controller
     {
         [HttpGet("/")]
-        public IActionResult Index() => PhysicalFile(
-            Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "index.html"),
-            "text/html");
+        public IActionResult Index() => View();
     }
 
     public class HealthController : Controller
     {
-        static Func<Task<HealthResult>>[] HealthChecks = new Func<Task<HealthResult>>[] 
+        static Func<Task<HealthResult>>[] HealthChecks = new Func<Task<HealthResult>>[]
         {
             // TODO: Health checks
         };
 
         [HttpGet("/health")]
-        public async Task<IActionResult> HealthView() 
+        public async Task<IActionResult> HealthView()
         {
             HealthReport report = await CheckHealth();
             XDocument document = new XDocument(
@@ -81,8 +79,8 @@ namespace onceandfuture
             public string Value { get; set; }
 
             public XElement ToXml() => new XElement(
-                "runtimeProperty", 
-                new XAttribute("name", Name), 
+                "runtimeProperty",
+                new XAttribute("name", Name),
                 new XAttribute("value", Value));
         }
 
@@ -95,16 +93,16 @@ namespace onceandfuture
                     new RuntimeProperty
                     {
                         Name = "Host Name",
-                        Value = Environment.MachineName  
+                        Value = Environment.MachineName
                     },
-                    new RuntimeProperty 
+                    new RuntimeProperty
                     {
-                         Name = "Framework Description", 
+                         Name = "Framework Description",
                          Value = RuntimeInformation.FrameworkDescription
                     },
-                    new RuntimeProperty 
+                    new RuntimeProperty
                     {
-                         Name = "OS Architecture", 
+                         Name = "OS Architecture",
                          Value = RuntimeInformation.OSArchitecture.ToString()
                     },
                     new RuntimeProperty
@@ -177,6 +175,10 @@ namespace onceandfuture
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+
+                var packer = new WebPacker();
+                packer.Start();
+                appLifetime.ApplicationStopping.Register(packer.Stop);
             }
 
             // serve static files from wwwroot/*
@@ -184,6 +186,85 @@ namespace onceandfuture
 
             // use MVC framework
             app.UseMvc();
+        }
+    }
+
+    class WebPacker
+    {
+        ManualResetEvent stop = new ManualResetEvent(false);
+        Thread thread;
+
+        public void Start()
+        {
+            Serilog.Log.Information("Starting webpack thread");
+            this.thread = new Thread(PackThread) { IsBackground = true };
+            this.thread.Start();
+        }
+
+        public void Stop()
+        {
+            Serilog.Log.Information("Stopping webpack thread");
+            this.stop.Set();
+            this.thread.Join();
+        }
+
+        void PackThread()
+        {
+            Serilog.Log.Information("Packing thread starting.");
+
+            string[] args = new[]
+            {
+                @".\node_modules\webpack\bin\webpack.js",
+                "-d --watch",
+                "--output-path wwwroot",
+                "--output-filename bundle.js",
+                "--entry ./wwwroot/main.js",
+            };
+
+            var startinfo = new ProcessStartInfo()
+            {
+                FileName = "node.exe",
+                Arguments = String.Join(" ", args),
+                WorkingDirectory = Directory.GetCurrentDirectory(),
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+
+            Process process = null;
+            var processStopped = new AutoResetEvent(false);
+            while (true)
+            {
+                Serilog.Log.Information("Starting webpack");
+                process = Process.Start(startinfo);
+                try
+                {
+                    process.EnableRaisingEvents = true; // Only applies to Exited though.
+                    process.Exited += (o, e) => processStopped.Set();
+                    process.ErrorDataReceived += (o, e) => Serilog.Log.Warning("webpack: {webpack_error}", e.Data);
+                    process.OutputDataReceived += (o, e) => Serilog.Log.Information("webpack: {webpack_info}", e.Data);
+                    process.Start();
+                    process.BeginErrorReadLine();
+                    process.BeginOutputReadLine();
+
+                    Serilog.Log.Information("Waiting for webpack to terminate");
+                    int which = WaitHandle.WaitAny(new WaitHandle[] { this.stop, processStopped });
+                    if (which == 0) { break; }
+                    Serilog.Log.Information("Webpack stopped");
+                }
+                catch (Exception e)
+                {
+                    Serilog.Log.Error(e, "Exception occurred while running webpack");
+                    if (!process.HasExited) { process.Kill(); }
+                }
+                Serilog.Log.Information("Waiting before looping");
+                Thread.Sleep(TimeSpan.FromSeconds(1));
+            }
+
+            Serilog.Log.Information("Shutting down webpack");
+            if (process != null && !process.HasExited) { process.Kill(); }
+
+            Serilog.Log.Information("Packing thread stopping");
         }
     }
 

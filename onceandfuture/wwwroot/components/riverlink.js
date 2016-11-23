@@ -1,6 +1,6 @@
 var React = require('react'); // N.B. Still need this because JSX.
 import { DEFAULT_LINK_STYLE } from './style'
-import { shell } from 'electron';
+// import { shell } from 'electron';
 
 function handleLinkClick(evt, link) {
   let open_background = false;

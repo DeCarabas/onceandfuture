@@ -5,7 +5,6 @@ import { createStore, applyMiddleware } from 'redux'
 import thunkMiddleware from 'redux-thunk'
 import createLogger from 'redux-logger'
 import { update_key } from './util'
-import { registerMessageHandlers } from './ipchandler'
 
 import {
   RIVER_MODE_AUTO,
@@ -30,7 +29,7 @@ import {
   REFRESH_ALL_FEEDS_ERROR,
   REFRESH_ALL_FEEDS_PROGRESS,
   refreshRiverList
-} from './actions'
+} from './actions';
 
 // import { data } from './data'
 import AppRoot from './components/approot'

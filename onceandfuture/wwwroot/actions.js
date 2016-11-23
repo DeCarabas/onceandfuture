@@ -1,9 +1,5 @@
 import { make_full_url } from './util';
-import {
-  sendLoadRiver,
-  sendLoadRiverList,
-  sendSetRiverMode,
-} from './ipchandler';
+//import { sendLoadRiver, sendLoadRiverList, sendSetRiverMode } from './ipchandler';
 
 export const RIVER_MODE_AUTO = 'auto';
 export const RIVER_MODE_IMAGE = 'image';
