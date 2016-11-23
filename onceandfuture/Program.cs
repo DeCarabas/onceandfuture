@@ -25,7 +25,9 @@ namespace onceandfuture
     public class AppController : Controller
     {
         [HttpGet("/")]
-        public IActionResult Index() => View();
+        public IActionResult Index() => PhysicalFile(
+            Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "index.html"),
+            "text/html");
     }
 
     public class HealthController : Controller
@@ -154,41 +156,6 @@ namespace onceandfuture
         }
     }
 
-    class WebStartup
-    {
-        public void ConfigureServices(IServiceCollection services)
-        {
-            // enable MVC framework
-            services.AddMvc();
-        }
-
-        public void Configure(
-            IApplicationBuilder app,
-            IHostingEnvironment env,
-            ILoggerFactory loggerFactory,
-            IApplicationLifetime appLifetime)
-        {
-            loggerFactory.AddSerilog();
-            appLifetime.ApplicationStopped.Register(Serilog.Log.CloseAndFlush);
-
-            // enable exception pages in development
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-
-                var packer = new WebPacker();
-                packer.Start();
-                appLifetime.ApplicationStopping.Register(packer.Stop);
-            }
-
-            // serve static files from wwwroot/*
-            app.UseStaticFiles();
-
-            // use MVC framework
-            app.UseMvc();
-        }
-    }
-
     class WebPacker
     {
         ManualResetEvent stop = new ManualResetEvent(false);
@@ -265,6 +232,41 @@ namespace onceandfuture
             if (process != null && !process.HasExited) { process.Kill(); }
 
             Serilog.Log.Information("Packing thread stopping");
+        }
+    }
+
+    class WebStartup
+    {
+        public void ConfigureServices(IServiceCollection services)
+        {
+            // enable MVC framework
+            services.AddMvc();
+        }
+
+        public void Configure(
+            IApplicationBuilder app,
+            IHostingEnvironment env,
+            ILoggerFactory loggerFactory,
+            IApplicationLifetime appLifetime)
+        {
+            loggerFactory.AddSerilog();
+            appLifetime.ApplicationStopped.Register(Serilog.Log.CloseAndFlush);
+
+            // enable exception pages in development
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+
+                var packer = new WebPacker();
+                packer.Start();
+                appLifetime.ApplicationStopping.Register(packer.Stop);
+            }
+
+            // serve static files from wwwroot/*
+            app.UseStaticFiles();
+
+            // use MVC framework
+            app.UseMvc();
         }
     }
 
