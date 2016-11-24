@@ -36,18 +36,18 @@ namespace onceandfuture
     {
         [HttpGet("/api/v1/river/{user}")]
         public async Task<IActionResult> GetRiverList(string user)
-        {            
-            UserProfile profile = await SubscriptionStore.GetProfileFor(user);
+        {
+            var subscriptionStore = new SubscriptionStore();
+            UserProfile profile = await subscriptionStore.GetProfileFor(user);
             return Json(new
             {
-                rivers =
-                    profile.Rivers.Select(
-                        (r, i) => new {
-                            name = r.Name,
-                            url = String.Format("/api/v1/river/{0}/{1}", user, i),
-                            id = i
-                        }
-                    ).ToArray()
+                rivers = (from r in profile.Rivers
+                          select new
+                          {
+                              name = r.Name,
+                              id = r.Id,
+                              url = String.Format("/api/v1/river/{0}/{1}", user, r.Id),
+                          }).ToArray()
             });
         }
 
@@ -451,7 +451,8 @@ namespace onceandfuture
             }
             else if (args["user"].Value != null)
             {
-                UserProfile profile = SubscriptionStore.GetProfileFor(args["user"].Value).Result;
+                var subscriptionStore = new SubscriptionStore();
+                UserProfile profile = subscriptionStore.GetProfileFor(args["user"].Value).Result;
                 feeds = (from river in profile.Rivers from feed in river.Feeds select feed).ToList();
             }
             else
@@ -501,8 +502,8 @@ namespace onceandfuture
                 return -1;
             }
 
-
-            UserProfile profile = SubscriptionStore.GetProfileFor(user).Result;
+            var subscriptionStore = new SubscriptionStore();
+            UserProfile profile = subscriptionStore.GetProfileFor(user).Result;
             RiverDefinition river = profile.Rivers.FirstOrDefault(r => r.Name == riverName);
 
             UserProfile newProfile;
@@ -513,6 +514,7 @@ namespace onceandfuture
                     rivers: profile.Rivers.Add(
                         new RiverDefinition(
                             name: riverName,
+                            id: Util.MakeID(),
                             feeds: new Uri[] { feedRiver.Metadata.OriginUrl })));
             }
             else
@@ -526,7 +528,7 @@ namespace onceandfuture
                     rivers: profile.Rivers.Replace(river, newRiver));
             }
 
-            SubscriptionStore.SaveProfileFor(user, newProfile).Wait();
+            subscriptionStore.SaveProfileFor(user, newProfile).Wait();
 
             Console.WriteLine("OK");
             return 0;
@@ -535,7 +537,7 @@ namespace onceandfuture
         static int DoList(ParsedOpts args)
         {
             string user = args["user"].Value;
-            UserProfile profile = SubscriptionStore.GetProfileFor(user).Result;
+            UserProfile profile = new SubscriptionStore().GetProfileFor(user).Result;
             foreach (var river in profile.Rivers)
             {
                 Console.WriteLine("{0}:", river.Name);
@@ -553,7 +555,8 @@ namespace onceandfuture
             Uri feed = new Uri(args["feed"].Value);
             string riverName = args["river"].Value;
 
-            UserProfile profile = SubscriptionStore.GetProfileFor(user).Result;
+            var subscriptionStore = new SubscriptionStore();
+            UserProfile profile = subscriptionStore.GetProfileFor(user).Result;
             RiverDefinition river = profile.Rivers.FirstOrDefault(r => r.Name == riverName);
             if (river == null)
             {
@@ -566,7 +569,7 @@ namespace onceandfuture
                 otherProfile: profile,
                 rivers: profile.Rivers.Replace(river, newRiver));
 
-            SubscriptionStore.SaveProfileFor(user, newProfile).Wait();
+            subscriptionStore.SaveProfileFor(user, newProfile).Wait();
             Console.WriteLine("OK");
             return 0;
         }

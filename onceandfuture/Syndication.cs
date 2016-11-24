@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Amazon;
+using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using AngleSharp.Dom;
@@ -347,6 +348,8 @@ namespace onceandfuture
             return Convert.ToBase64String(hash).Replace('/', '-');
         }
 
+        public static string MakeID() => Guid.NewGuid().ToString("N");
+
         public static string ParseBody(XElement body)
         {
             var parser = new HtmlParser();
@@ -620,7 +623,10 @@ namespace onceandfuture
         public BlobStore(string bucket)
         {
             this.bucket = bucket;
-            this.client = new AmazonS3Client(region: RegionEndpoint.USWest2);
+            this.client = new AmazonS3Client(new AmazonS3Config
+            {
+                RegionEndpoint = RegionEndpoint.USWest2,
+            });
         }
 
         public Uri GetObjectUri(string name)
@@ -1024,39 +1030,51 @@ namespace onceandfuture
         public RiverFeedMeta Metadata { get; }
     }
 
-    class RiverFeedStore
+    abstract class DocumentStore<TDocumentID, TDocument>
     {
-        readonly BlobStore blobStore = new BlobStore("onceandfuture");
+        readonly BlobStore blobStore;
 
-        static string GetNameForUri(Uri feedUri)
+        protected DocumentStore(BlobStore blobStore)
         {
-            return Util.HashString(feedUri.AbsoluteUri);
+            this.blobStore = blobStore;
         }
 
-        public async Task<River> LoadRiverForFeed(Uri feedUri)
+        protected abstract string GetObjectID(TDocumentID id);
+        protected abstract TDocument GetDefaultValue(TDocumentID id);
+
+        protected async Task<TDocument> GetDocument(TDocumentID docid)
         {
-            byte[] blob = await this.blobStore.GetObject(GetNameForUri(feedUri));
-            if (blob == null)
-            {
-                return new River(metadata: new RiverFeedMeta(originUrl: feedUri));
-            }
+            string id = GetObjectID(docid);
+            byte[] blob = await this.blobStore.GetObject(id);
+            if (blob == null) { return GetDefaultValue(docid); }
 
             using (var memoryStream = new MemoryStream(blob))
             using (var reader = new StreamReader(memoryStream, Encoding.UTF8))
             {
                 string text = reader.ReadToEnd();
-                return JsonConvert.DeserializeObject<River>(text);
+                return JsonConvert.DeserializeObject<TDocument>(text);
             }
         }
 
-        public async Task WriteRiver(Uri uri, River river)
+        protected async Task WriteDocument(TDocumentID docid, TDocument document)
         {
-            byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(river));
+            string id = GetObjectID(docid);
+            byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(document));
             using (var memoryStream = new MemoryStream(data))
             {
-                await this.blobStore.PutObject(GetNameForUri(uri), "application/json", memoryStream);
+                await this.blobStore.PutObject(id, "application/json", memoryStream);
             }
         }
+    }
+
+    class RiverFeedStore : DocumentStore<Uri, River>
+    {
+        public RiverFeedStore() : base(new BlobStore("onceandfuture")) { }
+
+        protected override River GetDefaultValue(Uri id) => new River(metadata: new RiverFeedMeta(originUrl: id));
+        protected override string GetObjectID(Uri id) => Util.HashString(id.AbsoluteUri);
+        public Task<River> LoadRiverForFeed(Uri feedUri) => GetDocument(feedUri);
+        public Task WriteRiver(Uri uri, River river) => WriteDocument(uri, river);
     }
 
     class RiverThumbnailStore
@@ -2215,12 +2233,16 @@ namespace onceandfuture
         public RiverDefinition(
             RiverDefinition otherRiver = null,
             string name = null,
+            string id = null,
             IEnumerable<Uri> feeds = null)
         {
             Name = name ?? otherRiver?.Name;
+            Id = id ?? otherRiver?.Id;
             Feeds = ImmutableList.CreateRange(
                 feeds ?? otherRiver?.Feeds ?? Enumerable.Empty<Uri>());
         }
+        [JsonProperty("id")]
+        public string Id { get; }
         [JsonProperty("name")]
         public string Name { get; }
         [JsonProperty("feeds")]
@@ -2313,31 +2335,13 @@ namespace onceandfuture
     }
 
 
-    static class SubscriptionStore
+    class SubscriptionStore : DocumentStore<string, UserProfile>
     {
-        public static async Task<UserProfile> GetProfileFor(string user)
-        {
-            try
-            {
-                using (TextReader reader = File.OpenText(user))
-                {
-                    string body = await reader.ReadToEndAsync();
-                    return JsonConvert.DeserializeObject<UserProfile>(body);
-                }
-            }
-            catch (FileNotFoundException)
-            {
-                return new UserProfile();
-            }
-        }
+        public SubscriptionStore() : base(new BlobStore("onceandfuture-profiles")) { }
 
-        public static async Task SaveProfileFor(string user, UserProfile profile)
-        {
-            string data = JsonConvert.SerializeObject(profile);
-            using (var writer = File.CreateText(user))
-            {
-                await writer.WriteAsync(data);
-            }
-        }
+        protected override UserProfile GetDefaultValue(string id) => new UserProfile();
+        protected override string GetObjectID(string id) => Util.HashString(id);
+        public Task<UserProfile> GetProfileFor(string user) => GetDocument(user);
+        public Task SaveProfileFor(string user, UserProfile profile) => WriteDocument(user, profile);
     }
 }
