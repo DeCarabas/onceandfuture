@@ -290,7 +290,6 @@
 	  React.createElement(_approot2.default, null)
 	), document.getElementById('example'));
 	
-	registerMessageHandlers(store.dispatch);
 	store.dispatch((0, _actions.refreshRiverList)());
 
 /***/ },
@@ -23634,15 +23633,19 @@
 	
 	var RIVER_SET_FEED_MODE = exports.RIVER_SET_FEED_MODE = 'RIVER_SET_FEED_MODE';
 	function riverSetFeedMode(river_index, river, mode) {
-	  return function doSetThing(dispatch) {
-	    console.log(river);
-	    sendSetRiverMode(river.id, mode);
-	    dispatch({
-	      type: RIVER_SET_FEED_MODE,
-	      river_index: river_index,
-	      mode: mode
-	    });
-	  };
+	  // Just set the feed mode with the server asynchronously; it's unlikely to
+	  // fail and it shouldn't take much time so who cares if it fails to land.
+	  return xhrAction({
+	    verb: 'POST', url: river.url + '/mode',
+	    msg: { 'mode': mode },
+	    start: function start(dispatch) {
+	      return dispatch({
+	        type: RIVER_SET_FEED_MODE,
+	        river_index: river_index,
+	        mode: mode
+	      });
+	    }
+	  });
 	}
 	
 	function addFeedToRiver(index, river) {
@@ -23663,17 +23666,36 @@
 	}
 	
 	function refreshRiver(index, river_name, river_url, river_id) {
-	  return function doRefresh(dispatch) {
-	    dispatch(riverUpdateStart(index));
-	    sendLoadRiver(index, river_name, river_url, river_id);
-	  };
+	  return xhrAction({
+	    url: river_url,
+	    start: function start(dispatch) {
+	      return dispatch(riverUpdateStart(index));
+	    },
+	    loaded_json: function loaded_json(dispatch, result) {
+	      return dispatch(riverUpdateSuccess(index, river_name, river_url, result));
+	    },
+	    error: function error(dispatch, xhr) {
+	      return dispatch(riverUpdateFailed(index, xhr.statusText));
+	    }
+	  });
 	}
 	
 	function refreshRiverList() {
-	  return function doRefreshRiverList(dispatch) {
-	    dispatch(riverListUpdateStart());
-	    sendLoadRiverList();
-	  };
+	  return xhrAction({
+	    url: "api/v1/river/doty",
+	    start: function start(dispatch) {
+	      return dispatch(riverListUpdateStart());
+	    },
+	    loaded_json: function loaded_json(dispatch, result) {
+	      dispatch(riverListUpdateSuccess(result));
+	      result.rivers.forEach(function (river, index) {
+	        dispatch(refreshRiver(index, river.name, river.url));
+	      });
+	    },
+	    error: function error(dispatch, xhr) {
+	      return dispatch(riverListUpdateFailed(xhr.statusText));
+	    }
+	  });
 	}
 	
 	function refreshAllFeeds() {

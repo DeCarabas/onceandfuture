@@ -19,6 +19,8 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Mvc.Routing;
 
 namespace onceandfuture
 {
@@ -28,6 +30,50 @@ namespace onceandfuture
         public IActionResult Index() => PhysicalFile(
             Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "index.html"),
             "text/html");
+    }
+
+    public class ApiController : Controller
+    {
+        [HttpGet("/api/v1/river/{user}")]
+        public async Task<IActionResult> GetRiverList(string user)
+        {            
+            UserProfile profile = await SubscriptionStore.GetProfileFor(user);
+            return Json(new
+            {
+                rivers =
+                    profile.Rivers.Select(
+                        (r, i) => new {
+                            name = r.Name,
+                            url = String.Format("/api/v1/river/{0}/{1}", user, i),
+                            id = i
+                        }
+                    ).ToArray()
+            });
+        }
+
+        [HttpGet("/api/v1/river/{user}/{id}")]
+        public Task<IActionResult> GetRiver(string user, string id)
+        {
+            throw new NotImplementedException();
+        }
+
+        [HttpPost("/api/v1/river/{user}/{id}")]
+        public Task<IActionResult> AddFeed(string user, string id)
+        {
+            throw new NotImplementedException();
+        }
+
+        [HttpPost("/api/v1/river/{user}/{id}/mode")]
+        public Task<IActionResult> PostRiverMode(string user, string id)
+        {
+            throw new NotImplementedException();
+        }
+
+        [HttpPost("/api/v1/river/{user}/refresh_all")]
+        public Task<IActionResult> PostRefreshAll(string user, string id)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class HealthController : Controller

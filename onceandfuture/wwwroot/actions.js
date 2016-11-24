@@ -196,15 +196,17 @@ function xhrAction(options) {
 
 export const RIVER_SET_FEED_MODE = 'RIVER_SET_FEED_MODE';
 export function riverSetFeedMode(river_index, river, mode) {
-  return function doSetThing(dispatch) {
-    console.log(river);
-    sendSetRiverMode(river.id, mode);
-    dispatch({
+  // Just set the feed mode with the server asynchronously; it's unlikely to
+  // fail and it shouldn't take much time so who cares if it fails to land.
+  return xhrAction({
+    verb: 'POST', url: river.url + '/mode',
+    msg: { 'mode': mode },
+    start: (dispatch) => dispatch({
       type: RIVER_SET_FEED_MODE,
       river_index: river_index,
       mode: mode,
-    });
-  }
+    }),
+  });
 }
 
 export function addFeedToRiver(index, river) {
@@ -223,17 +225,28 @@ export function addFeedToRiver(index, river) {
 }
 
 export function refreshRiver(index, river_name, river_url, river_id) {
-  return function doRefresh(dispatch) {
-    dispatch(riverUpdateStart(index));
-    sendLoadRiver(index, river_name, river_url, river_id);
-  }
+  return xhrAction({
+    url: river_url,
+    start: (dispatch) => dispatch(riverUpdateStart(index)),
+    loaded_json: (dispatch, result) =>
+      dispatch(riverUpdateSuccess(index, river_name, river_url, result)),
+    error: (dispatch, xhr) =>
+      dispatch(riverUpdateFailed(index, xhr.statusText)),
+  });
 }
 
 export function refreshRiverList() {
-  return function doRefreshRiverList(dispatch) {
-    dispatch(riverListUpdateStart());
-    sendLoadRiverList();
-  }
+  return xhrAction({
+    url: "api/v1/river/doty",
+    start: (dispatch) => dispatch(riverListUpdateStart()),
+    loaded_json: (dispatch, result) => {
+      dispatch(riverListUpdateSuccess(result));
+      result.rivers.forEach((river, index) => {
+        dispatch(refreshRiver(index, river.name, river.url));
+      });
+    },
+    error: (dispatch, xhr) => dispatch(riverListUpdateFailed(xhr.statusText)),
+  });
 }
 
 export function refreshAllFeeds() {

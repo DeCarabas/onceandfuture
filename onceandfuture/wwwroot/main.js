@@ -226,5 +226,4 @@ ReactDOM.render(
   document.getElementById('example')
 );
 
-registerMessageHandlers(store.dispatch);
 store.dispatch(refreshRiverList());
