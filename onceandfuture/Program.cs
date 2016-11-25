@@ -18,9 +18,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.Mvc.Routing;
 
 namespace onceandfuture
 {
