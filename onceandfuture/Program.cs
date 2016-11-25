@@ -233,7 +233,7 @@ namespace onceandfuture
 
             string[] args = new[]
             {
-				Path.Combine("node_modules", "webpack", "bin", "webpack.js"),
+                Path.Combine("node_modules", "webpack", "bin", "webpack.js"),
                 "-d --watch",
                 "--output-path wwwroot",
                 "--output-filename bundle.js",
