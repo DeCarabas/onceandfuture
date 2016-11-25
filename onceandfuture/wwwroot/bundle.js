@@ -23377,15 +23377,13 @@
 	
 	function make_full_url(url) {
 	  var full_url = url;
-	  if (full_url.startsWith('sqlblob://')) {
-	    return full_url;
-	  }
-	  if (!full_url.startsWith('/')) {
-	    full_url = '/' + full_url;
-	  }
-	  if (!full_url.startsWith('http')) {
-	    full_url = 'http://localhost:5000' + full_url;
-	  }
+	  // if (full_url.startsWith('http')) { return full_url; }
+	  // if (!full_url.startsWith('/')) {
+	  //   full_url = '/' + full_url;
+	  // }
+	  // if (!full_url.startsWith('http')) {
+	  //   full_url = 'http://localhost:5000' + full_url;
+	  // }
 	  return full_url;
 	}
 
@@ -23672,7 +23670,7 @@
 	      return dispatch(riverUpdateStart(index));
 	    },
 	    loaded_json: function loaded_json(dispatch, result) {
-	      return dispatch(riverUpdateSuccess(index, river_name, river_url, result));
+	      return dispatch(riverUpdateSuccess(index, river_name, river_url, river_id, result));
 	    },
 	    error: function error(dispatch, xhr) {
 	      return dispatch(riverUpdateFailed(index, xhr.statusText));
@@ -24707,14 +24705,14 @@
 	// import { shell } from 'electron';
 	
 	function handleLinkClick(evt, link) {
-	  var open_background = false;
-	  if (evt.metaKey || evt.ctrlKey) {
-	    open_background = true;
-	  }
+	  // let open_background = false;
+	  // if (evt.metaKey || evt.ctrlKey) {
+	  //   open_background = true;
+	  // }
 	
-	  shell.openExternal(link, { activate: !open_background });
-	  evt.preventDefault();
-	  return true;
+	  // shell.openExternal(link, {activate: !open_background});
+	  // evt.preventDefault();
+	  // return true;
 	}
 	
 	var RiverLink = function RiverLink(_ref) {

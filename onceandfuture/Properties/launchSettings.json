@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "onceandfuture": {
+      "commandName": "Project",
+      "commandLineArgs": "serve -vvvv",
+      "workingDirectory": "c:\\src\\onceandfuture\\onceandfuture",
+      "launchBrowser": true,
+      "launchUrl": "http://localhost:5000/"
+    }
+  }
+}

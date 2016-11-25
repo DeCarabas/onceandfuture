@@ -229,7 +229,7 @@ export function refreshRiver(index, river_name, river_url, river_id) {
     url: river_url,
     start: (dispatch) => dispatch(riverUpdateStart(index)),
     loaded_json: (dispatch, result) =>
-      dispatch(riverUpdateSuccess(index, river_name, river_url, result)),
+      dispatch(riverUpdateSuccess(index, river_name, river_url, river_id, result)),
     error: (dispatch, xhr) =>
       dispatch(riverUpdateFailed(index, xhr.statusText)),
   });

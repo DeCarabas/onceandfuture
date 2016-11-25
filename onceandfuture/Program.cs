@@ -39,22 +39,22 @@ namespace onceandfuture
         {
             var subscriptionStore = new SubscriptionStore();
             UserProfile profile = await subscriptionStore.GetProfileFor(user);
-            return Json(new
-            {
-                rivers = (from r in profile.Rivers
+            var rivers = (from r in profile.Rivers
                           select new
                           {
                               name = r.Name,
                               id = r.Id,
                               url = String.Format("/api/v1/river/{0}/{1}", user, r.Id),
-                          }).ToArray()
-            });
+                          }).ToArray();
+            return Json(new { rivers = rivers });
         }
 
         [HttpGet("/api/v1/river/{user}/{id}")]
-        public Task<IActionResult> GetRiver(string user, string id)
+        public async Task<IActionResult> GetRiver(string user, string id)
         {
-            throw new NotImplementedException();
+            var aggregateStore = new AggregateRiverStore();
+            River river = await aggregateStore.LoadAggregate(id);
+            return Json(river);
         }
 
         [HttpPost("/api/v1/river/{user}/{id}")]
@@ -70,9 +70,18 @@ namespace onceandfuture
         }
 
         [HttpPost("/api/v1/river/{user}/refresh_all")]
-        public Task<IActionResult> PostRefreshAll(string user, string id)
+        public async Task<IActionResult> PostRefreshAll(string user)
         {
-            throw new NotImplementedException();
+            var subscriptionStore = new SubscriptionStore();
+            var parser = new RiverFeedParser();
+            var feedStore = new RiverFeedStore();
+            var aggregateStore = new AggregateRiverStore();
+
+            UserProfile profile = await subscriptionStore.GetProfileFor(user);
+            River[] rivers = await Task.WhenAll(
+                profile.Rivers.Select(r => parser.RefreshAggregateRiverWithFeeds(
+                    r.Id, r.Feeds, aggregateStore, feedStore, CancellationToken.None)));
+            return Ok(); // Progress?
         }
     }
 
@@ -327,6 +336,7 @@ namespace onceandfuture
             )
             .AddVerb("show", "Show items in one or more feeds.", v => v
                 .AddOption("feed", "The single feed URL to show.", o => o.AcceptValue())
+                .AddOption("user", "The user to show for.", o => o.AcceptValue())
             )
             .AddVerb("sub", "Subscribe to a feed.", v => v
                 .AddOption("user", "The user to add a subscription for.", o => o.IsRequired())
@@ -395,29 +405,58 @@ namespace onceandfuture
             List<OpmlEntry> feeds;
             if (args["feed"].Value != null)
             {
-                Uri feedUrl;
-                if (!Uri.TryCreate(args["feed"].Value, UriKind.Absolute, out feedUrl))
-                {
-                    Console.Error.WriteLine("Feed not a valid url: {0}", args["feed"].Value);
-                    return 100;
-                }
-                feeds = new List<OpmlEntry> { new OpmlEntry(xmlUrl: feedUrl) };
+                return DoShowSingle(args);
+            }
+            else if (args["user"].Value != null)
+            {
+                return DoShowAll(args);
             }
             else
             {
-                XDocument doc = XDocument.Load(@"C:\Users\John\Downloads\NewsBlur-DeCarabas-2016-11-08");
-                XElement body = doc.Root.Element(XNames.OPML.Body);
+                Console.Error.WriteLine("Must specify either user or feed.");
+                return -1;
+            }
+        }
 
-                feeds =
-                    (from elem in body.Descendants(XNames.OPML.Outline)
-                     where elem.Attribute(XNames.OPML.XmlUrl) != null
-                     select OpmlEntry.FromXml(elem)).ToList();
+        static int DoShowSingle(ParsedOpts args)
+        {
+            Uri feedUrl;
+            if (!Uri.TryCreate(args["feed"].Value, UriKind.Absolute, out feedUrl))
+            {
+                Console.Error.WriteLine("Feed not a valid url: {0}", args["feed"].Value);
+                return 100;
             }
 
             var feedStore = new RiverFeedStore();
-            foreach (var entry in feeds)
+            River river = feedStore.LoadRiverForFeed(feedUrl).Result;
+            if (river.UpdatedFeeds.Feeds.Count > 0)
             {
-                River river = feedStore.LoadRiverForFeed(entry.XmlUrl).Result;
+                foreach (RiverFeed feed in river.UpdatedFeeds.Feeds)
+                {
+                    DumpFeed(feed);
+                }
+            }
+            else
+            {
+                Console.WriteLine("No data for {0}", feedUrl);
+            }
+
+            Console.WriteLine("(Press enter to continue)");
+            Console.ReadLine();
+
+            return 0;
+        }
+
+        static int DoShowAll(ParsedOpts args)
+        {
+            var profileStore = new SubscriptionStore();
+            var aggregateStore = new AggregateRiverStore();
+
+            UserProfile profile = profileStore.GetProfileFor(args["user"].Value).Result;
+            foreach (RiverDefinition rd in profile.Rivers)
+            {
+                Console.WriteLine("Loading {0} ({1})...", rd.Name, rd.Id);
+                River river = aggregateStore.LoadAggregate(rd.Id).Result;
                 if (river.UpdatedFeeds.Feeds.Count > 0)
                 {
                     foreach (RiverFeed feed in river.UpdatedFeeds.Feeds)
@@ -427,61 +466,71 @@ namespace onceandfuture
                 }
                 else
                 {
-                    Console.WriteLine("No data for {0}", entry.XmlUrl);
+                    Console.WriteLine("No data for {0}", rd.Name);
                 }
 
                 Console.WriteLine("(Press enter to continue)");
                 Console.ReadLine();
             }
+
             return 0;
         }
 
         static int DoUpdate(ParsedOpts args)
         {
-            List<Uri> feeds;
             if (args["feed"].Value != null)
             {
-                Uri feedUrl;
-                if (!Uri.TryCreate(args["feed"].Value, UriKind.Absolute, out feedUrl))
-                {
-                    Console.Error.WriteLine("Feed not a valid url: {0}", args["feed"].Value);
-                    return 100;
-                }
-                feeds = new List<Uri> { feedUrl };
+                return DoUpdateSingleFeed(args);
             }
             else if (args["user"].Value != null)
             {
-                var subscriptionStore = new SubscriptionStore();
-                UserProfile profile = subscriptionStore.GetProfileFor(args["user"].Value).Result;
-                feeds = (from river in profile.Rivers from feed in river.Feeds select feed).ToList();
+                return DoUpdateForUser(args);
             }
             else
             {
                 Console.Error.WriteLine("Must specify either user or feed.");
                 return -1;
             }
+        }
 
-            Stopwatch loadTimer = Stopwatch.StartNew();
+        static int DoUpdateSingleFeed(ParsedOpts args)
+        {
+            Uri feedUrl;
+            if (!Uri.TryCreate(args["feed"].Value, UriKind.Absolute, out feedUrl))
+            {
+                Console.Error.WriteLine("Feed not a valid url: {0}", args["feed"].Value);
+                return 100;
+            }
 
             var parser = new RiverFeedParser();
             var feedStore = new RiverFeedStore();
-            var parses =
-                (from entry in feeds
-                 select new
-                 {
-                     url = entry,
-                     task = parser.FetchAndUpdateRiver(feedStore, entry, CancellationToken.None),
-                 }).ToList();
 
-            Console.WriteLine("Started {0} feeds...", parses.Count);
-            Task<River[]> doneTask = Task.WhenAll(parses.Select(p => p.task).ToArray()).ContinueWith(t =>
-            {
-                loadTimer.Stop();
-                return t.Result;
-            });
+            Console.WriteLine("Refreshing {0}...", feedUrl);
+            Stopwatch loadTimer = Stopwatch.StartNew();
+            parser.FetchAndUpdateRiver(feedStore, feedUrl, CancellationToken.None).Wait();
+            Console.WriteLine("Refreshed {0} in {1}", feedUrl, loadTimer.Elapsed);
+            return 0;
+        }
 
-            doneTask.Wait();
-            Console.WriteLine("Refreshed {0} feeds in {1}", parses.Count, loadTimer.Elapsed);
+        static int DoUpdateForUser(ParsedOpts args)
+        {
+            string user = args["user"].Value;
+
+            var subscriptionStore = new SubscriptionStore();
+            var parser = new RiverFeedParser();
+            var feedStore = new RiverFeedStore();
+            var aggregateStore = new AggregateRiverStore();
+
+            Console.WriteLine("Refreshing for {0}...", user);
+            Stopwatch loadTimer = Stopwatch.StartNew();
+
+            UserProfile profile = subscriptionStore.GetProfileFor(user).Result;
+            var tasks = from rd in profile.Rivers
+                        select parser.RefreshAggregateRiverWithFeeds(
+                            rd.Id, rd.Feeds, aggregateStore, feedStore, CancellationToken.None);
+            Task.WhenAll(tasks).Wait();
+
+            Console.WriteLine("Refreshed {0} rivers in {1}", profile.Rivers.Count, loadTimer.Elapsed);
             return 0;
         }
 

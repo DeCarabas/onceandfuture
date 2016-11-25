@@ -3,14 +3,14 @@ import { DEFAULT_LINK_STYLE } from './style'
 // import { shell } from 'electron';
 
 function handleLinkClick(evt, link) {
-  let open_background = false;
-  if (evt.metaKey || evt.ctrlKey) {
-    open_background = true;
-  }
+  // let open_background = false;
+  // if (evt.metaKey || evt.ctrlKey) {
+  //   open_background = true;
+  // }
 
-  shell.openExternal(link, {activate: !open_background});
-  evt.preventDefault();
-  return true;
+  // shell.openExternal(link, {activate: !open_background});
+  // evt.preventDefault();
+  // return true;
 }
 
 const RiverLink = ({href, children}) => {

@@ -33,7 +33,9 @@ using Polly;
 using Serilog;
 
 // TODO: Post titles can still be way too long. (cap to say 64?)
-
+// TODO: Codemod: constructors with required arguments and then a With() method.
+// TODO: Codemod: Inline Log static methods?
+// TODO: Codemod: take stores as constructor params
 
 namespace onceandfuture
 {
@@ -44,7 +46,7 @@ namespace onceandfuture
         readonly static Func<string, ILogger> logCreator = Create;
 
         static ILogger Create(string tag) => Serilog.Log.Logger.ForContext("tag", tag);
-        static ILogger Get([CallerMemberName]string tag = null) => TaggedLoggers.GetOrAdd(tag, logCreator);
+        public static ILogger Get([CallerMemberName]string tag = null) => TaggedLoggers.GetOrAdd(tag, logCreator);
 
         public static void BadDate(string url, string date)
         {
@@ -823,14 +825,14 @@ namespace onceandfuture
             Uri feedUrl = null,
             string websiteUrl = null,
             string feedDescription = null,
-            DateTime? whenLastUpdate = null,
+            DateTimeOffset? whenLastUpdate = null,
             IEnumerable<RiverItem> items = null)
         {
             FeedTitle = feedTitle ?? otherFeed?.FeedTitle ?? String.Empty;
             FeedUrl = feedUrl ?? otherFeed?.FeedUrl;
             WebsiteUrl = websiteUrl ?? otherFeed?.WebsiteUrl ?? String.Empty;
             FeedDescription = feedDescription ?? otherFeed?.FeedDescription ?? String.Empty;
-            WhenLastUpdate = whenLastUpdate ?? otherFeed?.WhenLastUpdate ?? DateTime.UtcNow;
+            WhenLastUpdate = whenLastUpdate ?? otherFeed?.WhenLastUpdate ?? DateTimeOffset.UtcNow;
 
             Items = ImmutableList.CreateRange<RiverItem>(items ?? otherFeed?.Items ?? Enumerable.Empty<RiverItem>());
         }
@@ -848,7 +850,7 @@ namespace onceandfuture
         public string FeedDescription { get; }
 
         [JsonProperty(PropertyName = "whenLastUpdate")]
-        public DateTime WhenLastUpdate { get; }
+        public DateTimeOffset WhenLastUpdate { get; }
 
         [JsonProperty(PropertyName = "item")]
         public ImmutableList<RiverItem> Items { get; }
@@ -1076,6 +1078,18 @@ namespace onceandfuture
         public Task<River> LoadRiverForFeed(Uri feedUri) => GetDocument(feedUri);
         public Task WriteRiver(Uri uri, River river) => WriteDocument(uri, river);
     }
+
+    class AggregateRiverStore : DocumentStore<string, River>
+    {
+        public AggregateRiverStore() : base(new BlobStore("onceandfuture")) { }
+
+        protected override River GetDefaultValue(string id) => 
+            new River(metadata: new RiverFeedMeta(originUrl: new Uri("aggregate:/"+id)));
+        protected override string GetObjectID(string id) => id;
+        public Task<River> LoadAggregate(string id) => GetDocument(id);
+        public Task WriteAggregate(string id, River river) => WriteDocument(id, river);
+    }
+
 
     class RiverThumbnailStore
     {
@@ -1851,6 +1865,72 @@ namespace onceandfuture
             return river;
         }
 
+        public async Task<River> RefreshAggregateRiverWithFeeds(
+            string id,
+            IList<Uri> feedUrls,
+            AggregateRiverStore aggregateStore,
+            RiverFeedStore feedStore,
+            CancellationToken cancellationToken)
+        {
+            Stopwatch aggregateTimer = Stopwatch.StartNew();
+
+            Log.Get().Information("{id}: Loading aggregate");
+            River river = await aggregateStore.LoadAggregate(id);
+
+            Log.Get().Information("{id}: Refreshing aggregate with {feedUrlCount} feeds", id, feedUrls.Count);
+            DateTimeOffset lastUpdated = river.UpdatedFeeds.Feeds.Count > 0
+                ? river.UpdatedFeeds.Feeds.Max(f => f.WhenLastUpdate)
+                : DateTimeOffset.MinValue;
+            Log.Get().Information("{id}: Last updated @ {lastUpdated}", id, lastUpdated);
+
+            var parser = new RiverFeedParser();
+            River[] rivers = await Task.WhenAll(
+                from url in feedUrls
+                select parser.FetchAndUpdateRiver(feedStore, url, cancellationToken));
+            Log.Get().Information("{id}: Pulled {riverCount} rivers", id, rivers.Length);
+
+            List<RiverFeed> newFeeds = new List<RiverFeed>();
+            for(int riverIndex = 0; riverIndex < rivers.Length; riverIndex++)
+            {
+                River feedRiver = rivers[riverIndex];
+                Log.Get().Debug(
+                    "{id}: {feedUrl}: Has {count} feeds", 
+                    id, feedRiver.Metadata.OriginUrl, feedRiver.UpdatedFeeds.Feeds.Count);
+
+                RiverFeed[] newUpdates;
+                newUpdates = feedRiver.UpdatedFeeds.Feeds.Where(rf => rf.WhenLastUpdate > lastUpdated).ToArray();
+                Log.Get().Debug(
+                    "{id}: {feedUrl}: Has {count} new updates",
+                    id, feedRiver.Metadata.OriginUrl, newUpdates.Length);
+
+                if (newUpdates.Length > 0)
+                {
+                    RiverItem[] newItems = newUpdates.SelectMany(rf => rf.Items).ToArray();
+                    DateTimeOffset biggestUpdate = newUpdates.Max(rf => rf.WhenLastUpdate);
+                    Log.Get().Debug(
+                        "{id}: {feedUrl}: Has {count} new items @ {lastUpdate}",
+                        id, feedRiver.Metadata.OriginUrl, newUpdates.Length, biggestUpdate);
+
+                    newFeeds.Add(new RiverFeed(
+                        otherFeed: newUpdates[0], 
+                        whenLastUpdate: biggestUpdate, 
+                        items: newItems));
+                }
+            }            
+
+            Log.Get().Information("{id}: Resulted in {riverCount} new feeds", id, newFeeds.Count);
+            var newRiver = new River(
+                existingRiver: river,
+                updatedFeeds: new UpdatedFeeds(
+                    existingFeeds: river.UpdatedFeeds,
+                    feeds: newFeeds.Concat(river.UpdatedFeeds.Feeds)));
+            Log.Get().Information("{id}: Updating aggregate", id);
+            await aggregateStore.WriteAggregate(id, newRiver);
+
+            Log.Get().Information("{id}: Refreshed in {elapsed}ms", id, aggregateTimer.ElapsedMilliseconds);
+            return newRiver;
+        }
+
         public async Task<River> UpdateAsync(River river, CancellationToken cancellationToken)
         {
             FetchResult fetchResult = await FetchAsync(
@@ -1861,13 +1941,6 @@ namespace onceandfuture
             );
 
             var updatedFeeds = river.UpdatedFeeds;
-            var metadata = new RiverFeedMeta(
-                river.Metadata,
-                etag: fetchResult.Etag,
-                lastModified: fetchResult.LastModified,
-                originUrl: fetchResult.FeedUrl,
-                lastStatus: fetchResult.Status);
-
             if (fetchResult.Feed != null)
             {
                 var feed = fetchResult.Feed;
@@ -1899,6 +1972,13 @@ namespace onceandfuture
                         feeds: river.UpdatedFeeds.Feeds.Insert(0, feed));
                 }
             }
+
+            var metadata = new RiverFeedMeta(
+                river.Metadata,
+                etag: fetchResult.Etag,
+                lastModified: fetchResult.LastModified,
+                originUrl: fetchResult.FeedUrl,
+                lastStatus: fetchResult.Status);
 
             return new River(
                 river,
