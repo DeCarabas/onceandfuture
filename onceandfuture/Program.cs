@@ -402,7 +402,6 @@ namespace onceandfuture
 
         static int DoShow(ParsedOpts args)
         {
-            List<OpmlEntry> feeds;
             if (args["feed"].Value != null)
             {
                 return DoShowSingle(args);
