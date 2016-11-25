@@ -11,6 +11,8 @@
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
+    <RuntimeInteropHintPath Condition="'$(OS)' == 'Unix'">../packages/System.Runtime.InteropServices.RuntimeInformation.4.0.0/runtimes/unix/lib/netstandard1.1/System.Runtime.InteropServices.RuntimeInformation.dll</RuntimeInteropHintPath>
+    <RuntimeInteropHintPath Condition="'$(RuntimeInteropHintPath)' == ''">..\packages\System.Runtime.InteropServices.RuntimeInformation.4.0.0\lib\net45\System.Runtime.InteropServices.RuntimeInformation.dll</RuntimeInteropHintPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <DebugSymbols>true</DebugSymbols>
@@ -405,7 +407,7 @@
       <HintPath>..\..\..\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.6\System.Runtime.Caching.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.InteropServices.RuntimeInformation, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.Runtime.InteropServices.RuntimeInformation.4.0.0\lib\net45\System.Runtime.InteropServices.RuntimeInformation.dll</HintPath>
+      <HintPath>$(RuntimeInteropHintPath)</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Runtime.Serialization">

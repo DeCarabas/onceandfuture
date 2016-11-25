@@ -233,7 +233,7 @@ namespace onceandfuture
 
             string[] args = new[]
             {
-                @".\node_modules\webpack\bin\webpack.js",
+				Path.Combine("node_modules", "webpack", "bin", "webpack.js"),
                 "-d --watch",
                 "--output-path wwwroot",
                 "--output-filename bundle.js",
@@ -242,7 +242,7 @@ namespace onceandfuture
 
             var startinfo = new ProcessStartInfo()
             {
-                FileName = "node.exe",
+                FileName = "node",
                 Arguments = String.Join(" ", args),
                 WorkingDirectory = Directory.GetCurrentDirectory(),
                 RedirectStandardOutput = true,
