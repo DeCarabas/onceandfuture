@@ -675,6 +675,5 @@ namespace onceandfuture
                 }
             }
         }
-
     }
 }
