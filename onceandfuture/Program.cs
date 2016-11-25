@@ -75,7 +75,7 @@ namespace onceandfuture
             var aggregateStore = new AggregateRiverStore();
 
             UserProfile profile = await subscriptionStore.GetProfileFor(user);
-            River[] rivers = await Task.WhenAll(
+            await Task.WhenAll(
                 profile.Rivers.Select(r => parser.RefreshAggregateRiverWithFeeds(
                     r.Id, r.Feeds, aggregateStore, feedStore, CancellationToken.None)));
             return Ok(); // Progress?
