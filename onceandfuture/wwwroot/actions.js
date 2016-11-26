@@ -237,7 +237,7 @@ export function refreshRiver(index, river_name, river_url, river_id) {
 
 export function refreshRiverList() {
   return xhrAction({
-    url: "api/v1/river/doty",
+    url: "/api/v1/river/doty",
     start: (dispatch) => dispatch(riverListUpdateStart()),
     loaded_json: (dispatch, result) => {
       dispatch(riverListUpdateSuccess(result));
@@ -256,7 +256,7 @@ export function refreshAllFeeds() {
       const state = getState();
       return !state.loading;
     },
-    verb: "POST", url: "api/v1/river/doty/refresh_all",
+    verb: "POST", url: "/api/v1/river/doty/refresh_all",
     start: (dispatch, xhr) => {
       pollTimer = setInterval(() => {
         let text = xhr.responseText;

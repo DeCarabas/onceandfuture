@@ -23680,7 +23680,7 @@
 	
 	function refreshRiverList() {
 	  return xhrAction({
-	    url: "api/v1/river/doty",
+	    url: "/api/v1/river/doty",
 	    start: function start(dispatch) {
 	      return dispatch(riverListUpdateStart());
 	    },
@@ -23703,7 +23703,7 @@
 	      var state = getState();
 	      return !state.loading;
 	    },
-	    verb: "POST", url: "api/v1/river/doty/refresh_all",
+	    verb: "POST", url: "/api/v1/river/doty/refresh_all",
 	    start: function start(dispatch, xhr) {
 	      pollTimer = setInterval(function () {
 	        var text = xhr.responseText;

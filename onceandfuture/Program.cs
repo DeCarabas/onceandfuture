@@ -139,13 +139,19 @@ namespace onceandfuture
             }
             else
             {
-                return RedirectToAction(nameof(AppController.App));
+                return RedirectToAction(nameof(AppController.App), new { user = user });
             }
         }
 
-        [HttpGet("/feed")]
-        public IActionResult App()
+        [HttpGet("/feed/{user}")]
+        public IActionResult App(string user)
         {
+            string authn_user = (string)this.HttpContext.Items["authenticated_user"];
+            if (!string.Equals(authn_user, user, StringComparison.Ordinal))
+            {
+                return RedirectToAction(nameof(AppController.Login));
+            }
+
             return PhysicalFile(
                 Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "main.html"),
                 "text/html");
@@ -167,7 +173,7 @@ namespace onceandfuture
             bool isAuthenticated = await authnManager.ValidateLogin(HttpContext, user, password);
             if (isAuthenticated)
             {
-                return RedirectToAction(nameof(AppController.App));
+                return RedirectToAction(nameof(AppController.App), new { user = user });
             }
             else
             {
