@@ -34,6 +34,9 @@ import {
 // import { data } from './data'
 import AppRoot from './components/approot'
 
+// User doesn't channge, based on host URL.
+const user = window.location.pathname.split('/')[2];
+
 // The redux reducer-- this is the core logic of the app that evolves the app
 // state in response to actions.
 
@@ -203,6 +206,7 @@ function state_load_progress(state = 0, action) {
 
 function sociallistsApp(state = {}, action) {
   return {
+    user: user,
     rivers: state_rivers(state.rivers, action),
     loading: state_loading(state.loading, action),
     load_progress: state_load_progress(state.load_progress, action),
@@ -226,4 +230,4 @@ ReactDOM.render(
   document.getElementById('example')
 );
 
-store.dispatch(refreshRiverList());
+store.dispatch(refreshRiverList(user));

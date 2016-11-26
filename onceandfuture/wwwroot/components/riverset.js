@@ -45,7 +45,7 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh}) => {
   </div>
 }
 
-export const RiverSetBase = ({rivers, loading, load_progress, onRefresh}) => {
+export const RiverSetBase = ({user, rivers, loading, load_progress, onRefresh}) => {
   const TOTAL_SPACING = COLUMNSPACER * rivers.length;
   const TOTAL_COLUMNS = COLUMNWIDTH * rivers.length;
   const TOP_BAR_HEIGHT = 33;
@@ -92,7 +92,7 @@ export const RiverSetBase = ({rivers, loading, load_progress, onRefresh}) => {
           title='Rivers'
           loading={loading}
           load_progress={load_progress}
-          onRefresh={onRefresh}
+          onRefresh={() => onRefresh(user)}
           />
       </div>
     </div>
@@ -103,6 +103,7 @@ export const RiverSetBase = ({rivers, loading, load_progress, onRefresh}) => {
 //
 const vrs_mapStateToProps = (state) => {
   return {
+    user: state.user,
     rivers: state.rivers,
     loading: state.loading,
     load_progress: state.load_progress,
@@ -110,7 +111,7 @@ const vrs_mapStateToProps = (state) => {
 };
 const vrs_mapDispatchToProps = (dispatch) => {
   return {
-    onRefresh: function refreshIt () { dispatch(refreshAllFeeds()); },
+    onRefresh: function refreshIt (user) { dispatch(refreshAllFeeds(user)); },
   };
 };
 const RiverSet = connect(

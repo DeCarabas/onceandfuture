@@ -77,6 +77,9 @@
 	// import { data } from './data'
 	
 	
+	// User doesn't channge, based on host URL.
+	var user = window.location.pathname.split('/')[2];
+	
 	// The redux reducer-- this is the core logic of the app that evolves the app
 	// state in response to actions.
 	
@@ -271,6 +274,7 @@
 	  var action = arguments[1];
 	
 	  return {
+	    user: user,
 	    rivers: state_rivers(state.rivers, action),
 	    loading: state_loading(state.loading, action),
 	    load_progress: state_load_progress(state.load_progress, action)
@@ -290,7 +294,7 @@
 	  React.createElement(_approot2.default, null)
 	), document.getElementById('example'));
 	
-	store.dispatch((0, _actions.refreshRiverList)());
+	store.dispatch((0, _actions.refreshRiverList)(user));
 
 /***/ },
 /* 1 */
@@ -23678,9 +23682,9 @@
 	  });
 	}
 	
-	function refreshRiverList() {
+	function refreshRiverList(user) {
 	  return xhrAction({
-	    url: "/api/v1/river/doty",
+	    url: "/api/v1/river/" + user,
 	    start: function start(dispatch) {
 	      return dispatch(riverListUpdateStart());
 	    },
@@ -23696,14 +23700,14 @@
 	  });
 	}
 	
-	function refreshAllFeeds() {
+	function refreshAllFeeds(user) {
 	  var pollTimer = null;
 	  return xhrAction({
 	    precondition: function precondition(dispatch, getState) {
 	      var state = getState();
 	      return !state.loading;
 	    },
-	    verb: "POST", url: "/api/v1/river/doty/refresh_all",
+	    verb: "POST", url: "/api/v1/river/" + user + "/refresh_all",
 	    start: function start(dispatch, xhr) {
 	      pollTimer = setInterval(function () {
 	        var text = xhr.responseText;
@@ -23726,7 +23730,7 @@
 	        clearInterval(pollTimer);
 	      }
 	      dispatch(refreshAllFeedsSuccess());
-	      dispatch(refreshRiverList());
+	      dispatch(refreshRiverList(user));
 	    },
 	    error: function error(dispatch, xhr) {
 	      if (pollTimer) {
@@ -23867,10 +23871,11 @@
 	};
 	
 	var RiverSetBase = exports.RiverSetBase = function RiverSetBase(_ref2) {
-	  var rivers = _ref2.rivers,
+	  var user = _ref2.user,
+	      rivers = _ref2.rivers,
 	      loading = _ref2.loading,
 	      load_progress = _ref2.load_progress,
-	      onRefresh = _ref2.onRefresh;
+	      _onRefresh = _ref2.onRefresh;
 	
 	  var TOTAL_SPACING = _style.COLUMNSPACER * rivers.length;
 	  var TOTAL_COLUMNS = _style.COLUMNWIDTH * rivers.length;
@@ -23923,7 +23928,9 @@
 	        title: 'Rivers',
 	        loading: loading,
 	        load_progress: load_progress,
-	        onRefresh: onRefresh
+	        onRefresh: function onRefresh() {
+	          return _onRefresh(user);
+	        }
 	      })
 	    )
 	  );
@@ -23933,6 +23940,7 @@
 	//
 	var vrs_mapStateToProps = function vrs_mapStateToProps(state) {
 	  return {
+	    user: state.user,
 	    rivers: state.rivers,
 	    loading: state.loading,
 	    load_progress: state.load_progress
@@ -23940,8 +23948,8 @@
 	};
 	var vrs_mapDispatchToProps = function vrs_mapDispatchToProps(dispatch) {
 	  return {
-	    onRefresh: function refreshIt() {
-	      dispatch((0, _actions.refreshAllFeeds)());
+	    onRefresh: function refreshIt(user) {
+	      dispatch((0, _actions.refreshAllFeeds)(user));
 	    }
 	  };
 	};

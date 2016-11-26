@@ -235,9 +235,9 @@ export function refreshRiver(index, river_name, river_url, river_id) {
   });
 }
 
-export function refreshRiverList() {
+export function refreshRiverList(user) {
   return xhrAction({
-    url: "/api/v1/river/doty",
+    url: "/api/v1/river/" + user,
     start: (dispatch) => dispatch(riverListUpdateStart()),
     loaded_json: (dispatch, result) => {
       dispatch(riverListUpdateSuccess(result));
@@ -249,14 +249,14 @@ export function refreshRiverList() {
   });
 }
 
-export function refreshAllFeeds() {
+export function refreshAllFeeds(user) {
   let pollTimer = null;
   return xhrAction({
     precondition: (dispatch, getState) => {
       const state = getState();
       return !state.loading;
     },
-    verb: "POST", url: "/api/v1/river/doty/refresh_all",
+    verb: "POST", url: "/api/v1/river/"+user+"/refresh_all",
     start: (dispatch, xhr) => {
       pollTimer = setInterval(() => {
         let text = xhr.responseText;
@@ -279,7 +279,7 @@ export function refreshAllFeeds() {
         clearInterval(pollTimer);
       }
       dispatch(refreshAllFeedsSuccess());
-      dispatch(refreshRiverList());
+      dispatch(refreshRiverList(user));
     },
     error: (dispatch, xhr) => {
       if (pollTimer) {
