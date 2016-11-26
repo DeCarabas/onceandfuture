@@ -488,7 +488,8 @@
     <Content Include="wwwroot\components\style.js" />
     <Content Include="wwwroot\data.js" />
     <Content Include="wwwroot\health.xslt" />
-    <Content Include="wwwroot\index.html" />
+    <Content Include="wwwroot\main.html" />
+    <Content Include="wwwroot\login.html" />
     <Content Include="wwwroot\main.js" />
     <Content Include="wwwroot\util.js" />
   </ItemGroup>

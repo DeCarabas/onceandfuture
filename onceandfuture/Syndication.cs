@@ -2329,18 +2329,37 @@ namespace onceandfuture
         public ImmutableList<Uri> Feeds { get; }
     }
 
+    class LoginCookie
+    {
+        public LoginCookie(Guid identifier, DateTimeOffset expiresAt)
+        {
+            Id = identifier;
+            ExpiresAt = expiresAt;
+        }
+
+        [JsonProperty("id")]
+        public Guid Id { get; }
+        [JsonProperty("expireAt")]
+        public DateTimeOffset ExpiresAt { get; }
+    }
+
     class UserProfile
     {
         public UserProfile(
             UserProfile otherProfile = null,
-            IEnumerable<RiverDefinition> rivers = null)
+            IEnumerable<RiverDefinition> rivers = null,
+            IEnumerable<LoginCookie> logins = null)
         {
             Rivers = ImmutableList.CreateRange(
                 rivers ?? otherProfile?.Rivers ?? Enumerable.Empty<RiverDefinition>());
+            Logins = ImmutableList.CreateRange(
+                logins ?? otherProfile?.Logins ?? Enumerable.Empty<LoginCookie>());
         }
 
         [JsonProperty("rivers")]
         public ImmutableList<RiverDefinition> Rivers { get; }
+        [JsonProperty("logins")]
+        public ImmutableList<LoginCookie> Logins { get; }
 
         public static UserProfile ImportXml(UserProfile profile, XDocument opml)
         {
@@ -2415,9 +2434,9 @@ namespace onceandfuture
     }
 
 
-    class SubscriptionStore : DocumentStore<string, UserProfile>
+    class UserProfileStore : DocumentStore<string, UserProfile>
     {
-        public SubscriptionStore() : base(new BlobStore("onceandfuture-profiles")) { }
+        public UserProfileStore() : base(new BlobStore("onceandfuture-profiles")) { }
 
         protected override UserProfile GetDefaultValue(string id) => new UserProfile();
         protected override string GetObjectID(string id) => Util.HashString(id);
