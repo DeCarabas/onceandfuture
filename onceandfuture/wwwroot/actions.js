@@ -162,6 +162,8 @@ function xhrAction(options) {
       }
     }
 
+    // TODO: xhr.status has status code
+
     let xhr = new XMLHttpRequest();
     if (options.start) {
       options.start(dispatch, xhr);

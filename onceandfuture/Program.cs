@@ -15,15 +15,29 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Serilog;
 using Serilog.Events;
 
 namespace onceandfuture
 {
-    class AuthenticationManager
+    public class Fault
+    {
+        [JsonProperty("status")]
+        public string Status { get; set; }
+
+        [JsonProperty("code")]
+        public string Code { get; set; }
+
+        [JsonProperty("details")]
+        public string Details { get; set; }
+    }
+
+    public class AuthenticationManager
     {
         const string CookieName = "onceandfuture-feed";
         const int MaxConcurrentSessions = 10;
@@ -58,7 +72,11 @@ namespace onceandfuture
 
         public async Task<string> GetAuthenticatedUser(HttpContext context)
         {
-            // Did I get something?
+            // Has somebody already asked me this request?
+            object alreadyUser;
+            if (context.Items.TryGetValue(CookieName, out alreadyUser)) { return (string)alreadyUser; }
+
+            // Did I get a cookie?
             string cookie;
             if (!context.Request.Cookies.TryGetValue(CookieName, out cookie)) { return null; }
 
@@ -76,6 +94,7 @@ namespace onceandfuture
                     if (cachedCookies[i].Id == token && cachedCookies[i].ExpireAt >= DateTimeOffset.UtcNow)
                     {
                         // Oh, you're already good.
+                        context.Items.Add(CookieName, user);
                         return user;
                     }
                 }
@@ -89,6 +108,7 @@ namespace onceandfuture
                 loginCache[user] = profile.Logins.ToList();
                 if (profile.Logins.Any(c => c.Id == token && c.ExpireAt >= DateTimeOffset.UtcNow))
                 {
+                    context.Items.Add(CookieName, user);
                     return user;
                 }
             }
@@ -108,31 +128,67 @@ namespace onceandfuture
             var newCookie = new LoginCookie(Guid.NewGuid(), DateTimeOffset.UtcNow + TimeSpan.FromMinutes(30));
 
             // Try to keep the number of sessions bounded.
-            List<LoginCookie> validCookies = 
+            List<LoginCookie> validCookies =
                 profile.Logins.Where(c => c.ExpireAt >= DateTimeOffset.UtcNow).ToList();
             validCookies.Insert(0, newCookie);
             if (validCookies.Count > MaxConcurrentSessions)
             {
                 validCookies.RemoveRange(MaxConcurrentSessions, validCookies.Count);
             }
-            
+
             // State mutation order below is important. (Durable store, then cache, then cookie.)
             var newProfile = new UserProfile(otherProfile: profile, logins: validCookies);
             await this.profileStore.SaveProfileFor(user, newProfile);
-            
+
             loginCache[user] = validCookies;
             context.Response.Cookies.Append(CookieName, MakeCookie(user, newCookie.Id));
-            
+
             return true;
         }
     }
 
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
+    public class EnforceAuthenticationAttribute : Attribute, IAsyncAuthorizationFilter
+    {
+        readonly string userParameterName;
+
+        public EnforceAuthenticationAttribute(string userParameterName)
+        {
+            this.userParameterName = userParameterName;
+        }
+
+        public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
+        {
+            string user = (string)context.RouteData.Values[this.userParameterName];
+
+            var authmgr = context.HttpContext.RequestServices.GetRequiredService<AuthenticationManager>();
+            string authn_user = await authmgr.GetAuthenticatedUser(context.HttpContext);
+
+            if (authn_user == null || !String.Equals(user, authn_user, StringComparison.OrdinalIgnoreCase))
+            {
+                context.Result = new JsonResult(new Fault
+                {
+                    Code = "accessDenied",
+                    Status = "error",
+                    Details = "User is not authorized to access this resource.",
+                });
+            }
+        }        
+    }
+
     public class AppController : Controller
     {
-        [HttpGet("/")]
-        public IActionResult Index()
+        readonly AuthenticationManager authenticationManager;
+
+        public AppController(AuthenticationManager authenticationManager)
         {
-            string user = (string)this.HttpContext.Items["authenticated_user"];
+            this.authenticationManager = authenticationManager;
+        }
+
+        [HttpGet("/")]
+        public async Task<IActionResult> Index()
+        {
+            string user = await this.authenticationManager.GetAuthenticatedUser(HttpContext);
             if (user == null)
             {
                 return RedirectToAction(nameof(AppController.Login));
@@ -144,9 +200,9 @@ namespace onceandfuture
         }
 
         [HttpGet("/feed/{user}")]
-        public IActionResult App(string user)
+        public async Task<IActionResult> App(string user)
         {
-            string authn_user = (string)this.HttpContext.Items["authenticated_user"];
+            string authn_user = await this.authenticationManager.GetAuthenticatedUser(HttpContext);
             if (!string.Equals(authn_user, user, StringComparison.Ordinal))
             {
                 return RedirectToAction(nameof(AppController.Login));
@@ -182,13 +238,27 @@ namespace onceandfuture
         }
     }
 
+    [EnforceAuthentication(userParameterName: "user")]
     public class ApiController : Controller
     {
+        readonly UserProfileStore profileStore;
+        readonly AggregateRiverStore aggregateStore;
+        readonly RiverFeedStore feedStore;
+
+        public ApiController(
+            UserProfileStore profileStore,
+            AggregateRiverStore aggregateStore,
+            RiverFeedStore feedStore)
+        {
+            this.profileStore = profileStore;
+            this.aggregateStore = aggregateStore;
+            this.feedStore = feedStore;
+        }
+        
         [HttpGet("/api/v1/river/{user}")]
         public async Task<IActionResult> GetRiverList(string user)
         {
-            var subscriptionStore = new UserProfileStore();
-            UserProfile profile = await subscriptionStore.GetProfileFor(user);
+            UserProfile profile = await this.profileStore.GetProfileFor(user);
             var rivers = (from r in profile.Rivers
                           select new
                           {
@@ -202,8 +272,7 @@ namespace onceandfuture
         [HttpGet("/api/v1/river/{user}/{id}")]
         public async Task<IActionResult> GetRiver(string user, string id)
         {
-            var aggregateStore = new AggregateRiverStore();
-            River river = await aggregateStore.LoadAggregate(id);
+            River river = await this.aggregateStore.LoadAggregate(id);
             return Json(river);
         }
 
@@ -222,15 +291,12 @@ namespace onceandfuture
         [HttpPost("/api/v1/river/{user}/refresh_all")]
         public async Task<IActionResult> PostRefreshAll(string user)
         {
-            var subscriptionStore = new UserProfileStore();
             var parser = new RiverFeedParser();
-            var feedStore = new RiverFeedStore();
-            var aggregateStore = new AggregateRiverStore();
 
-            UserProfile profile = await subscriptionStore.GetProfileFor(user);
+            UserProfile profile = await this.profileStore.GetProfileFor(user);
             await Task.WhenAll(
                 profile.Rivers.Select(r => parser.RefreshAggregateRiverWithFeeds(
-                    r.Id, r.Feeds, aggregateStore, feedStore, CancellationToken.None)));
+                    r.Id, r.Feeds, this.aggregateStore, this.feedStore, CancellationToken.None)));
             return Ok(); // Progress?
         }
     }
@@ -481,15 +547,7 @@ namespace onceandfuture
             }
 
             // serve static files from wwwroot/*
-            app.UseStaticFiles();
-
-            // Authn.
-            app.Use(async (context, next) =>
-            {
-                var manager = context.RequestServices.GetRequiredService<AuthenticationManager>();
-                context.Items["authenticated_user"] = await manager.GetAuthenticatedUser(context);
-                await next();
-            });
+            app.UseStaticFiles();            
 
             // use MVC framework
             app.UseMvc();

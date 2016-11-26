@@ -615,7 +615,7 @@ namespace onceandfuture
         }
     }
 
-    class BlobStore
+    public class BlobStore
     {
         readonly string bucket;
         readonly AmazonS3Client client;
@@ -1032,7 +1032,7 @@ namespace onceandfuture
         public RiverFeedMeta Metadata { get; }
     }
 
-    abstract class DocumentStore<TDocumentID, TDocument>
+    public abstract class DocumentStore<TDocumentID, TDocument>
     {
         readonly BlobStore blobStore;
 
@@ -1069,7 +1069,7 @@ namespace onceandfuture
         }
     }
 
-    class RiverFeedStore : DocumentStore<Uri, River>
+    public class RiverFeedStore : DocumentStore<Uri, River>
     {
         public RiverFeedStore() : base(new BlobStore("onceandfuture")) { }
 
@@ -1079,7 +1079,7 @@ namespace onceandfuture
         public Task WriteRiver(Uri uri, River river) => WriteDocument(uri, river);
     }
 
-    class AggregateRiverStore : DocumentStore<string, River>
+    public class AggregateRiverStore : DocumentStore<string, River>
     {
         public AggregateRiverStore() : base(new BlobStore("onceandfuture")) { }
 
@@ -2308,7 +2308,7 @@ namespace onceandfuture
         }
     }
 
-    class RiverDefinition
+    public class RiverDefinition
     {
         public RiverDefinition(
             RiverDefinition otherRiver = null,
@@ -2329,7 +2329,7 @@ namespace onceandfuture
         public ImmutableList<Uri> Feeds { get; }
     }
 
-    class LoginCookie
+    public class LoginCookie
     {
         public LoginCookie(Guid id, DateTimeOffset expireAt)
         {
@@ -2343,7 +2343,7 @@ namespace onceandfuture
         public DateTimeOffset ExpireAt { get; }
     }
 
-    class UserProfile
+    public class UserProfile
     {
         public UserProfile(
             UserProfile otherProfile = null,
@@ -2434,7 +2434,7 @@ namespace onceandfuture
     }
 
 
-    class UserProfileStore : DocumentStore<string, UserProfile>
+    public class UserProfileStore : DocumentStore<string, UserProfile>
     {
         public UserProfileStore() : base(new BlobStore("onceandfuture-profiles")) { }
 
