@@ -2331,16 +2331,16 @@ namespace onceandfuture
 
     class LoginCookie
     {
-        public LoginCookie(Guid identifier, DateTimeOffset expiresAt)
+        public LoginCookie(Guid id, DateTimeOffset expireAt)
         {
-            Id = identifier;
-            ExpiresAt = expiresAt;
+            Id = id;
+            ExpireAt = expireAt;
         }
 
         [JsonProperty("id")]
         public Guid Id { get; }
         [JsonProperty("expireAt")]
-        public DateTimeOffset ExpiresAt { get; }
+        public DateTimeOffset ExpireAt { get; }
     }
 
     class UserProfile

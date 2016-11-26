@@ -73,7 +73,7 @@ namespace onceandfuture
             {
                 for (int i = 0; i < cachedCookies.Count; i++)
                 {
-                    if (cachedCookies[i].Id == token && cachedCookies[i].ExpiresAt >= DateTimeOffset.UtcNow)
+                    if (cachedCookies[i].Id == token && cachedCookies[i].ExpireAt >= DateTimeOffset.UtcNow)
                     {
                         // Oh, you're already good.
                         return user;
@@ -87,7 +87,7 @@ namespace onceandfuture
             {
                 // Refresh the cache while we're here.
                 loginCache[user] = profile.Logins.ToList();
-                if (profile.Logins.Any(c => c.Id == token && c.ExpiresAt >= DateTimeOffset.UtcNow))
+                if (profile.Logins.Any(c => c.Id == token && c.ExpireAt >= DateTimeOffset.UtcNow))
                 {
                     return user;
                 }
@@ -109,7 +109,7 @@ namespace onceandfuture
 
             // Try to keep the number of sessions bounded.
             List<LoginCookie> validCookies = 
-                profile.Logins.Where(c => c.ExpiresAt >= DateTimeOffset.UtcNow).ToList();
+                profile.Logins.Where(c => c.ExpireAt >= DateTimeOffset.UtcNow).ToList();
             validCookies.Insert(0, newCookie);
             if (validCookies.Count > MaxConcurrentSessions)
             {
@@ -477,9 +477,6 @@ namespace onceandfuture
             // serve static files from wwwroot/*
             app.UseStaticFiles();
 
-            // use MVC framework
-            app.UseMvc();
-
             // Authn.
             app.Use(async (context, next) =>
             {
@@ -487,6 +484,9 @@ namespace onceandfuture
                 context.Items["authenticated_user"] = await manager.GetAuthenticatedUser(context);
                 await next();
             });
+
+            // use MVC framework
+            app.UseMvc();
         }
     }
 
