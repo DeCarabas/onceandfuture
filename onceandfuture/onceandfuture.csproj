@@ -468,7 +468,6 @@
     </Reference>-->
   </ItemGroup>
   <ItemGroup>
-    <Content Include="onceandfuture.xproj.user" />
     <Content Include="webpack.config.js" />
     <Content Include="wwwroot\actions.js" />
     <Content Include="wwwroot\bundle.js" />
@@ -499,14 +498,10 @@
     <None Include=".vscode\tasks.json" />
     <None Include="App.config" />
     <None Include="oaf" />
-    <None Include="onceandfuture.xproj" />
     <None Include="package.json" />
     <None Include="packages.config" />
-    <None Include="project.json.bak" />
-    <None Include="project.lock.json" />
     <None Include="Properties\launchSettings.json" />
     <None Include="README.md" />
-    <None Include="wwwroot\bundle.js.map" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Arguments.cs" />

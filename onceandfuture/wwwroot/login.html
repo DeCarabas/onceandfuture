@@ -1,12 +1,78 @@
 ﻿<html>
-<body>
-    <h1>Oh poop, login!</h1>
-    <form action="/login" method="post">
-        User Name:<br />
-        <input type="text" name="username" /><br />
-        Password:<br />
-        <input type="password" name="password" />
-        <input type="submit" />
-    </form>
-</body>
+    <head>
+        <style>
+        /* http://paletton.com/#uid=12-0u0kleqtbzEKgVuIpcmGtdhZ */
+        .appBackground {
+            background-color: #BFEC97;
+            height: 100%;
+            font-family: 'AvenirNext-Medium', 'HelveticaNeue-Medium', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif';
+            margin: 0px;
+        }
+        .appHeader {
+            background-color: #7ABD3F;
+            margin: 0px;
+            padding: 0px;
+            font-size: 24px;
+            font-weight: bold;
+            padding-left: 10px;
+        }
+        #contentBox {
+            width: 460px;
+            margin: 20 auto;
+            text-align: center;
+            border: #5EA222 solid 3px;
+            border-radius: 5px;
+            background-color: #7ABD3F;
+        }
+        #contentBox input {
+            width: 100%;
+            max-width: 450px;
+            font-size: 24px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        #contentBox button {
+            height: 50px;
+            width: 100%;
+            max-width: 450px;
+            background-color: #5EA222;
+            border: none;
+            font-weight: 500;
+            vertical-align: middle;
+            cursor: pointer;
+            font-size: 24px;
+            margin-top: 50px;
+        }
+        #contentBox h3 {
+            margin-bottom: 50px;
+        }
+
+        .textBox {
+            width: 260px;
+            margin-left: auto;
+            margin-right: auto;
+            padding-bottom: 4px;
+            border-bottom: 1px solid;
+            margin-top: 15px;
+        }
+        </style>
+    </head>
+    <body class="appBackground">
+        <div class="appHeader">The Once And Future Feed</div>
+        <div id="contentBox">
+            <h1>Welcome back!</h1>
+            <h3>Let's get you signed in.</h3>
+            <form action="/login" method="post">
+                <div class="textBox">
+                    <input type="text" id="username" name="username" placeholder="User ID" />
+                </div>
+                <div class="textBox">
+                    <input type="password" id="password" name="password" placehoder="What's the password?'" />
+                </div>
+                <div>
+                    <button type="submit">Sign In</button>
+                </div>
+            </form>        
+        </div>
+    </body>
 </html>
