@@ -171,7 +171,10 @@ namespace onceandfuture
                     Code = "accessDenied",
                     Status = "error",
                     Details = "User is not authorized to access this resource.",
-                });
+                })
+                {
+                    StatusCode = (int)HttpStatusCode.Forbidden
+                };
             }
         }        
     }
