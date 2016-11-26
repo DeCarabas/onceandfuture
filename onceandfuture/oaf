@@ -1,2 +1,2 @@
 #!/bin/bash
-MONO_ENV_OPTIONS=--arch=64 dotnet run $*
+MONO_ENV_OPTIONS=--arch=64 mono bin/Debug/onceandfuture.exe $*
