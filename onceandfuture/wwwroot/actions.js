@@ -162,8 +162,6 @@ function xhrAction(options) {
       }
     }
 
-    // TODO: xhr.status has status code
-
     let xhr = new XMLHttpRequest();
     if (options.start) {
       options.start(dispatch, xhr);
@@ -174,12 +172,22 @@ function xhrAction(options) {
     }
     if (options.loaded_json) {
       xhr.addEventListener("load", () => {
-        let result = JSON.parse(xhr.responseText);
-        options.loaded_json(dispatch, result, xhr);
+        if (options.error && xhr.status > 399) {
+          options.error(dispatch, xhr);
+        } else {
+          let result = JSON.parse(xhr.responseText);
+          options.loaded_json(dispatch, result, xhr);
+        }
       });
     }
     if (options.loaded) {
-      xhr.addEventListener("load", () => options.loaded(dispatch, xhr));
+      xhr.addEventListener("load", () => {
+        if (options.error && xhr.status > 399) {
+          options.error(dispatch, xhr);
+        } else {
+          options.loaded(dispatch, xhr);
+        }
+      });
     }
     if (options.error) {
       xhr.addEventListener("error", () => options.error(dispatch, xhr));

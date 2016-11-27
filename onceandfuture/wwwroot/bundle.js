@@ -23593,8 +23593,6 @@
 	      }
 	    }
 	
-	    // TODO: xhr.status has status code
-	
 	    var xhr = new XMLHttpRequest();
 	    if (options.start) {
 	      options.start(dispatch, xhr);
@@ -23607,13 +23605,21 @@
 	    }
 	    if (options.loaded_json) {
 	      xhr.addEventListener("load", function () {
-	        var result = JSON.parse(xhr.responseText);
-	        options.loaded_json(dispatch, result, xhr);
+	        if (options.error && xhr.status > 399) {
+	          options.error(dispatch, xhr);
+	        } else {
+	          var result = JSON.parse(xhr.responseText);
+	          options.loaded_json(dispatch, result, xhr);
+	        }
 	      });
 	    }
 	    if (options.loaded) {
 	      xhr.addEventListener("load", function () {
-	        return options.loaded(dispatch, xhr);
+	        if (options.error && xhr.status > 399) {
+	          options.error(dispatch, xhr);
+	        } else {
+	          options.loaded(dispatch, xhr);
+	        }
 	      });
 	    }
 	    if (options.error) {
