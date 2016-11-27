@@ -9,7 +9,7 @@
     class ParsedOpts
     {
         public string Error;
-        public string Verb;
+        public VerbDef Verb;
         public Dictionary<string, Opt> Opts { get; } = new Dictionary<string, Opt>();
 
         public Opt this[string key] => this.Opts[key];
@@ -43,9 +43,9 @@
             return this;
         }
 
-        public ProgramOpts AddVerb(string verb, string help, Func<VerbDef, VerbDef> func)
+        public ProgramOpts AddVerb(string verb, string help, Func<ParsedOpts, int> handler, Func<VerbDef, VerbDef> func)
         {
-            var vdef = new VerbDef(help);
+            var vdef = new VerbDef(verb, help, handler);
             if (func != null) { vdef = func(vdef); }
             Verbs.Add(verb, vdef);
             return this;
@@ -120,7 +120,7 @@
                         }
                         else
                         {
-                            results.Verb = arg;
+                            results.Verb = verbdef;
                             verbOptions = verbdef.Options;
                             for (int verbOptionIndex = 0; verbOptionIndex < verbOptions.Count; verbOptionIndex++)
                             {
@@ -161,7 +161,7 @@
             return results;
         }
 
-        public string GetHelp(string verb)
+        public string GetHelp(VerbDef verb)
         {
             var buffer = new StringWriter();
             var writer = new IndentedTextWriter(buffer);
@@ -185,7 +185,7 @@
 
                 foreach (string v in verbs)
                 {
-                    if (verb!= null && verb != v) { continue; }
+                    if (verb != null && verb.Name != v) { continue; }
                     WriteVerbBlock(writer, v, Verbs[v]);
                     writer.WriteLine();
                 }
@@ -302,12 +302,16 @@
 
     class VerbDef
     {
-        public string Help;
+        public string Name { get; }
+        public string Help { get; }
         public List<OptDef> Options { get; } = new List<OptDef>();
+        public Func<ParsedOpts, int> Handler { get; }
 
-        public VerbDef(string help)
+        public VerbDef(string name, string help, Func<ParsedOpts, int> handler)
         {
+            this.Name = name;
             this.Help = help;
+            this.Handler = handler;
         }
 
         public VerbDef AddOption(string longName, string help, Func<OptDef, OptDef> func = null)

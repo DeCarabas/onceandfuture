@@ -42,11 +42,11 @@ namespace onceandfuture
     {
         const string CookieName = "onceandfuture-feed";
         const int MaxConcurrentSessions = 10;
+        static readonly ScryptEncoder Scrypt = new ScryptEncoder();
 
         readonly ConcurrentDictionary<string, LoginCookieCache[]> loginCache =
             new ConcurrentDictionary<string, LoginCookieCache[]>();
         readonly UserProfileStore profileStore;
-        readonly ScryptEncoder scrypt = new ScryptEncoder();
 
         public AuthenticationManager(UserProfileStore profileStore)
         {
@@ -71,7 +71,9 @@ namespace onceandfuture
             return String.Format("{0},{1}", token.ToString("n"), user);
         }
 
-        string EncryptToken(Guid token) => scrypt.Encode(token.ToString("N"));
+        static string EncryptToken(Guid token) => Scrypt.Encode(token.ToString("N"));
+        static bool CheckPassword(string password, string encrypted) => Scrypt.Compare(password, encrypted);
+        public static string EncryptPassword(string password) => Scrypt.Encode(password);
 
         bool ValidateAgainstLoginCache(Guid token, LoginCookieCache[] cache)
         {
@@ -181,10 +183,9 @@ namespace onceandfuture
 
         public async Task<bool> ValidateLogin(HttpContext context, string user, string password)
         {
-            // TODO: Obviously.
-            if (password != "swordfish") { return false; }
-
             UserProfile profile = await this.profileStore.GetProfileFor(user);
+            if (profile.Password == null) { return false; } // No password: disabled
+            if (!CheckPassword(password, profile.Password)) { return false; }
 
             // TODO: Fix this login duration. :P
             Guid token = Guid.NewGuid();
@@ -641,31 +642,34 @@ namespace onceandfuture
         static ProgramOpts Options = new ProgramOpts()
             .AddOption("help", "Display this help.", o => o.Flag('?'))
             .AddOption("verbose", "Increase the logging verbosity. (Specify more than once to be even more verbose.)")
-            .AddVerb("update", "Update one or more feeds.", v => v
+            .AddVerb("update", "Update one or more feeds.", DoUpdate, v => v
                 .AddOption("feed", "The single feed URL to update.", o => o.AcceptValue())
                 .AddOption("user", "The user to update feeds for.", o => o.AcceptValue())
             )
-            .AddVerb("show", "Show items in one or more feeds.", v => v
+            .AddVerb("show", "Show items in one or more feeds.", DoShow, v => v
                 .AddOption("feed", "The single feed URL to show.", o => o.AcceptValue())
                 .AddOption("user", "The user to show for.", o => o.AcceptValue())
             )
-            .AddVerb("sub", "Subscribe to a feed.", v => v
+            .AddVerb("sub", "Subscribe to a feed.", DoSubscribe, v => v
                 .AddOption("user", "The user to add a subscription for.", o => o.IsRequired())
                 .AddOption("river", "The river to add to.", o => o.HasDefault("main"))
                 .AddOption("feed", "The feed to add.", o => o.IsRequired())
             )
-            .AddVerb("unsub", "Unsubscribe from a feed.", v => v
+            .AddVerb("unsub", "Unsubscribe from a feed.", DoUnsubscribe, v => v
                 .AddOption("user", "The user to remove a subscription for.", o => o.IsRequired())
                 .AddOption("river", "The river to remove from.", o => o.HasDefault("main"))
                 .AddOption("feed", "The feed to remove.", o => o.IsRequired())
             )
-            .AddVerb("list", "List a user's subscriptions.", v => v
+            .AddVerb("list", "List a user's subscriptions.", DoList, v => v
                 .AddOption("user", "The user whose subscriptions we're showing.", o => o.IsRequired())
             )
-            .AddVerb("serve", "Start the web server.", v => v
+            .AddVerb("serve", "Start the web server.", DoServe, v => v
                 .AddOption("url", "The URL to listen on.", o => o.HasDefault("http://localhost:5000"))
                 .AddOption("environment", "The environment to run as.", o => o.HasDefault("Development"))
             )
+            .AddVerb("setpw", "Set a user's password", DoSetPassword, v => v
+                .AddOption("user", "The user to set the password for.", o => o.IsRequired())
+                .AddOption("password", "The password to set it to.", o => o.IsRequired()))
             ;
 
         static int Main(string[] args)
@@ -692,17 +696,7 @@ namespace onceandfuture
                     .WriteTo.LiterateConsole()
                     .CreateLogger();
 
-                switch (parsedArgs.Verb)
-                {
-                case "update": return DoUpdate(parsedArgs);
-                case "show": return DoShow(parsedArgs);
-                case "sub": return DoSubscribe(parsedArgs);
-                case "list": return DoList(parsedArgs);
-                case "unsub": return DoUnsubscribe(parsedArgs);
-                case "serve": return DoServe(parsedArgs);
-                }
-
-                throw new NotSupportedException();
+                return parsedArgs.Verb.Handler(parsedArgs);
             }
             catch (Exception e)
             {
@@ -943,6 +937,19 @@ namespace onceandfuture
                 .UseEnvironment(args["environment"].Value)
                 .Build();
             host.Run();
+            return 0;
+        }
+
+        static int DoSetPassword(ParsedOpts args)
+        {
+            string user = args["user"].Value;
+            string password = args["password"].Value;
+
+            var profileStore = new UserProfileStore();
+            var profile = profileStore.GetProfileFor(user).Result;
+            var newProfile = profile.With(password: AuthenticationManager.EncryptPassword(password));
+            profileStore.SaveProfileFor(user, newProfile).Wait();
+            Console.WriteLine("OK");
             return 0;
         }
 
