@@ -137,7 +137,7 @@ namespace onceandfuture
             }
 
             // State mutation order below is important. (Durable store, then cache, then cookie.)
-            var newProfile = new UserProfile(otherProfile: profile, logins: validCookies);
+            var newProfile = profile.With(logins: validCookies);
             await this.profileStore.SaveProfileFor(user, newProfile);
 
             loginCache[user] = validCookies;
@@ -789,8 +789,7 @@ namespace onceandfuture
             UserProfile newProfile;
             if (river == null)
             {
-                newProfile = new UserProfile(
-                    otherProfile: profile,
+                newProfile = profile.With(
                     rivers: profile.Rivers.Add(
                         new RiverDefinition(
                             name: riverName,
@@ -799,13 +798,8 @@ namespace onceandfuture
             }
             else
             {
-                var newRiver = new RiverDefinition(
-                    otherRiver: river,
-                    feeds: river.Feeds.Add(feedRiver.Metadata.OriginUrl));
-
-                newProfile = new UserProfile(
-                    otherProfile: profile,
-                    rivers: profile.Rivers.Replace(river, newRiver));
+                var newRiver = river.With(feeds: river.Feeds.Add(feedRiver.Metadata.OriginUrl));
+                newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
             }
 
             subscriptionStore.SaveProfileFor(user, newProfile).Wait();
@@ -844,10 +838,8 @@ namespace onceandfuture
                 return 0;
             }
 
-            RiverDefinition newRiver = new RiverDefinition(otherRiver: river, feeds: river.Feeds.Remove(feed));
-            UserProfile newProfile = new UserProfile(
-                otherProfile: profile,
-                rivers: profile.Rivers.Replace(river, newRiver));
+            RiverDefinition newRiver = river.With(feeds: river.Feeds.Remove(feed));
+            UserProfile newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
 
             subscriptionStore.SaveProfileFor(user, newProfile).Wait();
             Console.WriteLine("OK");

@@ -820,7 +820,6 @@ namespace onceandfuture
     public class RiverFeed
     {
         public RiverFeed(
-            RiverFeed otherFeed = null,
             string feedTitle = null,
             Uri feedUrl = null,
             string websiteUrl = null,
@@ -828,13 +827,30 @@ namespace onceandfuture
             DateTimeOffset? whenLastUpdate = null,
             IEnumerable<RiverItem> items = null)
         {
-            FeedTitle = feedTitle ?? otherFeed?.FeedTitle ?? String.Empty;
-            FeedUrl = feedUrl ?? otherFeed?.FeedUrl;
-            WebsiteUrl = websiteUrl ?? otherFeed?.WebsiteUrl ?? String.Empty;
-            FeedDescription = feedDescription ?? otherFeed?.FeedDescription ?? String.Empty;
-            WhenLastUpdate = whenLastUpdate ?? otherFeed?.WhenLastUpdate ?? DateTimeOffset.UtcNow;
+            FeedTitle = feedTitle ?? String.Empty;
+            FeedUrl = feedUrl;
+            WebsiteUrl = websiteUrl ?? String.Empty;
+            FeedDescription = feedDescription ?? String.Empty;
+            WhenLastUpdate = whenLastUpdate ?? DateTimeOffset.UtcNow;
 
-            Items = ImmutableList.CreateRange<RiverItem>(items ?? otherFeed?.Items ?? Enumerable.Empty<RiverItem>());
+            Items = ImmutableList.CreateRange<RiverItem>(items ?? Enumerable.Empty<RiverItem>());
+        }
+
+        public RiverFeed With(
+            string feedTitle = null, 
+            Uri feedUrl = null, 
+            string websiteUrl = null, 
+            string feedDescription = null, 
+            DateTimeOffset? whenLastUpdate = null, 
+            IEnumerable<RiverItem> items = null)
+        {
+            return new RiverFeed(
+                feedTitle ?? FeedTitle,
+                feedUrl ?? FeedUrl,
+                websiteUrl ?? WebsiteUrl,
+                feedDescription ?? FeedDescription,
+                whenLastUpdate ?? WhenLastUpdate,
+                items ?? Items);
         }
 
         [JsonProperty(PropertyName = "feedTitle")]
@@ -860,7 +876,6 @@ namespace onceandfuture
     {
         [JsonConstructor]
         public RiverItem(
-            RiverItem existingItem = null,
             string title = null,
             Uri link = null,
             string body = null,
@@ -871,20 +886,40 @@ namespace onceandfuture
             RiverItemThumbnail thumbnail = null,
             IEnumerable<RiverItemEnclosure> enclosures = null)
         {
-            Title = title ?? existingItem?.Title ?? String.Empty;
-            Link = link ?? existingItem?.Link;
-            Body = body ?? existingItem?.Body ?? String.Empty;
-            PubDate = pubDate ?? existingItem?.PubDate;
-            PermaLink = permaLink ?? existingItem?.PermaLink;
-            Comments = comments ?? existingItem?.Comments;
-            Id = id ?? existingItem?.Id;
-            Thumbnail = thumbnail ?? existingItem?.Thumbnail;
+            Title = title ?? String.Empty;
+            Link = link;
+            Body = body ?? String.Empty;
+            PubDate = pubDate;
+            PermaLink = permaLink;
+            Comments = comments;
+            Id = id;
+            Thumbnail = thumbnail;
 
             Enclosures = ImmutableList.CreateRange<RiverItemEnclosure>(
-                enclosures ??
-                existingItem?.Enclosures ??
-                Enumerable.Empty<RiverItemEnclosure>()
-            );
+                enclosures ?? Enumerable.Empty<RiverItemEnclosure>());
+        }
+
+        public RiverItem With(
+            string title = null,
+            Uri link = null,
+            string body = null,
+            DateTime? pubDate = null,
+            Uri permaLink = null,
+            string comments = null,
+            string id = null,
+            RiverItemThumbnail thumbnail = null,
+            IEnumerable<RiverItemEnclosure> enclosures = null)
+        {
+            return new RiverItem(
+                title ?? Title,
+                link ?? Link,
+                body ?? Body,
+                pubDate ?? PubDate,
+                permaLink ?? PermaLink,
+                comments ?? Comments,
+                id ?? Id,
+                thumbnail ?? Thumbnail,
+                enclosures ?? Enclosures);
         }
 
         [JsonProperty(PropertyName = "title")]
@@ -917,15 +952,16 @@ namespace onceandfuture
 
     public class RiverItemThumbnail
     {
-        public RiverItemThumbnail(
-            RiverItemThumbnail existingThumbnail = null,
-            string url = null,
-            int? width = 0,
-            int? height = 0)
+        public RiverItemThumbnail(string url, int width, int height)
         {
-            Url = url ?? existingThumbnail?.Url;
-            Width = width ?? existingThumbnail?.Width ?? 0;
-            Height = height ?? existingThumbnail?.Height ?? 0;
+            Url = url;
+            Width = width;
+            Height = height;
+        }
+
+        public RiverItemThumbnail With(string url = null, int? width = null, int? height = null)
+        {
+            return new RiverItemThumbnail(url ?? Url, width ?? Width, height ?? Height);
         }
 
         [JsonProperty(PropertyName = "url")]
@@ -940,15 +976,16 @@ namespace onceandfuture
 
     public class RiverItemEnclosure
     {
-        public RiverItemEnclosure(
-            RiverItemEnclosure existingEnclosure = null,
-            Uri url = null,
-            string type = null,
-            string length = null)
+        public RiverItemEnclosure(Uri url, string type, string length)
         {
-            Url = url ?? existingEnclosure?.Url;
-            Type = type ?? existingEnclosure?.Type;
-            Length = length ?? existingEnclosure?.Length;
+            Url = url;
+            Type = type;
+            Length = length;
+        }
+
+        public RiverItemEnclosure With(Uri url = null, string type = null, string length = null)
+        {
+            return new RiverItemEnclosure(url ?? Url, type ?? Type, length ?? Length);
         }
 
         [JsonProperty(PropertyName = "url")]
@@ -964,7 +1001,6 @@ namespace onceandfuture
     public class RiverFeedMeta
     {
         public RiverFeedMeta(
-            RiverFeedMeta existingMeta = null,
             string name = null,
             Uri originUrl = null,
             string docs = null,
@@ -972,12 +1008,29 @@ namespace onceandfuture
             DateTimeOffset? lastModified = null,
             HttpStatusCode? lastStatus = null)
         {
-            Name = name ?? existingMeta?.Name;
-            OriginUrl = originUrl ?? existingMeta?.OriginUrl;
-            Docs = docs ?? existingMeta?.Docs ?? "http://riverjs.org/";
-            Etag = etag ?? existingMeta?.Etag;
-            LastModified = lastModified ?? existingMeta?.LastModified;
-            LastStatus = lastStatus ?? existingMeta?.LastStatus ?? HttpStatusCode.OK;
+            Name = name;
+            OriginUrl = originUrl;
+            Docs = docs ?? "http://riverjs.org/";
+            Etag = etag;
+            LastModified = lastModified;
+            LastStatus = lastStatus ?? HttpStatusCode.OK;
+        }
+
+        public RiverFeedMeta With(
+            string name = null, 
+            Uri originUrl = null,
+            string docs = null, 
+            string etag = null, 
+            DateTimeOffset? lastModified = null, 
+            HttpStatusCode? lastStatus = null)
+        {
+            return new RiverFeedMeta(
+                name ?? Name, 
+                originUrl ?? OriginUrl, 
+                docs ?? Docs, 
+                etag ?? Etag, 
+                lastModified ?? LastModified, 
+                lastStatus ?? LastStatus);
         }
 
         [JsonProperty(PropertyName = "name")]
@@ -1001,13 +1054,14 @@ namespace onceandfuture
 
     public class UpdatedFeeds
     {
-        public UpdatedFeeds(
-            UpdatedFeeds existingFeeds = null,
-            IEnumerable<RiverFeed> feeds = null)
+        public UpdatedFeeds(IEnumerable<RiverFeed> feeds = null)
         {
-            Feeds = ImmutableList.CreateRange<RiverFeed>(
-                feeds ?? existingFeeds?.Feeds ?? Enumerable.Empty<RiverFeed>()
-            );
+            Feeds = ImmutableList.CreateRange<RiverFeed>(feeds ?? Enumerable.Empty<RiverFeed>());
+        }
+
+        public UpdatedFeeds With(IEnumerable<RiverFeed> feeds)
+        {
+            return new UpdatedFeeds(feeds);
         }
 
         [JsonProperty(PropertyName = "updatedFeed")]
@@ -1016,13 +1070,15 @@ namespace onceandfuture
 
     public class River
     {
-        public River(
-            River existingRiver = null,
-            UpdatedFeeds updatedFeeds = null,
-            RiverFeedMeta metadata = null)
+        public River(UpdatedFeeds updatedFeeds = null, RiverFeedMeta metadata = null)
         {
-            UpdatedFeeds = updatedFeeds ?? existingRiver?.UpdatedFeeds ?? new UpdatedFeeds();
-            Metadata = metadata ?? existingRiver?.Metadata ?? new RiverFeedMeta();
+            UpdatedFeeds = updatedFeeds ?? new UpdatedFeeds();
+            Metadata = metadata ?? new RiverFeedMeta();
+        }
+
+        public River With(UpdatedFeeds updatedFeeds = null, RiverFeedMeta metadata = null)
+        {
+            return new River(updatedFeeds ?? UpdatedFeeds, metadata ?? Metadata);
         }
 
         [JsonProperty(PropertyName = "updatedFeeds")]
@@ -1419,14 +1475,8 @@ namespace onceandfuture
             ImageData thumbnail = MakeThumbnail(sourceImage);
 
             Uri thumbnailUri = await this.thumbnailStore.StoreImage(thumbnail.Data);
-            return new RiverItem(
-                item,
-                thumbnail: new RiverItemThumbnail(
-                    url: thumbnailUri.AbsoluteUri,
-                    width: thumbnail.Width,
-                    height: thumbnail.Height
-                )
-            );
+            return item.With(
+                thumbnail: new RiverItemThumbnail(thumbnailUri.AbsoluteUri, thumbnail.Width, thumbnail.Height));
         }
 
         static ImageData MakeThumbnail(ImageData sourceImage)
@@ -1790,47 +1840,47 @@ namespace onceandfuture
         static readonly Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>> FeedElements =
             new Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>>
             {
-                { XNames.RSS.Title,       (rf, xe) => new RiverFeed(rf, feedTitle: Util.ParseBody(xe)) },
-                { XNames.RSS10.Title,     (rf, xe) => new RiverFeed(rf, feedTitle: Util.ParseBody(xe)) },
-                { XNames.Atom.Title,      (rf, xe) => new RiverFeed(rf, feedTitle: Util.ParseBody(xe)) },
+                { XNames.RSS.Title,       (rf, xe) => rf.With(feedTitle: Util.ParseBody(xe)) },
+                { XNames.RSS10.Title,     (rf, xe) => rf.With(feedTitle: Util.ParseBody(xe)) },
+                { XNames.Atom.Title,      (rf, xe) => rf.With(feedTitle: Util.ParseBody(xe)) },
 
-                { XNames.RSS.Link,        (rf, xe) => new RiverFeed(rf, websiteUrl: xe.Value) },
-                { XNames.RSS10.Link,      (rf, xe) => new RiverFeed(rf, websiteUrl: xe.Value) },
+                { XNames.RSS.Link,        (rf, xe) => rf.With(websiteUrl: xe.Value) },
+                { XNames.RSS10.Link,      (rf, xe) => rf.With(websiteUrl: xe.Value) },
                 { XNames.Atom.Link,       (rf, xe) => HandleAtomLink(rf, xe) },
 
-                { XNames.RSS.Description,   (rf, xe) => new RiverFeed(rf, feedDescription: Util.ParseBody(xe)) },
-                { XNames.RSS10.Description, (rf, xe) => new RiverFeed(rf, feedDescription: Util.ParseBody(xe)) },
+                { XNames.RSS.Description,   (rf, xe) => rf.With(feedDescription: Util.ParseBody(xe)) },
+                { XNames.RSS10.Description, (rf, xe) => rf.With(feedDescription: Util.ParseBody(xe)) },
 
-                { XNames.RSS.Item,        (rf, xe) => new RiverFeed(rf, items: rf.Items.Add(LoadItem(xe))) },
-                { XNames.RSS10.Item,      (rf, xe) => new RiverFeed(rf, items: rf.Items.Add(LoadItem(xe))) },
-                { XNames.Atom.Entry,      (rf, xe) => new RiverFeed(rf, items: rf.Items.Add(LoadItem(xe))) },
+                { XNames.RSS.Item,        (rf, xe) => rf.With(items: rf.Items.Add(LoadItem(xe))) },
+                { XNames.RSS10.Item,      (rf, xe) => rf.With(items: rf.Items.Add(LoadItem(xe))) },
+                { XNames.Atom.Entry,      (rf, xe) => rf.With(items: rf.Items.Add(LoadItem(xe))) },
             };
 
         static readonly Dictionary<XName, Func<RiverItem, XElement, RiverItem>> ItemElements =
             new Dictionary<XName, Func<RiverItem, XElement, RiverItem>>
             {
-                { XNames.RSS.Title,       (ri, xe) => new RiverItem(ri, title: Util.ParseBody(xe)) },
-                { XNames.RSS.Link,        (ri, xe) => new RiverItem(ri, link: Util.ParseLink(xe.Value, xe)) },
-                { XNames.RSS.Description, (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
-                { XNames.RSS.Comments,    (ri, xe) => new RiverItem(ri, comments: xe.Value) },
+                { XNames.RSS.Title,       (ri, xe) => ri.With(title: Util.ParseBody(xe)) },
+                { XNames.RSS.Link,        (ri, xe) => ri.With(link: Util.ParseLink(xe.Value, xe)) },
+                { XNames.RSS.Description, (ri, xe) => ri.With(body: Util.ParseBody(xe)) },
+                { XNames.RSS.Comments,    (ri, xe) => ri.With(comments: xe.Value) },
                 { XNames.RSS.PubDate,     (ri, xe) => HandlePubDate(ri, xe) },
                 { XNames.RSS.Guid,        (ri, xe) => HandleGuid(ri, xe) },
                 { XNames.RSS.Enclosure,   (ri, xe) => HandleEnclosure(ri, xe) },
 
-                { XNames.RSS10.Title,       (ri, xe) => new RiverItem(ri, title: Util.ParseBody(xe)) },
-                { XNames.RSS10.Link,        (ri, xe) => new RiverItem(ri, link: Util.ParseLink(xe.Value, xe)) },
-                { XNames.RSS10.Description, (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
-                { XNames.RSS10.Comments,    (ri, xe) => new RiverItem(ri, comments: xe.Value) },
+                { XNames.RSS10.Title,       (ri, xe) => ri.With(title: Util.ParseBody(xe)) },
+                { XNames.RSS10.Link,        (ri, xe) => ri.With(link: Util.ParseLink(xe.Value, xe)) },
+                { XNames.RSS10.Description, (ri, xe) => ri.With(body: Util.ParseBody(xe)) },
+                { XNames.RSS10.Comments,    (ri, xe) => ri.With(comments: xe.Value) },
                 { XNames.RSS10.PubDate,     (ri, xe) => HandlePubDate(ri, xe) },
                 { XNames.RSS10.Guid,        (ri, xe) => HandleGuid(ri, xe) },
 
-                { XNames.Content.Encoded,  (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
+                { XNames.Content.Encoded,  (ri, xe) => ri.With(body: Util.ParseBody(xe)) },
 
-                { XNames.Atom.Title,       (ri, xe) => new RiverItem(ri, title: Util.ParseBody(xe)) },
-                { XNames.Atom.Content,     (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
-                { XNames.Atom.Summary,     (ri, xe) => new RiverItem(ri, body: Util.ParseBody(xe)) },
+                { XNames.Atom.Title,       (ri, xe) => ri.With(title: Util.ParseBody(xe)) },
+                { XNames.Atom.Content,     (ri, xe) => ri.With(body: Util.ParseBody(xe)) },
+                { XNames.Atom.Summary,     (ri, xe) => ri.With(body: Util.ParseBody(xe)) },
                 { XNames.Atom.Link,        (ri, xe) => HandleAtomLink(ri, xe) },
-                { XNames.Atom.Id,          (ri, xe) => new RiverItem(ri, id: xe.Value) },
+                { XNames.Atom.Id,          (ri, xe) => ri.With(id: xe.Value) },
                 { XNames.Atom.Published,   (ri, xe) => HandlePubDate(ri, xe) },
                 { XNames.Atom.Updated,     (ri, xe) => HandlePubDate(ri, xe) },
         };
@@ -1911,19 +1961,13 @@ namespace onceandfuture
                         "{id}: {feedUrl}: Has {count} new items @ {lastUpdate}",
                         id, feedRiver.Metadata.OriginUrl, newUpdates.Length, biggestUpdate);
 
-                    newFeeds.Add(new RiverFeed(
-                        otherFeed: newUpdates[0], 
-                        whenLastUpdate: biggestUpdate, 
-                        items: newItems));
+                    newFeeds.Add(newUpdates[0].With(whenLastUpdate: biggestUpdate, items: newItems));
                 }
             }            
 
             Log.Get().Information("{id}: Resulted in {riverCount} new feeds", id, newFeeds.Count);
-            var newRiver = new River(
-                existingRiver: river,
-                updatedFeeds: new UpdatedFeeds(
-                    existingFeeds: river.UpdatedFeeds,
-                    feeds: newFeeds.Concat(river.UpdatedFeeds.Feeds)));
+            var newRiver = river.With(
+                updatedFeeds: river.UpdatedFeeds.With(feeds: newFeeds.Concat(river.UpdatedFeeds.Feeds)));
             Log.Get().Information("{id}: Updating aggregate", id);
             await aggregateStore.WriteAggregate(id, newRiver);
 
@@ -1966,35 +2010,26 @@ namespace onceandfuture
 
                     newItems = await this.thumbnailExtractor.LoadItemThumbnailsAsync(
                         baseUri, newItems, cancellationToken);
-                    feed = new RiverFeed(feed, items: newItems);
-                    updatedFeeds = new UpdatedFeeds(
-                        river.UpdatedFeeds,
-                        feeds: river.UpdatedFeeds.Feeds.Insert(0, feed));
+                    feed = feed.With(items: newItems);
+                    updatedFeeds = river.UpdatedFeeds.With(feeds: river.UpdatedFeeds.Feeds.Insert(0, feed));
                 }
             }
 
-            var metadata = new RiverFeedMeta(
-                river.Metadata,
+            var metadata = river.Metadata.With(
                 etag: fetchResult.Etag,
                 lastModified: fetchResult.LastModified,
                 originUrl: fetchResult.FeedUrl,
                 lastStatus: fetchResult.Status);
 
-            return new River(
-                river,
-                updatedFeeds: updatedFeeds,
-                metadata: metadata);
+            return river.With(updatedFeeds: updatedFeeds, metadata: metadata);
         }
 
         static RiverItem Rebase(RiverItem item, Uri baseUri)
         {
-            return new RiverItem(
-                item,
+            return item.With(
                 link: Util.Rebase(item.Link, baseUri),
                 permaLink: Util.Rebase(item.PermaLink, baseUri),
-                enclosures: item.Enclosures.Select(
-                    e => new RiverItemEnclosure(e, url: Util.Rebase(e.Url, baseUri))
-                )
+                enclosures: item.Enclosures.Select(e => e.With(url: Util.Rebase(e.Url, baseUri)))
             );
         }
 
@@ -2092,8 +2127,7 @@ namespace onceandfuture
                     else if (element.Name == XNames.RDF.Rdf)
                     {
                         result = LoadFeed(responseUri, element.Element(XNames.RSS10.Channel));
-                        result = new RiverFeed(
-                            result,
+                        result = result.With(
                             items: result.Items.AddRange(
                                 element.Elements(XNames.RSS10.Item).Select(xe => LoadItem(xe))
                             )
@@ -2158,7 +2192,7 @@ namespace onceandfuture
             if (String.Equals(rel, "alternate", StringComparison.OrdinalIgnoreCase) &&
                 type.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
             {
-                feed = new RiverFeed(feed, websiteUrl: link.Attribute(XNames.Atom.Href)?.Value);
+                feed = feed.With(websiteUrl: link.Attribute(XNames.Atom.Href)?.Value);
             }
 
             return feed;
@@ -2173,18 +2207,18 @@ namespace onceandfuture
             if (String.Equals(rel, "alternate", StringComparison.OrdinalIgnoreCase) &&
                 type.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
             {
-                item = new RiverItem(item, link: Util.ParseLink(href, link));
+                item = item.With(link: Util.ParseLink(href, link));
             }
 
             if (String.Equals(rel, "self", StringComparison.OrdinalIgnoreCase) &&
                 type.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
             {
-                item = new RiverItem(item, permaLink: Util.ParseLink(href, link));
+                item = item.With(permaLink: Util.ParseLink(href, link));
             }
 
             if (link.Attribute(XNames.Atom.Rel)?.Value == "enclosure")
             {
-                item = new RiverItem(item, enclosures: item.Enclosures.Add(new RiverItemEnclosure(
+                item = item.With(enclosures: item.Enclosures.Add(new RiverItemEnclosure(
                     length: link.Attribute(XNames.Atom.Length)?.Value,
                     type: type,
                     url: Util.ParseLink(href, link)
@@ -2195,23 +2229,21 @@ namespace onceandfuture
 
         static RiverItem HandleEnclosure(RiverItem item, XElement element)
         {
-            return new RiverItem(
-                item,
-                enclosures: item.Enclosures.Add(new RiverItemEnclosure(
-                    length: element.Attribute(XNames.RSS.Length)?.Value,
-                    type: element.Attribute(XNames.RSS.Type)?.Value,
-                    url: Util.ParseLink(element.Attribute(XNames.RSS.Url)?.Value, element)
-                )));
+            return item.With(enclosures: item.Enclosures.Add(new RiverItemEnclosure(
+                length: element.Attribute(XNames.RSS.Length)?.Value,
+                type: element.Attribute(XNames.RSS.Type)?.Value,
+                url: Util.ParseLink(element.Attribute(XNames.RSS.Url)?.Value, element)
+            )));
         }
 
         static RiverItem HandleGuid(RiverItem item, XElement element)
         {
-            item = new RiverItem(item, id: element.Value);
+            item = item.With(id: element.Value);
 
             if (item.Id.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                 item.Id.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                item = new RiverItem(item, permaLink: Util.ParseLink(item.Id, element));
+                item = item.With(permaLink: Util.ParseLink(item.Id, element));
             }
             return item;
         }
@@ -2221,7 +2253,7 @@ namespace onceandfuture
             DateTime? date = Util.ParseDate(element);
             if (date != null && (item.PubDate == null || date > item.PubDate))
             {
-                return new RiverItem(item, pubDate: date);
+                return item.With(pubDate: date);
             }
             return item;
         }
@@ -2241,7 +2273,7 @@ namespace onceandfuture
                 else if (!String.IsNullOrWhiteSpace(rf.WebsiteUrl)) { title = rf.WebsiteUrl; }
                 else if (rf.FeedUrl != null) { title = rf.FeedUrl.AbsoluteUri; }
 
-                rf = new RiverFeed(rf, feedTitle: title);
+                rf = rf.With(feedTitle: title);
             }
             return rf;
         }
@@ -2255,8 +2287,8 @@ namespace onceandfuture
                 if (ItemElements.TryGetValue(xe.Name, out func)) { ri = func(ri, xe); }
             }
 
-            if (ri.PermaLink == null) { ri = new RiverItem(ri, permaLink: ri.Link); }
-            if (ri.Id == null) { ri = new RiverItem(ri, id: CreateItemId(ri)); }
+            if (ri.PermaLink == null) { ri = ri.With(permaLink: ri.Link); }
+            if (ri.Id == null) { ri = ri.With(id: CreateItemId(ri)); }
             if (String.IsNullOrWhiteSpace(ri.Title))
             {
                 string title = null;
@@ -2264,7 +2296,7 @@ namespace onceandfuture
                 else if (ri.PermaLink != null) { title = ri.PermaLink.AbsoluteUri; }
                 else if (ri.Id != null) { title = ri.Id; }
 
-                if (title != null) { ri = new RiverItem(ri, title: title); }
+                if (title != null) { ri = ri.With(title: title); }
             }
             return ri;
         }
@@ -2310,17 +2342,18 @@ namespace onceandfuture
 
     public class RiverDefinition
     {
-        public RiverDefinition(
-            RiverDefinition otherRiver = null,
-            string name = null,
-            string id = null,
-            IEnumerable<Uri> feeds = null)
+        public RiverDefinition(string name, string id, IEnumerable<Uri> feeds = null)
         {
-            Name = name ?? otherRiver?.Name;
-            Id = id ?? otherRiver?.Id;
-            Feeds = ImmutableList.CreateRange(
-                feeds ?? otherRiver?.Feeds ?? Enumerable.Empty<Uri>());
+            Name = name;
+            Id = id;
+            Feeds = ImmutableList.CreateRange(feeds ?? Enumerable.Empty<Uri>());
         }
+
+        public RiverDefinition With(string name = null, string id = null, IEnumerable<Uri> feeds = null)
+        {
+            return new RiverDefinition(name ?? Name, id ?? Id, feeds ?? Feeds);
+        }
+
         [JsonProperty("id")]
         public string Id { get; }
         [JsonProperty("name")]
@@ -2346,91 +2379,29 @@ namespace onceandfuture
     public class UserProfile
     {
         public UserProfile(
-            UserProfile otherProfile = null,
             IEnumerable<RiverDefinition> rivers = null,
-            IEnumerable<LoginCookie> logins = null)
+            IEnumerable<LoginCookie> logins = null,
+            string password = null)
         {
-            Rivers = ImmutableList.CreateRange(
-                rivers ?? otherProfile?.Rivers ?? Enumerable.Empty<RiverDefinition>());
-            Logins = ImmutableList.CreateRange(
-                logins ?? otherProfile?.Logins ?? Enumerable.Empty<LoginCookie>());
+            Rivers = ImmutableList.CreateRange(rivers ?? Enumerable.Empty<RiverDefinition>());
+            Logins = ImmutableList.CreateRange(logins ?? Enumerable.Empty<LoginCookie>());
+            Password = password;
+        }
+
+        public UserProfile With(
+            IEnumerable<RiverDefinition> rivers = null,
+            IEnumerable<LoginCookie> logins = null,
+            string password = null)
+        {
+            return new UserProfile(rivers ?? Rivers, logins ?? Logins, password ?? Password);
         }
 
         [JsonProperty("rivers")]
         public ImmutableList<RiverDefinition> Rivers { get; }
         [JsonProperty("logins")]
         public ImmutableList<LoginCookie> Logins { get; }
-
-        public static UserProfile ImportXml(UserProfile profile, XDocument opml)
-        {
-            //string text = feed;
-            //string htmlUrl = feed;
-            //string xmlUrl = feedRiver.Metadata.OriginUrl.AbsoluteUri;
-            //if (feedRiver.UpdatedFeeds.Feeds.Count > 0)
-            //{
-            //    RiverFeed rf = feedRiver.UpdatedFeeds.Feeds[0];
-            //    text = rf.FeedTitle;
-            //    htmlUrl = rf.WebsiteUrl;
-            //}
-
-            //XElement feedElement = new XElement(
-            //    XNames.OPML.Outline,
-            //    new XAttribute(XNames.OPML.HtmlUrl, htmlUrl),
-            //    new XAttribute(XNames.OPML.Type, "rss"),
-            //    new XAttribute(XNames.OPML.Version, "RSS"),
-            //    new XAttribute(XNames.OPML.Title, text),
-            //    new XAttribute(XNames.OPML.Text, text),
-            //    new XAttribute(XNames.OPML.XmlUrl, xmlUrl));
-
-            //XElement opmlBody = SubscriptionStore.GetSubscriptionsFor(user).Result;
-
-            //// Find the river element. 
-            //XElement riverElement;
-            //if (String.Equals("main", riverName, StringComparison.OrdinalIgnoreCase))
-            //{
-            //    riverElement = opmlBody;
-            //}
-            //else
-            //{
-            //    riverElement =
-            //        (from element in opmlBody.Elements(XNames.OPML.Outline)
-            //         where element.Attribute(XNames.OPML.Text)?.Value == riverName
-            //         where element.Attribute(XNames.OPML.XmlUrl) == null
-            //         select element).FirstOrDefault();
-            //}
-
-            //if (riverElement == null)
-            //{
-            //    riverElement = new XElement(
-            //        XNames.OPML.Outline,
-            //        new XAttribute(XNames.OPML.Title, riverName),
-            //        new XAttribute(XNames.OPML.Text, riverName));
-            //    opmlBody.Add(riverElement);
-            //}
-
-            //XElement existingFeedElement =
-            //    (from element in riverElement.Elements(XNames.OPML.Outline)
-            //     where element.Attribute(XNames.OPML.XmlUrl)?.Value == xmlUrl
-            //     select element).FirstOrDefault();
-            //if (existingFeedElement != null)
-            //{
-            //    existingFeedElement.ReplaceWith(feedElement);
-            //}
-            //else
-            //{
-            //    riverElement.Add(feedElement);
-            //}
-
-            //SubscriptionStore.SaveSubscriptionsFor(user, opmlBody).Wait();
-
-
-            throw new NotImplementedException();
-        }
-
-        public static XDocument ExportXml(UserProfile profile)
-        {
-            throw new NotImplementedException();
-        }
+        [JsonProperty("password")]
+        public string Password { get; }
     }
 
 
