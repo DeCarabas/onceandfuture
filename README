@@ -1,0 +1,35 @@
+Todo:
+
+UI:
+- Error boxes
+- Add/remove rivers
+- Add/remove feeds from rivers
+- Add/remove river sets
+- Re-order rivers
+- Import/export OPML
+
+Shipping:
+- Actual health checks
+- Re-pack font awesome fonts
+- Use packed/minified/precompiled source if it exists
+
+Feed Stuff:
+- Implement ATOM cache timeout and RSS skip hours and the like to poll more
+  intelligently.
+- Clip titles that are too long. (Because seriously.)
+
+Bugs:
+- b0rk's feed refreshes completely every time there's a new article; fix it!
+- Feed settings
+
+
+Later:
+- Extract enclosures and the like, store locally (in the DB) and present them
+  in the river. (Then do UI work to expose audio enclosures and the like.)
+
+
+Far future:
+- For the future, we'll probably need options on individual feeds for
+  processing to make them better. It is possible to over-engineer this so be
+  careful.
+- Implement pubsubhubbub?
