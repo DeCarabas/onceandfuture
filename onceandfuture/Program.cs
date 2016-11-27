@@ -20,6 +20,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Scrypt;
 using Serilog;
 using Serilog.Events;
 
@@ -42,9 +43,10 @@ namespace onceandfuture
         const string CookieName = "onceandfuture-feed";
         const int MaxConcurrentSessions = 10;
 
-        readonly ConcurrentDictionary<string, List<LoginCookie>> loginCache =
-            new ConcurrentDictionary<string, List<LoginCookie>>();
+        readonly ConcurrentDictionary<string, LoginCookieCache[]> loginCache =
+            new ConcurrentDictionary<string, LoginCookieCache[]>();
         readonly UserProfileStore profileStore;
+        readonly ScryptEncoder scrypt = new ScryptEncoder();
 
         public AuthenticationManager(UserProfileStore profileStore)
         {
@@ -54,7 +56,6 @@ namespace onceandfuture
 
         bool ParseCookie(string cookie, out string user, out Guid token)
         {
-            // TODO: HMAC cookie when I send it? Need to use KMS then I think, for secrets.
             user = null;
             token = Guid.Empty;
 
@@ -70,9 +71,68 @@ namespace onceandfuture
             return String.Format("{0},{1}", token.ToString("n"), user);
         }
 
+        string EncryptToken(Guid token) => scrypt.Encode(token.ToString("N"));
+
+        bool ValidateAgainstLoginCache(Guid token, LoginCookieCache[] cache)
+        {
+            for (int i = 0; i < cache.Length; i++)
+            {
+                // Check plaintext values; we might have seen this before.
+                if (cache[i].Plaintext == token)
+                {
+                    // We found it; even if it's expired don't bother looping through the encrypted tokens.
+                    return (cache[i].ExpireAt >= DateTimeOffset.UtcNow);
+                }
+            }
+
+            string encryptedToken = EncryptToken(token);
+            for(int i = 0; i < cache.Length; i++)
+            {
+                // Check against cyphertext; this is slow but faster than hitting S3 again.
+                if (String.Equals(encryptedToken, cache[i].Token, StringComparison.Ordinal))
+                {
+                    // Hooray! Make sure the cache is updated.
+                    cache[i].Plaintext = token;
+                    return (cache[i].ExpireAt >= DateTimeOffset.UtcNow);                    
+                }
+            }
+
+            // Neither encrypted nor plaintext, no access.
+            return false;            
+        }
+
+        static LoginCookieCache[] RebuildCache(LoginCookieCache[] existingCache, IList<LoginCookie> validLogins)
+        {
+            int existingPointer = 0;
+            existingCache = existingCache ?? Array.Empty<LoginCookieCache>();
+
+            // Very silly, but these things are always in a predictable order so scanning to rebuild should be quick.
+            // (Trying to keep from throwing away the scrypt work every time we get a new login; the scrypt work is 
+            // relatively slow.)
+            LoginCookieCache[] newCache = new LoginCookieCache[validLogins.Count];
+            for(int i = 0; i < validLogins.Count; i++)
+            {
+                // Find the matching entry...
+                while(existingPointer < existingCache.Length)
+                {
+                    if (String.CompareOrdinal(existingCache[existingPointer].Token, validLogins[i].Id) == 0)
+                    {
+                        newCache[i].Plaintext = existingCache[existingPointer].Plaintext;
+                        break;
+                    }
+                    existingPointer++;
+                }
+
+                newCache[i].ExpireAt = validLogins[i].ExpireAt;
+                newCache[i].Token = validLogins[i].Id;
+            }
+
+            return newCache;
+        }
+
         public async Task<string> GetAuthenticatedUser(HttpContext context)
         {
-            // Has somebody already asked me this request?
+            // Has somebody already asked me for this request?
             object alreadyUser;
             if (context.Items.TryGetValue(CookieName, out alreadyUser)) { return (string)alreadyUser; }
 
@@ -80,39 +140,41 @@ namespace onceandfuture
             string cookie;
             if (!context.Request.Cookies.TryGetValue(CookieName, out cookie)) { return null; }
 
-            // Is it really something?
+            // Is it really a valid cookie?
             string user;
             Guid token;
             if (!ParseCookie(cookie, out user, out token)) { return null; }
 
             // Is it valid? Check the cache.
-            List<LoginCookie> cachedCookies;
+            LoginCookieCache[] cachedCookies;
             if (loginCache.TryGetValue(user, out cachedCookies))
             {
-                for (int i = 0; i < cachedCookies.Count; i++)
+                if (ValidateAgainstLoginCache(token, cachedCookies))
                 {
-                    if (cachedCookies[i].Id == token && cachedCookies[i].ExpireAt >= DateTimeOffset.UtcNow)
-                    {
-                        // Oh, you're already good.
-                        context.Items.Add(CookieName, user);
-                        return user;
-                    }
+                    context.Items.Add(CookieName, user);
+                    return user;                    
                 }
             }
 
             // Not in the cache; pull the user profile. (Might have signed in on another node.)
             UserProfile profile = await this.profileStore.GetProfileFor(user);
+
+            // Rebuild the cache from the profile. Note that this rebuilds the cyphertext.
+            // NOTE: Only bother to go down this path if there are *any* valid logins. That way somebody can't spam my
+            //       server with fake user names and waste space in my cache with bogus entries.
+            //
+            // TODO: Possible abuse: I can send requests at a node with a valid user name and a garbage token and
+            //       cause that node to hit the profile store over and over and over and over. Maybe we should rate-
+            //       limit this stuff?           
             if (profile.Logins.Count > 0)
             {
-                // Refresh the cache while we're here.
-                loginCache[user] = profile.Logins.ToList();
-                if (profile.Logins.Any(c => c.Id == token && c.ExpireAt >= DateTimeOffset.UtcNow))
-                {
+                cachedCookies = RebuildCache(cachedCookies, profile.Logins);
+                if (ValidateAgainstLoginCache(token, cachedCookies))
+                {                
                     context.Items.Add(CookieName, user);
-                    return user;
+                    return user;                
                 }
             }
-
             // No profile, or no matching cookie-- not authn.
             return null;
         }
@@ -125,25 +187,42 @@ namespace onceandfuture
             UserProfile profile = await this.profileStore.GetProfileFor(user);
 
             // TODO: Fix this login duration. :P
-            var newCookie = new LoginCookie(Guid.NewGuid(), DateTimeOffset.UtcNow + TimeSpan.FromMinutes(30));
+            Guid token = Guid.NewGuid();
+            var newLogin = new LoginCookie(EncryptToken(token), DateTimeOffset.UtcNow + TimeSpan.FromMinutes(30));
 
-            // Try to keep the number of sessions bounded.
-            List<LoginCookie> validCookies =
-                profile.Logins.Where(c => c.ExpireAt >= DateTimeOffset.UtcNow).ToList();
-            validCookies.Insert(0, newCookie);
-            if (validCookies.Count > MaxConcurrentSessions)
+            // Insert the new session at the front (because it's most likely to be tried first), and try to keep the 
+            // number of sessions bounded.
+            List<LoginCookie> validLogins = profile.Logins.Where(c => c.ExpireAt >= DateTimeOffset.UtcNow).ToList();
+            validLogins.Insert(0, newLogin);
+            if (validLogins.Count > MaxConcurrentSessions)
             {
-                validCookies.RemoveRange(MaxConcurrentSessions, validCookies.Count);
+                validLogins.RemoveRange(MaxConcurrentSessions, validLogins.Count);
             }
 
             // State mutation order below is important. (Durable store, then cache, then cookie.)
-            var newProfile = profile.With(logins: validCookies);
+            var newProfile = profile.With(logins: validLogins);
             await this.profileStore.SaveProfileFor(user, newProfile);
 
-            loginCache[user] = validCookies;
-            context.Response.Cookies.Append(CookieName, MakeCookie(user, newCookie.Id));
+            // Now update the cache.
+            LoginCookieCache[] cache;
+            if (!this.loginCache.TryGetValue(user, out cache)) { cache = Array.Empty<LoginCookieCache>(); }
+            LoginCookieCache[] newCache = new LoginCookieCache[cache.Length + 1];
+            Array.Copy(cache, 0, newCache, 1, cache.Length);
+            newCache[0].ExpireAt = newLogin.ExpireAt;
+            newCache[0].Token = newLogin.Id;
+            newCache[0].Plaintext = token;
+            this.loginCache[user] = newCache;
 
+            // Now store the cookie.
+            context.Response.Cookies.Append(CookieName, MakeCookie(user, token));
             return true;
+        }
+
+        struct LoginCookieCache
+        {
+            public Guid Plaintext;
+            public string Token;
+            public DateTimeOffset ExpireAt;
         }
     }
 

@@ -2364,14 +2364,14 @@ namespace onceandfuture
 
     public class LoginCookie
     {
-        public LoginCookie(Guid id, DateTimeOffset expireAt)
+        public LoginCookie(string id, DateTimeOffset expireAt)
         {
             Id = id;
             ExpireAt = expireAt;
         }
 
         [JsonProperty("id")]
-        public Guid Id { get; }
+        public string Id { get; }
         [JsonProperty("expireAt")]
         public DateTimeOffset ExpireAt { get; }
     }

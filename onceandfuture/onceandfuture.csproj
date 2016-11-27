@@ -466,6 +466,9 @@
       <HintPath>..\packages\System.Xml.XPath.XDocument.4.0.1\lib\net46\System.Xml.XPath.XDocument.dll</HintPath>
       <Private>True</Private>
     </Reference>-->
+    <Reference Include="Scrypt">
+      <HintPath>..\packages\Scrypt.NET.1.1.0\lib\net20\Scrypt.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="webpack.config.js" />
