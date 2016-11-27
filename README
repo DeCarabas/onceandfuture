@@ -1,5 +1,9 @@
 Todo:
 
+Health Checks:
+- Can access blob stores
+- Can do image manipulation
+
 UI:
 - Error boxes
 - Add/remove rivers
@@ -9,7 +13,6 @@ UI:
 - Import/export OPML
 
 Shipping:
-- Actual health checks
 - Re-pack font awesome fonts
 - Use packed/minified/precompiled source if it exists
 
