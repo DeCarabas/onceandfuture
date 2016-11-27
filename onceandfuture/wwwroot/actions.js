@@ -170,22 +170,18 @@ function xhrAction(options) {
     if (options.progress) {
       xhr.addEventListener("progress", () => options.progress(dispatch, xhr));
     }
-    if (options.loaded_json) {
+    if (options.loaded_json || options.loaded) {
       xhr.addEventListener("load", () => {
-        if (options.error && xhr.status > 399) {
+        if (xhr.status == 403 /* Forbidden */) {
+          console.log("Got forbidden, redirecting to login...");
+          window.location.href = "/login";
+        } else if (options.error && xhr.status > 399) {
           options.error(dispatch, xhr);
-        } else {
+        } else if (options.loaded_json) {
           let result = JSON.parse(xhr.responseText);
           options.loaded_json(dispatch, result, xhr);
-        }
-      });
-    }
-    if (options.loaded) {
-      xhr.addEventListener("load", () => {
-        if (options.error && xhr.status > 399) {
-          options.error(dispatch, xhr);
         } else {
-          options.loaded(dispatch, xhr);
+          options.loaded(dispatch, xhr);          
         }
       });
     }

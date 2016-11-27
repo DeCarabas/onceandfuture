@@ -670,6 +670,8 @@ namespace onceandfuture
             .AddVerb("setpw", "Set a user's password", DoSetPassword, v => v
                 .AddOption("user", "The user to set the password for.", o => o.IsRequired())
                 .AddOption("password", "The password to set it to.", o => o.IsRequired()))
+            .AddVerb("resetlogin", "Reset a user's login cookies", DoResetLogins, v => v
+                .AddOption("user", "The user to reset.", o => o.IsRequired()))
             ;
 
         static int Main(string[] args)
@@ -947,12 +949,25 @@ namespace onceandfuture
 
             var profileStore = new UserProfileStore();
             var profile = profileStore.GetProfileFor(user).Result;
-            var newProfile = profile.With(password: AuthenticationManager.EncryptPassword(password));
+            var newProfile = profile.With(
+                password: AuthenticationManager.EncryptPassword(password),
+                logins: new LoginCookie[0]);
             profileStore.SaveProfileFor(user, newProfile).Wait();
             Console.WriteLine("OK");
             return 0;
         }
 
+        static int DoResetLogins(ParsedOpts args)
+        {
+            string user = args["user"].Value;
+
+            var profileStore = new UserProfileStore();
+            var profile = profileStore.GetProfileFor(user).Result;
+            var newProfile = profile.With(logins: new LoginCookie[0]);
+            profileStore.SaveProfileFor(user, newProfile).Wait();
+            Console.WriteLine("OK");
+            return 0;
+        }
         static void DumpFeed(RiverFeed riverFeed)
         {
             if (riverFeed != null)
