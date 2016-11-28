@@ -7,21 +7,27 @@ import {
   BUTTON_STYLE,
   COLUMNSPACER,
   COLUMNWIDTH,
+  PROGRESS_HEIGHT,
   RIVER_TITLE_FONT_SIZE,
   RIVER_TITLE_BACKGROUND_COLOR,
 } from './style'
 import RiverColumn from './rivercolumn'
 import RiverProgress from './riverprogress'
 
+const TITLE_HEIGHT = 33; // <div>"Rivers"..."refresh"</div>
+const TOP_BAR_HEIGHT = TITLE_HEIGHT + PROGRESS_HEIGHT; 
+
 const RiverSetBar = ({title, loading, load_progress, onRefresh}) => {
   const div_style = {
     backgroundColor: RIVER_TITLE_BACKGROUND_COLOR,
+    height: TITLE_HEIGHT,
   };
   const head_style = {
     fontSize: RIVER_TITLE_FONT_SIZE,
     display: 'inline-block',
     paddingLeft: COLUMNSPACER,
     fontWeight: 'bold',
+    paddingTop: 2,
   };
 
   const refresh_color = loading ? RIVER_TITLE_BACKGROUND_COLOR : APP_TEXT_COLOR;
@@ -31,12 +37,15 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh}) => {
     display: 'inline-block',
     float: 'right',
     color: refresh_color,
+    verticalAlign: 'middle',
   };
 
-  return <div style={div_style}>
-    <div style={head_style}>{title}</div>
-    <div style={refresh_style} onClick={onClick} >
-      <i style={BUTTON_STYLE} onClick={onClick} className="fa fa-refresh" />
+  return <div> 
+    <div style={div_style}>
+      <div style={head_style}>{title}</div>
+      <div style={refresh_style} onClick={onClick} >
+        <i style={BUTTON_STYLE} onClick={onClick} className="fa fa-refresh" />
+      </div>
     </div>
     <RiverProgress
       progress={load_progress / 100} 
@@ -48,7 +57,7 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh}) => {
 export const RiverSetBase = ({user, rivers, loading, load_progress, onRefresh}) => {
   const TOTAL_SPACING = COLUMNSPACER * rivers.length;
   const TOTAL_COLUMNS = COLUMNWIDTH * rivers.length;
-  const TOP_BAR_HEIGHT = 33;
+  const TOP_BAR_HEIGHT = 43;
 
   const style = {
     position: 'relative',

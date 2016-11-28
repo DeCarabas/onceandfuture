@@ -23829,6 +23829,9 @@
 	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
 	
 	
+	var TITLE_HEIGHT = 33; // <div>"Rivers"..."refresh"</div>
+	var TOP_BAR_HEIGHT = TITLE_HEIGHT + _style.PROGRESS_HEIGHT;
+	
 	var RiverSetBar = function RiverSetBar(_ref) {
 	  var title = _ref.title,
 	      loading = _ref.loading,
@@ -23836,13 +23839,15 @@
 	      onRefresh = _ref.onRefresh;
 	
 	  var div_style = {
-	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR
+	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR,
+	    height: TITLE_HEIGHT
 	  };
 	  var head_style = {
 	    fontSize: _style.RIVER_TITLE_FONT_SIZE,
 	    display: 'inline-block',
 	    paddingLeft: _style.COLUMNSPACER,
-	    fontWeight: 'bold'
+	    fontWeight: 'bold',
+	    paddingTop: 2
 	  };
 	
 	  var refresh_color = loading ? _style.RIVER_TITLE_BACKGROUND_COLOR : _style.APP_TEXT_COLOR;
@@ -23851,21 +23856,26 @@
 	  var refresh_style = {
 	    display: 'inline-block',
 	    float: 'right',
-	    color: refresh_color
+	    color: refresh_color,
+	    verticalAlign: 'middle'
 	  };
 	
 	  return React.createElement(
 	    'div',
-	    { style: div_style },
+	    null,
 	    React.createElement(
 	      'div',
-	      { style: head_style },
-	      title
-	    ),
-	    React.createElement(
-	      'div',
-	      { style: refresh_style, onClick: onClick },
-	      React.createElement('i', { style: _style.BUTTON_STYLE, onClick: onClick, className: 'fa fa-refresh' })
+	      { style: div_style },
+	      React.createElement(
+	        'div',
+	        { style: head_style },
+	        title
+	      ),
+	      React.createElement(
+	        'div',
+	        { style: refresh_style, onClick: onClick },
+	        React.createElement('i', { style: _style.BUTTON_STYLE, onClick: onClick, className: 'fa fa-refresh' })
+	      )
 	    ),
 	    React.createElement(_riverprogress2.default, {
 	      progress: load_progress / 100,
@@ -23883,7 +23893,7 @@
 	
 	  var TOTAL_SPACING = _style.COLUMNSPACER * rivers.length;
 	  var TOTAL_COLUMNS = _style.COLUMNWIDTH * rivers.length;
-	  var TOP_BAR_HEIGHT = 33;
+	  var TOP_BAR_HEIGHT = 43;
 	
 	  var style = {
 	    position: 'relative',
