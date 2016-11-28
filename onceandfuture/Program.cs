@@ -386,10 +386,151 @@ namespace onceandfuture
 
     public class HealthController : Controller
     {
-        static Func<Task<HealthResult>>[] HealthChecks = new Func<Task<HealthResult>>[]
+        readonly Func<Task<HealthResult>>[] HealthChecks;
+        readonly UserProfileStore profileStore;
+        readonly RiverFeedStore feedStore;
+        readonly AggregateRiverStore aggregateStore;
+        readonly RiverThumbnailStore thumbnailStore;
+
+        public HealthController(
+            UserProfileStore profileStore,
+            RiverFeedStore feedStore,
+            AggregateRiverStore aggregateStore,
+            RiverThumbnailStore thumbnailStore)
         {
-            // TODO: Health checks
-        };
+            this.profileStore = profileStore;
+            this.feedStore = feedStore;
+            this.aggregateStore = aggregateStore;
+            this.thumbnailStore = thumbnailStore;
+
+            HealthChecks = new Func<Task<HealthResult>>[]
+            {
+                CheckAggregateStore,
+                CheckFeedStore,
+                CheckProfileStore,
+                CheckThumbnailStore,
+                CheckCanMakeThumbnail,
+            };
+        }
+
+        async Task<HealthResult> CheckProfileStore()
+        {
+            var result = new HealthResult {  Title = "Profile Store", Healthy = false };
+            try
+            {
+                UserProfile dummy = await this.profileStore.GetProfileFor("@@@health");
+                await this.profileStore.SaveProfileFor("@@@health", dummy);
+                result.Healthy = true;
+                result.Log.Add("OK");
+            }
+            catch(Exception e)
+            {
+                result.Healthy = false;
+                result.Log.AddRange(e.ToString().Split('\n'));
+            }
+            return result;
+        }
+
+        async Task<HealthResult> CheckAggregateStore()
+        {
+            var result = new HealthResult {  Title = "Aggregate Store", Healthy = false };
+            try
+            {
+                River aggregate = await this.aggregateStore.LoadAggregate("fooble");
+                await this.aggregateStore.WriteAggregate("fooble", aggregate);
+                result.Healthy = true;
+                result.Log.Add("OK");
+            }
+            catch(Exception e)
+            {
+                result.Healthy = false;
+                result.Log.AddRange(e.ToString().Split('\n'));
+            }
+            return result;
+        }
+
+
+        async Task<HealthResult> CheckFeedStore()
+        {
+            var result = new HealthResult {  Title = "Feed Store", Healthy = false };
+            try
+            {
+                River river = await this.feedStore.LoadRiverForFeed(new Uri("http://dummy/"));
+                await this.feedStore.WriteRiver(new Uri("http://dummy"), river);
+                result.Healthy = true;
+                result.Log.Add("OK");
+            }
+            catch(Exception e)
+            {
+                result.Healthy = false;
+                result.Log.AddRange(e.ToString().Split('\n'));
+            }
+            return result;
+        }
+
+        async Task<HealthResult> CheckThumbnailStore()
+        {
+            var result = new HealthResult { Title = "Thumbnail Store", Healthy = false };
+            try
+            {
+                byte[] img = await LoadFileBytes("dummy.png");
+                /* Uri uri = */ await this.thumbnailStore.StoreImage(img);
+                // TODO: validate URI makes an image.
+                
+                result.Healthy = true;
+                result.Log.Add("OK");
+            }
+            catch(Exception e)
+            {
+                result.Healthy = false;
+                result.Log.AddRange(e.ToString().Split('\n'));
+            }
+            return result;            
+        }
+
+        async Task<HealthResult> CheckCanMakeThumbnail()
+        {
+            var result = new HealthResult { Title = "Make Thumbnail", Healthy = false };
+            try
+            {
+                int width, height;
+                byte[] img = await LoadFileBytes("dummy.png");
+                using(var ms = new MemoryStream(img))
+                using(var i = new System.Drawing.Bitmap(ms))
+                {
+                    width = i.Width;
+                    height = i.Height;
+                }
+                var srcImg = new ThumbnailExtractor.ImageData(width, height, img);
+                /* var dstImage =*/  ThumbnailExtractor.MakeThumbnail(srcImg);
+
+                result.Healthy = true;
+                result.Log.Add("OK");
+            }
+            catch(Exception e)
+            {
+                result.Healthy = false;
+                result.Log.AddRange(e.ToString().Split('\n'));
+            }
+            return result;                       
+        }
+
+        static async Task<byte[]> LoadFileBytes(string file)
+        {
+            byte[] img;
+            using(var stream = System.IO.File.OpenRead(file))
+            {
+                img = new byte[stream.Length];
+                int cursor = 0;
+                while(cursor < img.Length)
+                {
+                    int read = await stream.ReadAsync(img, cursor, img.Length - cursor);
+                    if (read == 0) { break; }
+                    cursor += read;
+                }
+            }
+            return img;
+        }
 
         [HttpGet("/health")]
         public async Task<IActionResult> HealthView()

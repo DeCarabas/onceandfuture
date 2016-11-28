@@ -1147,7 +1147,7 @@ namespace onceandfuture
     }
 
 
-    class RiverThumbnailStore
+    public class RiverThumbnailStore
     {
         readonly BlobStore blobStore = new BlobStore("onceandfuture-thumbs");
 
@@ -1479,7 +1479,7 @@ namespace onceandfuture
                 thumbnail: new RiverItemThumbnail(thumbnailUri.AbsoluteUri, thumbnail.Width, thumbnail.Height));
         }
 
-        static ImageData MakeThumbnail(ImageData sourceImage)
+        public static ImageData MakeThumbnail(ImageData sourceImage)
         {
             using (var ss = new MemoryStream(sourceImage.Data))
             using (var src = (Bitmap)Image.FromStream(ss))
@@ -1812,7 +1812,7 @@ namespace onceandfuture
             return thumbnail;
         }
 
-        class ImageData
+        public class ImageData
         {
             public ImageData(int width, int height, byte[] data)
             {
