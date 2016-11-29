@@ -18,6 +18,7 @@ const RiverSettingsButton = ({river, onShowSettings, onHideSettings}) => {
 const RiverTitle = ({river, onShowSettings, onHideSettings}) => {
   const divStyle = {
     backgroundColor: RIVER_TITLE_BACKGROUND_COLOR,
+    verticalAlign: 'middle',    
   }
   const style = {
     paddingLeft: COLUMNSPACER,

@@ -51,7 +51,7 @@ namespace onceandfuture
         public AuthenticationManager(UserProfileStore profileStore)
         {
             // TODO: Cache scrubber.
-            this.profileStore = profileStore;
+            this.profileStore = profileStore;            
         }
 
         bool ParseCookie(string cookie, out string user, out Guid token)
@@ -72,6 +72,7 @@ namespace onceandfuture
         }
 
         static string EncryptToken(Guid token) => Scrypt.Encode(token.ToString("N"));
+        static bool CheckToken(Guid token, string encrypted) => Scrypt.Compare(token.ToString("N"), encrypted);
         static bool CheckPassword(string password, string encrypted) => Scrypt.Compare(password, encrypted);
         public static string EncryptPassword(string password) => Scrypt.Encode(password);
 
@@ -87,20 +88,19 @@ namespace onceandfuture
                 }
             }
 
-            string encryptedToken = EncryptToken(token);
-            for(int i = 0; i < cache.Length; i++)
+            for (int i = 0; i < cache.Length; i++)
             {
                 // Check against cyphertext; this is slow but faster than hitting S3 again.
-                if (String.Equals(encryptedToken, cache[i].Token, StringComparison.Ordinal))
+                if (CheckToken(token, cache[i].Token))
                 {
                     // Hooray! Make sure the cache is updated.
                     cache[i].Plaintext = token;
-                    return (cache[i].ExpireAt >= DateTimeOffset.UtcNow);                    
+                    return (cache[i].ExpireAt >= DateTimeOffset.UtcNow);
                 }
             }
 
             // Neither encrypted nor plaintext, no access.
-            return false;            
+            return false;
         }
 
         static LoginCookieCache[] RebuildCache(LoginCookieCache[] existingCache, IList<LoginCookie> validLogins)
@@ -112,10 +112,10 @@ namespace onceandfuture
             // (Trying to keep from throwing away the scrypt work every time we get a new login; the scrypt work is 
             // relatively slow.)
             LoginCookieCache[] newCache = new LoginCookieCache[validLogins.Count];
-            for(int i = 0; i < validLogins.Count; i++)
+            for (int i = 0; i < validLogins.Count; i++)
             {
                 // Find the matching entry...
-                while(existingPointer < existingCache.Length)
+                while (existingPointer < existingCache.Length)
                 {
                     if (String.CompareOrdinal(existingCache[existingPointer].Token, validLogins[i].Id) == 0)
                     {
@@ -140,12 +140,20 @@ namespace onceandfuture
 
             // Did I get a cookie?
             string cookie;
-            if (!context.Request.Cookies.TryGetValue(CookieName, out cookie)) { return null; }
+            if (!context.Request.Cookies.TryGetValue(CookieName, out cookie))
+            {
+                Serilog.Log.Debug("Auth: No cookie found {cookie}", cookie);
+                return null;
+            }
 
             // Is it really a valid cookie?
             string user;
             Guid token;
-            if (!ParseCookie(cookie, out user, out token)) { return null; }
+            if (!ParseCookie(cookie, out user, out token))
+            {
+                Serilog.Log.Debug("Auth: Unable to parse cookie {cookie}", cookie);
+                return null;
+            }
 
             // Is it valid? Check the cache.
             LoginCookieCache[] cachedCookies;
@@ -153,8 +161,9 @@ namespace onceandfuture
             {
                 if (ValidateAgainstLoginCache(token, cachedCookies))
                 {
+                    Serilog.Log.Debug("Auth: Login session {token} found in cache", token);
                     context.Items.Add(CookieName, user);
-                    return user;                    
+                    return user;
                 }
             }
 
@@ -171,13 +180,17 @@ namespace onceandfuture
             if (profile.Logins.Count > 0)
             {
                 cachedCookies = RebuildCache(cachedCookies, profile.Logins);
+                loginCache[user] = cachedCookies;
                 if (ValidateAgainstLoginCache(token, cachedCookies))
-                {                
+                {
+                    Serilog.Log.Debug("Auth: Login session {token} found in cache after refresh", token);
                     context.Items.Add(CookieName, user);
-                    return user;                
+                    return user;
                 }
             }
+
             // No profile, or no matching cookie-- not authn.
+            Serilog.Log.Debug("Auth: Login session {token} not found", token);
             return null;
         }
 
@@ -256,7 +269,7 @@ namespace onceandfuture
                     StatusCode = (int)HttpStatusCode.Forbidden
                 };
             }
-        }        
+        }
     }
 
     public class AppController : Controller
@@ -326,18 +339,21 @@ namespace onceandfuture
     {
         readonly UserProfileStore profileStore;
         readonly AggregateRiverStore aggregateStore;
+        readonly RiverFeedParser feedParser;
         readonly RiverFeedStore feedStore;
 
         public ApiController(
             UserProfileStore profileStore,
             AggregateRiverStore aggregateStore,
+            RiverFeedParser feedParser,
             RiverFeedStore feedStore)
         {
             this.profileStore = profileStore;
             this.aggregateStore = aggregateStore;
+            this.feedParser = feedParser;
             this.feedStore = feedStore;
         }
-        
+
         [HttpGet("/api/v1/river/{user}")]
         public async Task<IActionResult> GetRiverList(string user)
         {
@@ -360,9 +376,56 @@ namespace onceandfuture
         }
 
         [HttpPost("/api/v1/river/{user}/{id}")]
-        public Task<IActionResult> AddFeed(string user, string id)
+        public async Task<IActionResult> AddFeed(string user, string id)
         {
-            throw new NotImplementedException();
+            AddFeedRequest requestBody;
+
+            try
+            {
+                var content = new MemoryStream();
+                await Request.Body.CopyToAsync(content);
+                content.Position = 0;
+                using (var reader = new StreamReader(content))
+                {
+                    string data = reader.ReadToEnd();
+                    requestBody = JsonConvert.DeserializeObject<AddFeedRequest>(data);
+                }
+            }
+            catch (Exception e)
+            {
+                return new JsonResult(new Fault
+                {
+                    Status = "error",
+                    Code = "badrequest",
+                    Details = "Error decoding request: " + e.Message,
+                })
+                { StatusCode = 400 };
+            }
+
+            IList<Uri> feedUrls = await FeedDetector.GetFeedUrls(requestBody.Url, HttpContext.RequestAborted);
+            if (feedUrls.Count == 0)
+            {
+                return new JsonResult(new Fault
+                {
+                    Status = "error",
+                    Code = "nofeed",
+                    Details = "No feed found @ " + requestBody.Url
+                })
+                { StatusCode = 400 };
+            }
+
+            Uri feedUrl = feedUrls[0];
+
+            UserProfile profile = await this.profileStore.GetProfileFor(user);
+            RiverDefinition river = profile.Rivers.FirstOrDefault(rd => String.CompareOrdinal(rd.Id, id) == 0);
+            RiverDefinition newRiver = river.With(feeds: river.Feeds.Concat(new[] { feedUrl }));
+            UserProfile newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
+            await this.profileStore.SaveProfileFor(user, newProfile);
+
+            await feedParser.RefreshAggregateRiverWithFeeds(
+                newRiver.Id, newRiver.Feeds, this.aggregateStore, this.feedStore, HttpContext.RequestAborted);
+
+            return Json(new { status = "ok" });
         }
 
         [HttpPost("/api/v1/river/{user}/{id}/mode")]
@@ -381,6 +444,12 @@ namespace onceandfuture
                 profile.Rivers.Select(r => parser.RefreshAggregateRiverWithFeeds(
                     r.Id, r.Feeds, this.aggregateStore, this.feedStore, CancellationToken.None)));
             return Ok(); // Progress?
+        }
+
+        public class AddFeedRequest
+        {
+            [JsonProperty("url", Required = Required.Always)]
+            public string Url { get; set; }
         }
     }
 
@@ -415,7 +484,7 @@ namespace onceandfuture
 
         async Task<HealthResult> CheckProfileStore()
         {
-            var result = new HealthResult {  Title = "Profile Store", Healthy = false };
+            var result = new HealthResult { Title = "Profile Store", Healthy = false };
             try
             {
                 UserProfile dummy = await this.profileStore.GetProfileFor("@@@health");
@@ -423,7 +492,7 @@ namespace onceandfuture
                 result.Healthy = true;
                 result.Log.Add("OK");
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 result.Healthy = false;
                 result.Log.AddRange(e.ToString().Split('\n'));
@@ -433,7 +502,7 @@ namespace onceandfuture
 
         async Task<HealthResult> CheckAggregateStore()
         {
-            var result = new HealthResult {  Title = "Aggregate Store", Healthy = false };
+            var result = new HealthResult { Title = "Aggregate Store", Healthy = false };
             try
             {
                 River aggregate = await this.aggregateStore.LoadAggregate("fooble");
@@ -441,7 +510,7 @@ namespace onceandfuture
                 result.Healthy = true;
                 result.Log.Add("OK");
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 result.Healthy = false;
                 result.Log.AddRange(e.ToString().Split('\n'));
@@ -449,10 +518,9 @@ namespace onceandfuture
             return result;
         }
 
-
         async Task<HealthResult> CheckFeedStore()
         {
-            var result = new HealthResult {  Title = "Feed Store", Healthy = false };
+            var result = new HealthResult { Title = "Feed Store", Healthy = false };
             try
             {
                 River river = await this.feedStore.LoadRiverForFeed(new Uri("http://dummy/"));
@@ -460,7 +528,7 @@ namespace onceandfuture
                 result.Healthy = true;
                 result.Log.Add("OK");
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 result.Healthy = false;
                 result.Log.AddRange(e.ToString().Split('\n'));
@@ -474,18 +542,19 @@ namespace onceandfuture
             try
             {
                 byte[] img = await LoadFileBytes("dummy.png");
-                /* Uri uri = */ await this.thumbnailStore.StoreImage(img);
+                /* Uri uri = */
+                await this.thumbnailStore.StoreImage(img);
                 // TODO: validate URI makes an image.
-                
+
                 result.Healthy = true;
                 result.Log.Add("OK");
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 result.Healthy = false;
                 result.Log.AddRange(e.ToString().Split('\n'));
             }
-            return result;            
+            return result;
         }
 
         async Task<HealthResult> CheckCanMakeThumbnail()
@@ -495,34 +564,35 @@ namespace onceandfuture
             {
                 int width, height;
                 byte[] img = await LoadFileBytes("dummy.png");
-                using(var ms = new MemoryStream(img))
-                using(var i = new System.Drawing.Bitmap(ms))
+                using (var ms = new MemoryStream(img))
+                using (var i = new System.Drawing.Bitmap(ms))
                 {
                     width = i.Width;
                     height = i.Height;
                 }
                 var srcImg = new ThumbnailExtractor.ImageData(width, height, img);
-                /* var dstImage =*/  ThumbnailExtractor.MakeThumbnail(srcImg);
+                /* var dstImage =*/
+                ThumbnailExtractor.MakeThumbnail(srcImg);
 
                 result.Healthy = true;
                 result.Log.Add("OK");
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 result.Healthy = false;
                 result.Log.AddRange(e.ToString().Split('\n'));
             }
-            return result;                       
+            return result;
         }
 
         static async Task<byte[]> LoadFileBytes(string file)
         {
             byte[] img;
-            using(var stream = System.IO.File.OpenRead(file))
+            using (var stream = System.IO.File.OpenRead(file))
             {
                 img = new byte[stream.Length];
                 int cursor = 0;
-                while(cursor < img.Length)
+                while (cursor < img.Length)
                 {
                     int read = await stream.ReadAsync(img, cursor, img.Length - cursor);
                     if (read == 0) { break; }
@@ -739,9 +809,10 @@ namespace onceandfuture
 
             var aggStore = new AggregateRiverStore();
             var feedStore = new RiverFeedStore();
-            var profileStore = new UserProfileStore();
             var thumbStore = new RiverThumbnailStore();
+            var feedParser = new RiverFeedParser();
 
+            var profileStore = new UserProfileStore();
             var authenticationManager = new AuthenticationManager(profileStore);
 
             services.AddSingleton(typeof(RiverThumbnailStore), thumbStore);
@@ -749,6 +820,7 @@ namespace onceandfuture
             services.AddSingleton(typeof(RiverFeedStore), feedStore);
             services.AddSingleton(typeof(UserProfileStore), profileStore);
             services.AddSingleton(typeof(AuthenticationManager), authenticationManager);
+            services.AddSingleton(typeof(RiverFeedParser), feedParser);
         }
 
         public void Configure(
@@ -771,7 +843,7 @@ namespace onceandfuture
             }
 
             // serve static files from wwwroot/*
-            app.UseStaticFiles();            
+            app.UseStaticFiles();
 
             // use MVC framework
             app.UseMvc();
@@ -810,9 +882,14 @@ namespace onceandfuture
             )
             .AddVerb("setpw", "Set a user's password", DoSetPassword, v => v
                 .AddOption("user", "The user to set the password for.", o => o.IsRequired())
-                .AddOption("password", "The password to set it to.", o => o.IsRequired()))
+                .AddOption("password", "The password to set it to.", o => o.IsRequired())
+            )
             .AddVerb("resetlogin", "Reset a user's login cookies", DoResetLogins, v => v
-                .AddOption("user", "The user to reset.", o => o.IsRequired()))
+                .AddOption("user", "The user to reset.", o => o.IsRequired())
+            )
+            .AddVerb("findfeed", "Find the feed for an URL", DoFindFeed, v => v
+                .AddOption("url", "The URL to find a feed for.", o => o.IsRequired())
+            )
             ;
 
         static int Main(string[] args)
@@ -1109,6 +1186,21 @@ namespace onceandfuture
             Console.WriteLine("OK");
             return 0;
         }
+
+        static int DoFindFeed(ParsedOpts args)
+        {
+            string url = args["url"].Value;
+            Console.WriteLine("Finding feed for {0}...", url);
+            IList<Uri> found = FeedDetector.GetFeedUrls(args["url"].Value).Result;
+            foreach (Uri uri in found)
+            {
+                Console.WriteLine("{0}", uri.AbsoluteUri);
+            }
+
+            Console.WriteLine("Found {0} feeds", found.Count);
+            return 0;
+        }
+
         static void DumpFeed(RiverFeed riverFeed)
         {
             if (riverFeed != null)

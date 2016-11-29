@@ -24449,7 +24449,8 @@
 	      onHideSettings = _ref2.onHideSettings;
 	
 	  var divStyle = {
-	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR
+	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR,
+	    verticalAlign: 'middle'
 	  };
 	  var style = {
 	    paddingLeft: _style.COLUMNSPACER,

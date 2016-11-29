@@ -22,7 +22,6 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Amazon;
-using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using AngleSharp.Dom;
@@ -283,6 +282,67 @@ namespace onceandfuture
                 "Object {name} not found in S3 bucket {bucket} ({elapsed}ms)",
                 name, bucket, timer.ElapsedMilliseconds
             );
+        }
+
+        public static void DetectFeedServerError(Uri uri, HttpResponseMessage response)
+        {
+            Get().Warning("Error detecting feed @ {url}: {status}", uri.AbsoluteUri, response.StatusCode);
+        }
+
+        public static void DetectFeedLoadFeedError(Uri feedUri, HttpStatusCode lastStatus)
+        {
+            Get().Warning("Error loading detected feed @ {url}: {status}", feedUri.AbsoluteUri, lastStatus);
+        }
+
+        public static void FindFeedBaseWasFeed(Uri baseUri)
+        {
+            Get().Debug("{base}: Base URL was a feed.", baseUri.AbsoluteUri);
+        }
+
+        public static void FindFeedCheckingBase(Uri baseUri)
+        {
+            Get().Debug("{base}: Checking base URL...", baseUri.AbsoluteUri);
+        }
+
+        public static void FindFeedCheckingLinkElements(Uri baseUri)
+        {
+            Get().Debug("{base}: Checking link elements...", baseUri.AbsoluteUri);
+        }
+
+        public static void FindFeedFoundLinkElements(Uri baseUri, List<Uri> linkUrls)
+        {
+            Get().Debug("{base}: Found {count} link elements.", baseUri.AbsoluteUri, linkUrls.Count);
+        }
+
+        public static void FindFeedCheckingAnchorElements(Uri baseUri)
+        {
+            Get().Debug("{base}: Checking anchor elements...", baseUri.AbsoluteUri);
+        }
+
+        public static void FindFeedFoundSomeAnchors(Uri baseUri, List<Uri> localGuesses, List<Uri> remoteGuesses)
+        {
+            Get().Debug("{base}: Found {localCount} local and {remoteCount} remote anchors.", 
+                baseUri.AbsoluteUri, localGuesses.Count, remoteGuesses.Count);
+        }
+
+        public static void FindFeedsFoundLocalGuesses(Uri baseUri, List<Uri> localAnchors)
+        {
+            Get().Debug("{base}: Found {count} local anchors.", baseUri.AbsoluteUri, localAnchors.Count);
+        }
+
+        public static void FindFeedsFoundRemoteGuesses(Uri baseUri, List<Uri> remoteAnchors)
+        {
+            Get().Debug("{base}: Found {count} remote anchors.", baseUri.AbsoluteUri, remoteAnchors.Count);
+        }
+
+        public static void FindFeedsFoundRandomGuesses(Uri baseUri, List<Uri> randomGuesses)
+        {
+            Get().Debug("{base}: Found {count} random guesses.", baseUri.AbsoluteUri, randomGuesses.Count);
+        }
+
+        public static void FindFeedFoundTotal(Uri baseUri, List<Uri> allUrls)
+        {
+            Get().Debug("{base}: Found {count} URIs in total.", baseUri.AbsoluteUri, allUrls.Count);
         }
     }
 
@@ -1792,6 +1852,10 @@ namespace onceandfuture
                 Uri relativeUrl = thumbnail;
                 if (!Uri.TryCreate(baseUrl, relativeUrl, out thumbnail)) { return null; }
             }
+            if (thumbnail.Scheme != "http" && thumbnail.Scheme != "https")
+            {
+                return null;
+            }
 
             for (int i = 0; i < BadThumbnails.Length; i++)
             {
@@ -1832,7 +1896,7 @@ namespace onceandfuture
         }
     }
 
-    class RiverFeedParser
+    public class RiverFeedParser
     {
         readonly ThumbnailExtractor thumbnailExtractor = new ThumbnailExtractor();
         static readonly HttpClient client;
@@ -2413,5 +2477,266 @@ namespace onceandfuture
         protected override string GetObjectID(string id) => Util.HashString(id);
         public Task<UserProfile> GetProfileFor(string user) => GetDocument(user);
         public Task SaveProfileFor(string user, UserProfile profile) => WriteDocument(user, profile);
+    }
+
+    class FindFeedException : Exception
+    {
+        public FindFeedException(string message, params object[] args) : base(String.Format(message, args)) { }
+    }
+
+    public static class FeedDetector
+    {
+        static HttpClient client;
+        static HashSet<string> FeedMimeTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "application/rss+xml",
+            "text/xml",
+            "application/atom+xml",
+            "application/x.atom+xml",
+            "application/x-atom+xml",
+        };
+        static readonly string[] OrderedFeedKeywords = new string[] { "atom", "rss", "rdf", "xml", "feed" };
+        static readonly string[] FeedNames = new string[] {
+            "atom.xml", "index.atom", "index.rdf", "rss.xml", "index.xml", "index.rss",
+        };
+        static readonly string[] FeedExtensions = new string[]
+        {
+            ".rss", ".rdf", ".xml", ".atom",
+        };
+
+        static FeedDetector()
+        {
+            client = new HttpClient();
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
+        }
+
+        public static async Task<IList<Uri>> GetFeedUrls(
+            string originUrl,             
+            CancellationToken cancellationToken = default(CancellationToken),
+            bool findAll = false)
+        {
+            var allUrls = new List<Uri>();
+            Uri baseUri = FixupUrl(originUrl);
+
+            // Maybe... maybe this one is a feed?
+            Log.FindFeedCheckingBase(baseUri);
+            string data = await GetFeedData(baseUri, cancellationToken);
+            if (LooksLikeFeed(data))
+            {
+                Log.FindFeedBaseWasFeed(baseUri);
+                return new[] { baseUri };
+            }
+
+            // Nope, let's dive into the soup!
+            var parser = new HtmlParser();
+            IHtmlDocument document = parser.Parse(data);
+
+            // Link elements.
+            Log.FindFeedCheckingLinkElements(baseUri);
+            List<Uri> linkUrls = new List<Uri>();
+            foreach (IElement element in document.GetElementsByTagName("link"))
+            {
+                string linkType = element.GetAttribute("type");
+                if (linkType != null && FeedMimeTypes.Contains(linkType))
+                {
+                    Uri hrefUrl;
+                    string href = element.GetAttribute("href");
+                    if (href != null && Uri.TryCreate(href, UriKind.RelativeOrAbsolute, out hrefUrl))
+                    {
+                        if (!hrefUrl.IsAbsoluteUri) { hrefUrl = new Uri(baseUri, hrefUrl); }
+                        linkUrls.Add(hrefUrl);
+                    }
+                }
+            }
+
+            await FilterUrlsByFeed(linkUrls, cancellationToken);
+            if (linkUrls.Count > 0)
+            {
+                Log.FindFeedFoundLinkElements(baseUri, linkUrls);
+                linkUrls.Sort(UrlFeedComparison);
+                allUrls.AddRange(linkUrls);
+                if (!findAll) { return allUrls; }
+            }
+
+            // <a> tags
+            Log.FindFeedCheckingAnchorElements(baseUri);
+            List<Uri> localGuesses = new List<Uri>();
+            List<Uri> remoteGuesses = new List<Uri>();
+            foreach (IElement element in document.GetElementsByTagName("a"))
+            {
+                Uri hrefUrl;
+                string href = element.GetAttribute("href");
+                if (href != null && Uri.TryCreate(href, UriKind.RelativeOrAbsolute, out hrefUrl))
+                {
+                    if (!hrefUrl.IsAbsoluteUri) { hrefUrl = new Uri(baseUri, hrefUrl); }
+
+                    if ((hrefUrl.Host == baseUri.Host) && IsFeedUrl(hrefUrl))
+                    {
+                        localGuesses.Add(hrefUrl);
+                    }
+                    else if (IsFeedishUrl(hrefUrl))
+                    {
+                        remoteGuesses.Add(hrefUrl);
+                    }
+                }
+            }
+            Log.FindFeedFoundSomeAnchors(baseUri, localGuesses, remoteGuesses);
+
+            // (Consider ones on the same domain first.)
+            await FilterUrlsByFeed(localGuesses, cancellationToken);
+            if (localGuesses.Count > 0)
+            {
+                Log.FindFeedsFoundLocalGuesses(baseUri, localGuesses);
+                localGuesses.Sort(UrlFeedComparison);
+                allUrls.AddRange(localGuesses);
+                if (!findAll) { return localGuesses; }
+            }
+
+            await FilterUrlsByFeed(remoteGuesses, cancellationToken);
+            if (remoteGuesses.Count > 0)
+            {
+                Log.FindFeedsFoundRemoteGuesses(baseUri, remoteGuesses);
+                remoteGuesses.Sort(UrlFeedComparison);
+                allUrls.AddRange(remoteGuesses);
+                if (!findAll) { return remoteGuesses; }
+            }
+
+            List<Uri> randomGuesses = FeedNames.Select(s => new Uri(baseUri, s)).ToList();
+            await FilterUrlsByFeed(randomGuesses, cancellationToken);
+            if (randomGuesses.Count > 0)
+            {
+                Log.FindFeedsFoundRandomGuesses(baseUri, randomGuesses);
+                randomGuesses.Sort(UrlFeedComparison);
+                allUrls.AddRange(randomGuesses);
+                if (!findAll) { return randomGuesses; }
+            }
+
+            // All done, nothing. (Or... everything!)
+            Log.FindFeedFoundTotal(baseUri, allUrls);
+            return allUrls;
+        }
+
+        static Uri FixupUrl(string uri)
+        {
+            uri = uri.Trim();
+            if (uri.StartsWith("feed://"))
+            {
+                uri = "http://" + uri.Substring(7);
+            }
+            else if (!(uri.StartsWith("http://") || uri.StartsWith("https://")))
+            {
+                uri = "http://" + uri;
+            }
+
+            Uri parsedUri;
+            if (!Uri.TryCreate(uri, UriKind.Absolute, out parsedUri))
+            {
+                throw new FindFeedException("The provided URL ({0}) does not seem like a valid URL.", uri);
+            }
+            return parsedUri;
+        }
+
+        static async Task<string> GetFeedData(Uri url, CancellationToken cancellationToken)
+        {
+            HttpResponseMessage response = await Policies.HttpPolicy.ExecuteAsync(
+                (ct) => client.GetAsync(url, ct),
+                new Dictionary<string, object> { { "uri", url } },
+                cancellationToken);
+            using (response)
+            {
+                if (!response.IsSuccessStatusCode)
+                {
+                    Log.DetectFeedServerError(url, response);
+                    throw new FindFeedException("The server at {0} returned an error.", url.Host);
+                }
+
+                return await response.Content.ReadAsStringAsync();
+            }
+        }
+
+        static int UrlFeedComparison(Uri x, Uri y)
+        {
+            // Reversed; if x's probability is larger it goes before y.
+            return UrlFeedProbability(y) - UrlFeedProbability(x);
+        }
+
+        static int UrlFeedProbability(Uri url)
+        {
+            if (url.AbsoluteUri.IndexOf("comments", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return -2;
+            }
+            if (url.AbsoluteUri.IndexOf("georss", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return -1;
+            }
+
+            for (int i = 0; i < OrderedFeedKeywords.Length; i++)
+            {
+                string kw = OrderedFeedKeywords[i];
+                if (url.AbsoluteUri.IndexOf(kw, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return OrderedFeedKeywords.Length - i;
+                }
+            }
+
+            return 0;
+        }
+        
+        static async Task FilterUrlsByFeed(List<Uri> linkUrls, CancellationToken cancellationToken)
+        {
+            bool[] results = await Task.WhenAll(linkUrls.Select(u => IsFeed(u, cancellationToken)));
+            for (int i = linkUrls.Count - 1; i >= 0; i--)
+            {
+                if (!results[i]) { linkUrls.RemoveAt(i); }
+            }
+        }
+
+        static async Task<bool> IsFeed(Uri url, CancellationToken cancellationToken)
+        {
+            try
+            {
+                string data = await GetFeedData(url, cancellationToken);
+                return LooksLikeFeed(data);
+            }
+            catch (FindFeedException)
+            {
+                return false;
+            }
+        }
+
+        static bool LooksLikeFeed(string data)
+        {
+            data = data.ToLowerInvariant();
+            if (data.IndexOf("<html") >= 0) { return false; }
+            if (data.IndexOf("<rss") >= 0) { return true; }
+            if (data.IndexOf("<rdf") >= 0) { return true; }
+            if (data.IndexOf("<feed") >= 0) { return true; }
+            return false;
+        }
+
+        static bool IsFeedishUrl(Uri hrefUrl)
+        {
+            for (int i = 0; i < OrderedFeedKeywords.Length; i++)
+            {
+                if (hrefUrl.AbsoluteUri.IndexOf(OrderedFeedKeywords[i], StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        static bool IsFeedUrl(Uri hrefUrl)
+        {
+            for (int i = 0; i < FeedExtensions.Length; i++)
+            {
+                if (hrefUrl.AbsolutePath.EndsWith(FeedExtensions[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 }
