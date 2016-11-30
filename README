@@ -1,6 +1,10 @@
 Todo:
+=======
 
 UI:
+- Account creation flow
+- Account settings view
+- Change email address option
 - Add/remove river sets
 - Rename river
 - Import/export OPML
@@ -9,6 +13,7 @@ UI:
 - More/less UX is jarring.
 
 Back-end Stuff:
+- Cache health check results; currently pinging the QA instance very hard.
 - Cancellation tokens everywhere
 - Single HttpClient (or factory) everywhere
 - Measure things:
@@ -17,12 +22,12 @@ Back-end Stuff:
 - Replace inline log with static log method
 - Login cookie cache scrubber
 - Max request size
+- Limit on HTTP response sizes, strong timeouts
+  - Remember that attackers dictate URLs.
 
 Shipping:
 - Re-pack font awesome fonts
 - Use packed/minified/precompiled source if it exists
-
-Feed Stuff:
 - Implement ATOM cache timeout and RSS skip hours and the like to poll more
   intelligently.
 - Clip titles that are too long. (Because seriously.)
