@@ -2,9 +2,10 @@ Todo:
 
 UI:
 - Error boxes
-- Add/remove rivers
-- Add/remove feeds from rivers
+- Remove rivers
+- Remove feeds from rivers
 - Add/remove river sets
+- Rename river
 - Re-order rivers
 - Import/export OPML
 - Pretty Dates
@@ -21,6 +22,7 @@ Code Stuff:
   - Latencies of various things
 - Replace inline log with static log method
 - Pull images from content soup rather than link soup if present.
+- Login cookie cache scrubber
 
 Shipping:
 - Re-pack font awesome fonts

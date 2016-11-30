@@ -1,13 +1,15 @@
 var React = require('react'); // N.B. Still need this because JSX.
 import { connect } from 'react-redux'
-import { refreshAllFeeds } from '../actions'
+import { addRiver, refreshAllFeeds } from '../actions'
 import {
   APP_BACKGROUND_COLOR,
   APP_TEXT_COLOR,
   BUTTON_STYLE,
+  COLOR_VERY_DARK,
   COLUMNSPACER,
   COLUMNWIDTH,
   PROGRESS_HEIGHT,
+  RIVER_COLUMN_BACKGROUND_COLOR,
   RIVER_TITLE_FONT_SIZE,
   RIVER_TITLE_BACKGROUND_COLOR,
 } from './style'
@@ -54,7 +56,20 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh}) => {
   </div>
 }
 
-export const RiverSetBase = ({user, rivers, loading, load_progress, onRefresh}) => {
+export const AddRiverButton = ({onAddRiver}) => {
+  const add_button_style = {
+    textAlign: 'center',
+    fontSize: 'xx-large',
+    marginTop: 13,
+    cursor: 'pointer',
+  };  
+
+  return <div style={add_button_style} onClick={onAddRiver}>
+      <i className="fa fa-plus-square" />
+  </div>
+}
+
+export const RiverSetBase = ({user, rivers, loading, load_progress, onRefresh, onAddRiver}) => {
   const TOTAL_SPACING = COLUMNSPACER * rivers.length;
   const TOTAL_COLUMNS = COLUMNWIDTH * rivers.length;
   const TOP_BAR_HEIGHT = 43;
@@ -82,6 +97,10 @@ export const RiverSetBase = ({user, rivers, loading, load_progress, onRefresh}) 
     marginTop: TOP_BAR_HEIGHT + COLUMNSPACER,
     bottom: COLUMNSPACER,
   };
+  const add_river_style = Object.assign({}, column_style, {
+    left: rivers.length * (COLUMNWIDTH + COLUMNSPACER),
+    width: COLUMNWIDTH / 6,
+  });
   return (
     <div style={style}>
       <div key='river_set' style={column_set_style}>
@@ -95,6 +114,9 @@ export const RiverSetBase = ({user, rivers, loading, load_progress, onRefresh}) 
           </div>
         })
       }
+      <div style={add_river_style}>
+        <AddRiverButton onAddRiver={() => onAddRiver(user)} />
+      </div>
       </div>
       <div style={top_bar_style}>
         <RiverSetBar
@@ -121,6 +143,7 @@ const vrs_mapStateToProps = (state) => {
 const vrs_mapDispatchToProps = (dispatch) => {
   return {
     onRefresh: function refreshIt (user) { dispatch(refreshAllFeeds(user)); },
+    onAddRiver: function addIt (user) { dispatch(addRiver(user)); },
   };
 };
 const RiverSet = connect(

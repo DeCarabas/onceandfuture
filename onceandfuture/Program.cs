@@ -51,7 +51,7 @@ namespace onceandfuture
         public AuthenticationManager(UserProfileStore profileStore)
         {
             // TODO: Cache scrubber.
-            this.profileStore = profileStore;            
+            this.profileStore = profileStore;
         }
 
         bool ParseCookie(string cookie, out string user, out Guid token)
@@ -368,10 +368,87 @@ namespace onceandfuture
             return Json(new { rivers = rivers });
         }
 
+        [HttpPost("/api/v1/river/{user}")]
+        public async Task<IActionResult> CreateOrRestoreRiver(string user)
+        {
+            CreateOrRestoreRequest requestBody;
+
+            try
+            {
+                var content = new MemoryStream();
+                await Request.Body.CopyToAsync(content);
+                content.Position = 0;
+                using (var reader = new StreamReader(content))
+                {
+                    string data = reader.ReadToEnd();
+                    requestBody = JsonConvert.DeserializeObject<CreateOrRestoreRequest>(data);
+                }
+            }
+            catch (Exception e)
+            {
+                return new JsonResult(new Fault
+                {
+                    Status = "error",
+                    Code = "badrequest",
+                    Details = "Error decoding request: " + e.Message,
+                })
+                { StatusCode = (int)HttpStatusCode.BadRequest };
+            }
+
+            if (requestBody.Id != null)
+            {
+                var existing = await this.aggregateStore.LoadAggregate(requestBody.Id);
+                if (String.CompareOrdinal(existing.Metadata.Owner, user) != 0)
+                {
+                    return new JsonResult(new Fault
+                    {
+                        Status = "error",
+                        Code = "forbidden",
+                        Details = "Not allowed to add somebody else's river.",
+                    })
+                    { StatusCode = (int)HttpStatusCode.Forbidden };
+                }
+            }
+
+            UserProfile profile = await this.profileStore.GetProfileFor(user);
+
+            string name = requestBody.Name ?? Util.RiverName(profile.Rivers.Count);
+            RiverDefinition river = profile.Rivers.FirstOrDefault(
+                rd => String.Equals(rd.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (river == null)
+            {
+                var newRiver = new RiverDefinition(name, requestBody.Id ?? Util.MakeID());
+                var newProfile = profile.With(rivers: profile.Rivers.Add(newRiver));
+
+                await this.profileStore.SaveProfileFor(user, newProfile);
+
+                profile = newProfile;
+            }
+
+            var rivers = (from r in profile.Rivers
+                          select new
+                          {
+                              name = r.Name,
+                              id = r.Id,
+                              url = String.Format("/api/v1/river/{0}/{1}", user, r.Id),
+                          }).ToArray();
+            return Json(new { status = "ok", rivers = rivers });
+        }
+
         [HttpGet("/api/v1/river/{user}/{id}")]
         public async Task<IActionResult> GetRiver(string user, string id)
         {
             River river = await this.aggregateStore.LoadAggregate(id);
+            if (river.Metadata.Owner != null && String.CompareOrdinal(river.Metadata.Owner, user) != 0)
+            {
+                return new JsonResult(new Fault
+                {
+                    Status = "error",
+                    Code = "forbidden",
+                    Details = "Not allowed to add somebody else's river.",
+                })
+                { StatusCode = (int)HttpStatusCode.Forbidden };
+            }
             return Json(river);
         }
 
@@ -399,7 +476,7 @@ namespace onceandfuture
                     Code = "badrequest",
                     Details = "Error decoding request: " + e.Message,
                 })
-                { StatusCode = 400 };
+                { StatusCode = (int)HttpStatusCode.BadRequest };
             }
 
             IList<Uri> feedUrls = await FeedDetector.GetFeedUrls(requestBody.Url, HttpContext.RequestAborted);
@@ -411,19 +488,29 @@ namespace onceandfuture
                     Code = "nofeed",
                     Details = "No feed found @ " + requestBody.Url
                 })
-                { StatusCode = 400 };
+                { StatusCode = (int)HttpStatusCode.BadRequest };
             }
 
             Uri feedUrl = feedUrls[0];
 
             UserProfile profile = await this.profileStore.GetProfileFor(user);
             RiverDefinition river = profile.Rivers.FirstOrDefault(rd => String.CompareOrdinal(rd.Id, id) == 0);
-            RiverDefinition newRiver = river.With(feeds: river.Feeds.Concat(new[] { feedUrl }));
+            if (river == null)
+            {
+                return new JsonResult(new Fault
+                {
+                    Status = "error",
+                    Code = "nofeed",
+                    Details = "No river found @ " + id
+                })
+                { StatusCode = (int)HttpStatusCode.BadRequest };
+            }
+            RiverDefinition newRiver = river.With(feeds: river.Feeds.Add(feedUrl));
             UserProfile newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
             await this.profileStore.SaveProfileFor(user, newProfile);
 
             await feedParser.RefreshAggregateRiverWithFeeds(
-                newRiver.Id, newRiver.Feeds, this.aggregateStore, this.feedStore, HttpContext.RequestAborted);
+                newRiver.Id, new[] { feedUrl }, this.aggregateStore, this.feedStore, HttpContext.RequestAborted);
 
             return Json(new { status = "ok" });
         }
@@ -440,16 +527,46 @@ namespace onceandfuture
             var parser = new RiverFeedParser();
 
             UserProfile profile = await this.profileStore.GetProfileFor(user);
-            await Task.WhenAll(
+            River[] rivers = await Task.WhenAll(
                 profile.Rivers.Select(r => parser.RefreshAggregateRiverWithFeeds(
-                    r.Id, r.Feeds, this.aggregateStore, this.feedStore, CancellationToken.None)));
-            return Ok(); // Progress?
+                    r.Id, r.Feeds, this.aggregateStore, this.feedStore, HttpContext.RequestAborted)));
+
+            // Make sure owner is filled in for these rivers.
+            List<Task> saveTasks = null;
+            for (int i = 0; i < rivers.Length; i++)
+            {
+                if (rivers[i].Metadata.Owner == null)
+                {
+                    if (saveTasks == null) { saveTasks = new List<Task>(); }
+                    var newRiver = rivers[i].With(metadata: rivers[i].Metadata.With(owner: user));
+                    saveTasks.Add(aggregateStore.WriteAggregate(profile.Rivers[i].Id, newRiver));
+                }
+            }
+            if (saveTasks != null)
+            {
+                await Task.WhenAll(saveTasks);
+            }
+
+            return Ok(); // TODO: Progress?
         }
 
         public class AddFeedRequest
         {
+            public AddFeedRequest(string url) { Url = url; }
+
             [JsonProperty("url", Required = Required.Always)]
-            public string Url { get; set; }
+            public string Url { get; }
+        }
+
+        public class CreateOrRestoreRequest
+        {
+            public CreateOrRestoreRequest(string name, string id) { Name = name; Id = id; }
+
+            [JsonProperty("name")]
+            public string Name { get; }
+
+            [JsonProperty("id")]
+            public string Id { get; }
         }
     }
 
@@ -587,19 +704,13 @@ namespace onceandfuture
 
         static async Task<byte[]> LoadFileBytes(string file)
         {
-            byte[] img;
             using (var stream = System.IO.File.OpenRead(file))
             {
-                img = new byte[stream.Length];
-                int cursor = 0;
-                while (cursor < img.Length)
-                {
-                    int read = await stream.ReadAsync(img, cursor, img.Length - cursor);
-                    if (read == 0) { break; }
-                    cursor += read;
-                }
+                byte[] img = new byte[stream.Length];
+                MemoryStream ms = new MemoryStream(img);
+                await stream.CopyToAsync(ms);
+                return img;
             }
-            return img;
         }
 
         [HttpGet("/health")]
@@ -909,6 +1020,7 @@ namespace onceandfuture
                     return 0;
                 }
 
+                // Global configuration.
                 var logLevel = (LogEventLevel)Math.Max((int)(LogEventLevel.Error - parsedArgs["verbose"].Count), 0);
                 Serilog.Log.Logger = new LoggerConfiguration()
                     .Enrich.FromLogContext()

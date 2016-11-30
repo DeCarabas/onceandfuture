@@ -321,7 +321,7 @@ namespace onceandfuture
 
         public static void FindFeedFoundSomeAnchors(Uri baseUri, List<Uri> localGuesses, List<Uri> remoteGuesses)
         {
-            Get().Debug("{base}: Found {localCount} local and {remoteCount} remote anchors.", 
+            Get().Debug("{base}: Found {localCount} local and {remoteCount} remote anchors.",
                 baseUri.AbsoluteUri, localGuesses.Count, remoteGuesses.Count);
         }
 
@@ -398,6 +398,38 @@ namespace onceandfuture
             {"jan", 1}, {"feb", 2}, {"mar", 3}, {"apr", 4}, {"may", 5}, {"jun", 6},
             {"jul", 7}, {"aug", 8}, {"sep", 9}, {"oct", 10}, {"nov", 11}, {"dec", 12},
         };
+
+        static readonly string[] RiverNames = new[] {
+            "Nile", "Kagera", "Amazon", "Ucayali", "Apurímac", "Yangtze", "Mississippi", "Missouri", "Jefferson",
+            "Yenisei", "Angara", "Selenge", "Huang He", "Ob", "Irtysh", "Paraná", "Río de la Plata", "Congo",
+            "Chambeshi", "Amur", "Argun", "Lena", "Mekong", "Mackenzie", "Slave", "Peace", "Finlay", "Niger", "Murray",
+            "Darling", "Tocantins", "Araguaia", "Volga", "Shatt al-Arab", "Euphrates", "Madeira", "Mamoré", "Grande",
+            "Caine", "Rocha", "Purús", "Yukon", "Indus", "São Francisco", "Syr Darya", "Naryn", "Salween",
+            "Saint Lawrence", "Niagara", "Detroit", "Saint Clair", "Saint Marys", "Saint Louis", "Rio Grande",
+            "Lower Tunguska", "Brahmaputra", "Tsangpo", "Danube", "Breg", "Zambezi", "Vilyuy", "Araguaia", "Ganges",
+            "Hooghly", "Padma", "Amu Darya", "Panj", "Japurá", "Nelson", "Saskatchewan", "Paraguay", "Kolyma",
+            "Pilcomayo", "Upper Ob", "Katun", "Ishim", "Juruá", "Ural", "Arkansas", "Colorado", "Olenyok", "Dnieper",
+            "Aldan", "Ubangi", "Uele", "Negro", "Columbia", "Pearl", "Zhu Jiang", "Red", "Ayeyarwady", "Kasai", "Ohio",
+            "Allegheny", "Orinoco", "Tarim", "Xingu", "Orange", "Northern Salado", "Vitim", "Tigris", "Songhua",
+            "Tapajós", "Don", "Stony Tunguska", "Pechora", "Kama", "Limpopo", "Guaporé", "Indigirka", "Snake",
+            "Senegal", "Uruguay", "Murrumbidgee", "Blue Nile", "Churchill", "Khatanga", "Okavango", "Volta", "Beni",
+            "Platte", "Tobol", "Jubba", "Shebelle", "Içá", "Magdalena", "Han", "Oka", "Pecos", "Upper Yenisei",
+            "Little Yenisei", "Godavari", "Guapay", "Belaya", "Cooper", "Barcoo", "Marañón", "Dniester", "Benue",
+            "Ili", "Warburton", "Georgina", "Sutlej", "Yamuna", "Vyatka", "Fraser", "Mtkvari", "Grande", "Brazos",
+            "Cauca", "Liao", "Yalong", "Iguaçu", "Olyokma", "Northern Dvina", "Sukhona", "Krishna", "Iriri", "Narmada",
+            "Lomami", "Ottawa", "Lerma", "Rio Grande de Santiago", "Elbe", "Vltava", "Zeya", "Juruena",
+            "Upper Mississippi", "Rhine", "Athabasca", "Canadian", "North Saskatchewan", "Vaal", "Shire", "Nen",
+            "Kızıl", "Green", "Milk", "Chindwin", "Sankuru", "Wu", "James", "Kapuas", "Desna", "Helmand",
+            "Madre de Dios", "Tietê", "Vychegda", "Sepik", "Cimarron", "Anadyr", "Paraíba do Sul", "Jialing River",
+            "Liard", "Cumberland", "White", "Huallaga", "Kwango", "Draa", "Gambia", "Chenab", "Yellowstone",
+            "Ghaghara", "Huai", "Aras", "Seversky Donets", "Bermejo", "Fly", "Guaviare", "Kuskokwim", "Tennessee",
+            "Vistula", "Aruwimi", "Daugava", "Gila", "Loire", "Essequibo", "Khoper", "Tagus",
+        };
+
+        public static string RiverName(int number)
+        {
+            return RiverNames[number % RiverNames.Length];
+        }
 
         public static IEnumerable<TItem> ConcatSequence<TItem>(params IEnumerable<TItem>[] sequences)
         {
@@ -897,11 +929,11 @@ namespace onceandfuture
         }
 
         public RiverFeed With(
-            string feedTitle = null, 
-            Uri feedUrl = null, 
-            string websiteUrl = null, 
-            string feedDescription = null, 
-            DateTimeOffset? whenLastUpdate = null, 
+            string feedTitle = null,
+            Uri feedUrl = null,
+            string websiteUrl = null,
+            string feedDescription = null,
+            DateTimeOffset? whenLastUpdate = null,
             IEnumerable<RiverItem> items = null)
         {
             return new RiverFeed(
@@ -1066,7 +1098,8 @@ namespace onceandfuture
             string docs = null,
             string etag = null,
             DateTimeOffset? lastModified = null,
-            HttpStatusCode? lastStatus = null)
+            HttpStatusCode? lastStatus = null,
+            string owner = null)
         {
             Name = name;
             OriginUrl = originUrl;
@@ -1074,23 +1107,26 @@ namespace onceandfuture
             Etag = etag;
             LastModified = lastModified;
             LastStatus = lastStatus ?? HttpStatusCode.OK;
+            Owner = owner;
         }
 
         public RiverFeedMeta With(
-            string name = null, 
+            string name = null,
             Uri originUrl = null,
-            string docs = null, 
-            string etag = null, 
-            DateTimeOffset? lastModified = null, 
-            HttpStatusCode? lastStatus = null)
+            string docs = null,
+            string etag = null,
+            DateTimeOffset? lastModified = null,
+            HttpStatusCode? lastStatus = null,
+            string owner = null)
         {
             return new RiverFeedMeta(
-                name ?? Name, 
-                originUrl ?? OriginUrl, 
-                docs ?? Docs, 
-                etag ?? Etag, 
-                lastModified ?? LastModified, 
-                lastStatus ?? LastStatus);
+                name ?? Name,
+                originUrl ?? OriginUrl,
+                docs ?? Docs,
+                etag ?? Etag,
+                lastModified ?? LastModified,
+                lastStatus ?? LastStatus,
+                owner ?? Owner);
         }
 
         [JsonProperty(PropertyName = "name")]
@@ -1110,6 +1146,9 @@ namespace onceandfuture
 
         [JsonProperty(PropertyName = "lastStatus")]
         public HttpStatusCode LastStatus { get; }
+
+        [JsonProperty(PropertyName = "owner")]
+        public string Owner { get; }
     }
 
     public class UpdatedFeeds
@@ -1150,6 +1189,12 @@ namespace onceandfuture
 
     public abstract class DocumentStore<TDocumentID, TDocument>
     {
+        readonly static JsonSerializerSettings SerializerSettings = new JsonSerializerSettings
+        {
+            DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate,
+            Formatting = Newtonsoft.Json.Formatting.None,
+        };
+
         readonly BlobStore blobStore;
 
         protected DocumentStore(BlobStore blobStore)
@@ -1170,14 +1215,14 @@ namespace onceandfuture
             using (var reader = new StreamReader(memoryStream, Encoding.UTF8))
             {
                 string text = reader.ReadToEnd();
-                return JsonConvert.DeserializeObject<TDocument>(text);
+                return JsonConvert.DeserializeObject<TDocument>(text, SerializerSettings);
             }
         }
 
         protected async Task WriteDocument(TDocumentID docid, TDocument document)
         {
             string id = GetObjectID(docid);
-            byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(document));
+            byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(document, SerializerSettings));
             using (var memoryStream = new MemoryStream(data))
             {
                 await this.blobStore.PutObject(id, "application/json", memoryStream);
@@ -1199,8 +1244,8 @@ namespace onceandfuture
     {
         public AggregateRiverStore() : base(new BlobStore("onceandfuture")) { }
 
-        protected override River GetDefaultValue(string id) => 
-            new River(metadata: new RiverFeedMeta(originUrl: new Uri("aggregate:/"+id)));
+        protected override River GetDefaultValue(string id) =>
+            new River(metadata: new RiverFeedMeta(originUrl: new Uri("aggregate:/" + id)));
         protected override string GetObjectID(string id) => id;
         public Task<River> LoadAggregate(string id) => GetDocument(id);
         public Task WriteAggregate(string id, River river) => WriteDocument(id, river);
@@ -2004,11 +2049,11 @@ namespace onceandfuture
             Log.Get().Information("{id}: Pulled {riverCount} rivers", id, rivers.Length);
 
             List<RiverFeed> newFeeds = new List<RiverFeed>();
-            for(int riverIndex = 0; riverIndex < rivers.Length; riverIndex++)
+            for (int riverIndex = 0; riverIndex < rivers.Length; riverIndex++)
             {
                 River feedRiver = rivers[riverIndex];
                 Log.Get().Debug(
-                    "{id}: {feedUrl}: Has {count} feeds", 
+                    "{id}: {feedUrl}: Has {count} feeds",
                     id, feedRiver.Metadata.OriginUrl, feedRiver.UpdatedFeeds.Feeds.Count);
 
                 RiverFeed[] newUpdates;
@@ -2027,7 +2072,7 @@ namespace onceandfuture
 
                     newFeeds.Add(newUpdates[0].With(whenLastUpdate: biggestUpdate, items: newItems));
                 }
-            }            
+            }
 
             Log.Get().Information("{id}: Resulted in {riverCount} new feeds", id, newFeeds.Count);
             var newRiver = river.With(
@@ -2511,7 +2556,7 @@ namespace onceandfuture
         }
 
         public static async Task<IList<Uri>> GetFeedUrls(
-            string originUrl,             
+            string originUrl,
             CancellationToken cancellationToken = default(CancellationToken),
             bool findAll = false)
         {
@@ -2682,7 +2727,7 @@ namespace onceandfuture
 
             return 0;
         }
-        
+
         static async Task FilterUrlsByFeed(List<Uri> linkUrls, CancellationToken cancellationToken)
         {
             bool[] results = await Task.WhenAll(linkUrls.Select(u => IsFeed(u, cancellationToken)));

@@ -9,10 +9,13 @@ import {
 } from './style'
 
 const RiverSettingsButton = ({river, onShowSettings, onHideSettings}) => {
+  const style = Object.assign({}, BUTTON_STYLE, {
+    paddingTop: 6,
+  });
   const is_settings = (river.modal || {}).kind === 'settings';
   const icon = is_settings ? 'fa-chevron-up' : 'fa-gear';
   const onClick = is_settings ? onHideSettings : onShowSettings;
-  return <i className={'fa ' + icon} style={BUTTON_STYLE} onClick={onClick} />
+  return <i className={'fa ' + icon} style={style} onClick={onClick} />
 }
 
 const RiverTitle = ({river, onShowSettings, onHideSettings}) => {

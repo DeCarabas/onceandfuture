@@ -80,10 +80,10 @@ export function riverListUpdateStart() {
 }
 
 export const RIVER_LIST_UPDATE_SUCCESS = 'RIVER_LIST_UPDATE_SUCCESS';
-export function riverListUpdateSuccess(response) {
+export function riverListUpdateSuccess(rivers) {
   return {
     type: RIVER_LIST_UPDATE_SUCCESS,
-    response: response,
+    rivers: rivers,
   };
 }
 
@@ -230,6 +230,19 @@ export function addFeedToRiver(index, river) {
   });
 }
 
+export function addRiver(user) {
+  return xhrAction({
+    verb: 'POST', url: "/api/v1/river/" + user,
+    msg: { name: null },
+    loaded_json: (dispatch, result) => {
+      dispatch(riverListUpdateSuccess(result.rivers));
+    },
+    error: (dispatch, xhr) => {
+      // TODOTODO: Ya
+    },
+  });
+}
+
 export function refreshRiver(index, river_name, river_url, river_id) {
   return xhrAction({
     url: river_url,
@@ -246,7 +259,7 @@ export function refreshRiverList(user) {
     url: "/api/v1/river/" + user,
     start: (dispatch) => dispatch(riverListUpdateStart()),
     loaded_json: (dispatch, result) => {
-      dispatch(riverListUpdateSuccess(result));
+      dispatch(riverListUpdateSuccess(result.rivers));
       result.rivers.forEach((river, index) => {
         dispatch(refreshRiver(index, river.name, river.url));
       });

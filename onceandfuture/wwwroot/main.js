@@ -150,7 +150,7 @@ function state_river(state = def_river, action) {
 function state_rivers(state = [], action) {
   switch(action.type) {
     case RIVER_LIST_UPDATE_SUCCESS:
-      return action.response.rivers.map(nr => {
+      return action.rivers.map(nr => {
         let old_river = state.find(or => or.name === nr.name) || def_river;
         return Object.assign({}, old_river, {
           name: nr.name,

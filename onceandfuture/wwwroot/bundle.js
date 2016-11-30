@@ -207,7 +207,7 @@
 	
 	  switch (action.type) {
 	    case _actions.RIVER_LIST_UPDATE_SUCCESS:
-	      return action.response.rivers.map(function (nr) {
+	      return action.rivers.map(function (nr) {
 	        var old_river = state.find(function (or) {
 	          return or.name === nr.name;
 	        }) || def_river;
@@ -23424,6 +23424,7 @@
 	exports.refreshAllFeedsError = refreshAllFeedsError;
 	exports.riverSetFeedMode = riverSetFeedMode;
 	exports.addFeedToRiver = addFeedToRiver;
+	exports.addRiver = addRiver;
 	exports.refreshRiver = refreshRiver;
 	exports.refreshRiverList = refreshRiverList;
 	exports.refreshAllFeeds = refreshAllFeeds;
@@ -23511,10 +23512,10 @@
 	}
 	
 	var RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_SUCCESS = 'RIVER_LIST_UPDATE_SUCCESS';
-	function riverListUpdateSuccess(response) {
+	function riverListUpdateSuccess(rivers) {
 	  return {
 	    type: RIVER_LIST_UPDATE_SUCCESS,
-	    response: response
+	    rivers: rivers
 	  };
 	}
 	
@@ -23671,6 +23672,19 @@
 	  });
 	}
 	
+	function addRiver(user) {
+	  return xhrAction({
+	    verb: 'POST', url: "/api/v1/river/" + user,
+	    msg: { name: null },
+	    loaded_json: function loaded_json(dispatch, result) {
+	      dispatch(riverListUpdateSuccess(result.rivers));
+	    },
+	    error: function error(dispatch, xhr) {
+	      // TODOTODO: Ya
+	    }
+	  });
+	}
+	
 	function refreshRiver(index, river_name, river_url, river_id) {
 	  return xhrAction({
 	    url: river_url,
@@ -23693,7 +23707,7 @@
 	      return dispatch(riverListUpdateStart());
 	    },
 	    loaded_json: function loaded_json(dispatch, result) {
-	      dispatch(riverListUpdateSuccess(result));
+	      dispatch(riverListUpdateSuccess(result.rivers));
 	      result.rivers.forEach(function (river, index) {
 	        dispatch(refreshRiver(index, river.name, river.url));
 	      });
@@ -23808,7 +23822,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.RiverSetBase = undefined;
+	exports.RiverSetBase = exports.AddRiverButton = undefined;
 	
 	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
 	
@@ -23884,12 +23898,30 @@
 	  );
 	};
 	
-	var RiverSetBase = exports.RiverSetBase = function RiverSetBase(_ref2) {
-	  var user = _ref2.user,
-	      rivers = _ref2.rivers,
-	      loading = _ref2.loading,
-	      load_progress = _ref2.load_progress,
-	      _onRefresh = _ref2.onRefresh;
+	var AddRiverButton = exports.AddRiverButton = function AddRiverButton(_ref2) {
+	  var onAddRiver = _ref2.onAddRiver;
+	
+	  var add_button_style = {
+	    textAlign: 'center',
+	    fontSize: 'xx-large',
+	    marginTop: 13,
+	    cursor: 'pointer'
+	  };
+	
+	  return React.createElement(
+	    'div',
+	    { style: add_button_style, onClick: onAddRiver },
+	    React.createElement('i', { className: 'fa fa-plus-square' })
+	  );
+	};
+	
+	var RiverSetBase = exports.RiverSetBase = function RiverSetBase(_ref3) {
+	  var user = _ref3.user,
+	      rivers = _ref3.rivers,
+	      loading = _ref3.loading,
+	      load_progress = _ref3.load_progress,
+	      _onRefresh = _ref3.onRefresh,
+	      _onAddRiver = _ref3.onAddRiver;
 	
 	  var TOTAL_SPACING = _style.COLUMNSPACER * rivers.length;
 	  var TOTAL_COLUMNS = _style.COLUMNWIDTH * rivers.length;
@@ -23918,6 +23950,10 @@
 	    marginTop: TOP_BAR_HEIGHT + _style.COLUMNSPACER,
 	    bottom: _style.COLUMNSPACER
 	  };
+	  var add_river_style = Object.assign({}, column_style, {
+	    left: rivers.length * (_style.COLUMNWIDTH + _style.COLUMNSPACER),
+	    width: _style.COLUMNWIDTH / 6
+	  });
 	  return React.createElement(
 	    'div',
 	    { style: style },
@@ -23933,7 +23969,14 @@
 	          { style: c_style, key: r.name },
 	          React.createElement(_rivercolumn2.default, { index: index })
 	        );
-	      })
+	      }),
+	      React.createElement(
+	        'div',
+	        { style: add_river_style },
+	        React.createElement(AddRiverButton, { onAddRiver: function onAddRiver() {
+	            return _onAddRiver(user);
+	          } })
+	      )
 	    ),
 	    React.createElement(
 	      'div',
@@ -23964,6 +24007,9 @@
 	  return {
 	    onRefresh: function refreshIt(user) {
 	      dispatch((0, _actions.refreshAllFeeds)(user));
+	    },
+	    onAddRiver: function addIt(user) {
+	      dispatch((0, _actions.addRiver)(user));
 	    }
 	  };
 	};
@@ -24437,10 +24483,13 @@
 	      onShowSettings = _ref.onShowSettings,
 	      onHideSettings = _ref.onHideSettings;
 	
+	  var style = Object.assign({}, _style.BUTTON_STYLE, {
+	    paddingTop: 6
+	  });
 	  var is_settings = (river.modal || {}).kind === 'settings';
 	  var icon = is_settings ? 'fa-chevron-up' : 'fa-gear';
 	  var onClick = is_settings ? onHideSettings : onShowSettings;
-	  return React.createElement('i', { className: 'fa ' + icon, style: _style.BUTTON_STYLE, onClick: onClick });
+	  return React.createElement('i', { className: 'fa ' + icon, style: style, onClick: onClick });
 	};
 	
 	var RiverTitle = function RiverTitle(_ref2) {
