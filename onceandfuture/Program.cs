@@ -441,18 +441,6 @@ namespace onceandfuture
         [HttpDelete("/api/v1/river/{user}/{id}")]
         public async Task<IActionResult> DeleteRiver(string user, string id)
         {
-            River river = await this.aggregateStore.LoadAggregate(id);
-            if (river.Metadata.Owner != null && String.CompareOrdinal(river.Metadata.Owner, user) != 0)
-            {
-                return new JsonResult(new Fault
-                {
-                    Status = "error",
-                    Code = "forbidden",
-                    Details = "Not allowed to delete somebody else's river.",
-                })
-                { StatusCode = (int)HttpStatusCode.Forbidden };
-            }
-
             UserProfile profile = await this.profileStore.GetProfileFor(user);
             UserProfile newProfile = profile.With(
                 rivers: profile.Rivers.RemoveAll(rd => String.CompareOrdinal(rd.Id, id) == 0));
@@ -483,6 +471,30 @@ namespace onceandfuture
                 { StatusCode = (int)HttpStatusCode.Forbidden };
             }
             return Json(river);
+        }
+
+        [HttpGet("/api/v1/river/{user}/{id}/sources")]
+        public async Task<IActionResult> GetRiverSources(string user, string id)
+        {
+            UserProfile profile = await this.profileStore.GetProfileFor(user);
+            RiverDefinition river = profile.Rivers.FirstOrDefault(rd => String.CompareOrdinal(rd.Id, id) == 0);
+
+            IList<Uri> feedUris = river.Feeds ?? (IList<Uri>)(Array.Empty<Uri>());
+            River[] feedrivers = await Task.WhenAll(feedUris.Select(f => this.feedStore.LoadRiverForFeed(f)));
+
+            return Json(new
+            {
+                sources = feedrivers.Select(r => new
+                {
+                    name = r.UpdatedFeeds.Feeds.FirstOrDefault()?.FeedTitle ?? r.Metadata.OriginUrl.AbsoluteUri,
+                    webUrl = r.UpdatedFeeds.Feeds.FirstOrDefault()?.WebsiteUrl ?? r.Metadata.OriginUrl.AbsoluteUri,
+                    feedUrl = r.Metadata.OriginUrl,
+                    lastStatus = r.Metadata.LastStatus,
+                    lastUpdated = r.UpdatedFeeds.Feeds.Count > 0
+                        ? r.UpdatedFeeds.Feeds.Max(f => f.WhenLastUpdate)
+                        : DateTimeOffset.MinValue,
+                }).ToArray()
+            });
         }
 
         [HttpPost("/api/v1/river/{user}/{id}")]
@@ -1253,11 +1265,19 @@ namespace onceandfuture
             UserProfile profile = new UserProfileStore().GetProfileFor(user).Result;
             foreach (var river in profile.Rivers)
             {
-                Console.WriteLine("{0}:", river.Name);
-                foreach (var feed in river.Feeds)
+                Console.WriteLine("{0} ({1}):", river.Name, river.Id);
+                if (river.Feeds.Count > 0)
                 {
-                    Console.WriteLine("  {0}", feed);
+                    foreach (var feed in river.Feeds)
+                    {
+                        Console.WriteLine("  {0}", feed);
+                    }
                 }
+                else
+                {
+                    Console.WriteLine("  No feeds.");
+                }
+                Console.WriteLine();
             }
             return 0;
         }

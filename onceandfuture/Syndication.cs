@@ -1236,7 +1236,17 @@ namespace onceandfuture
 
         protected override River GetDefaultValue(Uri id) => new River(metadata: new RiverFeedMeta(originUrl: id));
         protected override string GetObjectID(Uri id) => Util.HashString(id.AbsoluteUri);
-        public Task<River> LoadRiverForFeed(Uri feedUri) => GetDocument(feedUri);
+        public async Task<River> LoadRiverForFeed(Uri feedUri)
+        {
+            River river = null;
+            for (int i = 0; i < 30; i++)
+            {
+                river = await GetDocument(feedUri);
+                if (river.Metadata.LastStatus != HttpStatusCode.Moved) { break; }
+                feedUri = river.Metadata.OriginUrl;
+            }
+            return river;
+        }
         public Task WriteRiver(Uri uri, River river) => WriteDocument(uri, river);
     }
 
