@@ -28,6 +28,8 @@ import {
   REFRESH_ALL_FEEDS_SUCCESS,
   REFRESH_ALL_FEEDS_ERROR,
   REFRESH_ALL_FEEDS_PROGRESS,
+  ADD_RIVER_SUCCESS,
+  REMOVE_RIVER_SUCCESS,
   refreshRiverList
 } from './actions';
 
@@ -149,6 +151,8 @@ function state_river(state = def_river, action) {
 
 function state_rivers(state = [], action) {
   switch(action.type) {
+    case ADD_RIVER_SUCCESS:
+    case REMOVE_RIVER_SUCCESS:
     case RIVER_LIST_UPDATE_SUCCESS:
       return action.rivers.map(nr => {
         let old_river = state.find(or => or.name === nr.name) || def_river;

@@ -15,6 +15,7 @@ import {
   addFeedToRiver,
   riverAddFeedUrlChanged,
   riverSetFeedMode,
+  removeRiver,
 } from '../actions'
 
 const SettingsSectionTitle = ({text}) => {
@@ -107,12 +108,20 @@ const FeedDisplayModeBox = ({mode, setFeedMode}) => {
   );
 }
 
+const DeleteRiverBox = ({deleteRiver}) => {
+  return <div>
+    <SettingsSectionTitle text="Remove This River" />
+    <SettingsButton onClick={deleteRiver} text="Remove" />
+  </div>;
+}
+
 const RiverSettingsBase = ({
   index,
   river,
   feedUrlChanged,
   addFeedToRiver,
-  riverSetFeedMode
+  riverSetFeedMode,
+  deleteRiver
 }) => {
   const style = {
     backgroundColor: COLOR_VERY_LIGHT,
@@ -127,10 +136,12 @@ const RiverSettingsBase = ({
   const addFeed = () => addFeedToRiver(index, river);
   const urlChanged = (text) => feedUrlChanged(index, text);
   const setFeedMode = (mode) => riverSetFeedMode(index, river, mode);
+  const delRiver = () => deleteRiver(river);
 
   return <div style={style}>
     <AddFeedBox feedUrlChanged={urlChanged} addFeedToRiver={addFeed} />
     <FeedDisplayModeBox mode={river.mode} setFeedMode={setFeedMode} />
+    <DeleteRiverBox deleteRiver={delRiver} />
   </div>;
 }
 
@@ -140,12 +151,10 @@ const mapStateToProps = (state) => {
 };
 const mapDispatchToProps = (dispatch) => {
   return {
-    'feedUrlChanged': (index, new_value) =>
-      dispatch(riverAddFeedUrlChanged(index, new_value)),
-    'addFeedToRiver': (index, river) =>
-      dispatch(addFeedToRiver(index, river)),
-    'riverSetFeedMode': (index, river, mode) =>
-      dispatch(riverSetFeedMode(index, river, mode)),
+    'feedUrlChanged': (index, new_value) => dispatch(riverAddFeedUrlChanged(index, new_value)),
+    'addFeedToRiver': (index, river) => dispatch(addFeedToRiver(index, river)),
+    'riverSetFeedMode': (index, river, mode) => dispatch(riverSetFeedMode(index, river, mode)),
+    'deleteRiver': (river) => dispatch(removeRiver(river)),
   };
 };
 

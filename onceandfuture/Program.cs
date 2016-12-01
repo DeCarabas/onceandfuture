@@ -435,6 +435,36 @@ namespace onceandfuture
             return Json(new { status = "ok", rivers = rivers });
         }
 
+        [HttpDelete("/api/v1/river/{user}/{id}")]
+        public async Task<IActionResult> DeleteRiver(string user, string id)
+        {
+            River river = await this.aggregateStore.LoadAggregate(id);
+            if (river.Metadata.Owner != null && String.CompareOrdinal(river.Metadata.Owner, user) != 0)
+            {
+                return new JsonResult(new Fault
+                {
+                    Status = "error",
+                    Code = "forbidden",
+                    Details = "Not allowed to delete somebody else's river.",
+                })
+                { StatusCode = (int)HttpStatusCode.Forbidden };
+            }
+
+            UserProfile profile = await this.profileStore.GetProfileFor(user);
+            UserProfile newProfile = profile.With(
+                rivers: profile.Rivers.RemoveAll(rd => String.CompareOrdinal(rd.Id, id) == 0));
+            // await this.profileStore.SaveProfileFor(user, newProfile);
+
+            var rivers = (from r in newProfile.Rivers
+                          select new
+                          {
+                              name = r.Name,
+                              id = r.Id,
+                              url = String.Format("/api/v1/river/{0}/{1}", user, r.Id),
+                          }).ToArray();
+            return Json(new { status = "ok", rivers = rivers });
+        }
+
         [HttpGet("/api/v1/river/{user}/{id}")]
         public async Task<IActionResult> GetRiver(string user, string id)
         {
@@ -445,7 +475,7 @@ namespace onceandfuture
                 {
                     Status = "error",
                     Code = "forbidden",
-                    Details = "Not allowed to add somebody else's river.",
+                    Details = "Not allowed to get somebody else's river.",
                 })
                 { StatusCode = (int)HttpStatusCode.Forbidden };
             }

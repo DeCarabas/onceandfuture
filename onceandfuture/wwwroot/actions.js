@@ -154,6 +154,38 @@ export function refreshAllFeedsError(error) {
   };
 }
 
+export const ADD_RIVER_SUCCESS = 'ADD_RIVER_SUCCESS';
+export function addRiverSuccess(rivers) {
+  return {
+    type: ADD_RIVER_SUCCESS,
+    rivers: rivers,
+  };
+}
+
+export const ADD_RIVER_ERROR = 'ADD_RIVER_ERROR';
+export function addRiverError(error) {
+  return {
+    type: ADD_RIVER_ERROR,
+    error: error,
+  };
+}
+
+export const REMOVE_RIVER_SUCCESS = 'REMOVE_RIVER_SUCCESS';
+export function removeRiverSuccess(rivers) {
+  return {
+    type: REMOVE_RIVER_SUCCESS,
+    rivers: rivers,
+  };
+}
+
+export const REMOVE_RIVER_ERROR = 'REMOVE_RIVER_ERROR';
+export function removeRiverError(error) {
+  return {
+    type: REMOVE_RIVER_ERROR,
+    error: error,
+  };
+}
+
 function xhrAction(options) {
   return function doXHR(dispatch, getState) {
     if (options.precondition) {
@@ -235,10 +267,22 @@ export function addRiver(user) {
     verb: 'POST', url: "/api/v1/river/" + user,
     msg: { name: null },
     loaded_json: (dispatch, result) => {
-      dispatch(riverListUpdateSuccess(result.rivers));
+      dispatch(addRiverSuccess(result.rivers));
     },
     error: (dispatch, xhr) => {
-      // TODOTODO: Ya
+      dispatch(addRiverError(index, xhr.statusText));
+    },
+  });
+}
+
+export function removeRiver(river_url) {
+  return xhrAction({
+    verb: 'DELETE', url: river_url,
+    loaded_json: (dispatch, result) => {
+      dispatch(removeRiverSuccess(result.rivers));
+    },
+    error: (dispatch, xhr) => {
+      dispatch(removeRiverError(xhr.statusText));
     },
   });
 }

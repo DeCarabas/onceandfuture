@@ -206,6 +206,8 @@
 	  var action = arguments[1];
 	
 	  switch (action.type) {
+	    case _actions.ADD_RIVER_SUCCESS:
+	    case _actions.REMOVE_RIVER_SUCCESS:
 	    case _actions.RIVER_LIST_UPDATE_SUCCESS:
 	      return action.rivers.map(function (nr) {
 	        var old_river = state.find(function (or) {
@@ -23403,7 +23405,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.RIVER_SET_FEED_MODE = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_URL_CHANGED = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
+	exports.RIVER_SET_FEED_MODE = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_URL_CHANGED = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
 	exports.expandFeedUpdate = expandFeedUpdate;
 	exports.collapseFeedUpdate = collapseFeedUpdate;
 	exports.showRiverSettings = showRiverSettings;
@@ -23422,9 +23424,14 @@
 	exports.refreshAllFeedsProgress = refreshAllFeedsProgress;
 	exports.refreshAllFeedsSuccess = refreshAllFeedsSuccess;
 	exports.refreshAllFeedsError = refreshAllFeedsError;
+	exports.addRiverSuccess = addRiverSuccess;
+	exports.addRiverError = addRiverError;
+	exports.removeRiverSuccess = removeRiverSuccess;
+	exports.removeRiverError = removeRiverError;
 	exports.riverSetFeedMode = riverSetFeedMode;
 	exports.addFeedToRiver = addFeedToRiver;
 	exports.addRiver = addRiver;
+	exports.removeRiver = removeRiver;
 	exports.refreshRiver = refreshRiver;
 	exports.refreshRiverList = refreshRiverList;
 	exports.refreshAllFeeds = refreshAllFeeds;
@@ -23586,6 +23593,38 @@
 	  };
 	}
 	
+	var ADD_RIVER_SUCCESS = exports.ADD_RIVER_SUCCESS = 'ADD_RIVER_SUCCESS';
+	function addRiverSuccess(rivers) {
+	  return {
+	    type: ADD_RIVER_SUCCESS,
+	    rivers: rivers
+	  };
+	}
+	
+	var ADD_RIVER_ERROR = exports.ADD_RIVER_ERROR = 'ADD_RIVER_ERROR';
+	function addRiverError(error) {
+	  return {
+	    type: ADD_RIVER_ERROR,
+	    error: error
+	  };
+	}
+	
+	var REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_SUCCESS = 'REMOVE_RIVER_SUCCESS';
+	function removeRiverSuccess(rivers) {
+	  return {
+	    type: REMOVE_RIVER_SUCCESS,
+	    rivers: rivers
+	  };
+	}
+	
+	var REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_ERROR = 'REMOVE_RIVER_ERROR';
+	function removeRiverError(error) {
+	  return {
+	    type: REMOVE_RIVER_ERROR,
+	    error: error
+	  };
+	}
+	
 	function xhrAction(options) {
 	  return function doXHR(dispatch, getState) {
 	    if (options.precondition) {
@@ -23677,10 +23716,22 @@
 	    verb: 'POST', url: "/api/v1/river/" + user,
 	    msg: { name: null },
 	    loaded_json: function loaded_json(dispatch, result) {
-	      dispatch(riverListUpdateSuccess(result.rivers));
+	      dispatch(addRiverSuccess(result.rivers));
 	    },
 	    error: function error(dispatch, xhr) {
-	      // TODOTODO: Ya
+	      dispatch(addRiverError(index, xhr.statusText));
+	    }
+	  });
+	}
+	
+	function removeRiver(river_url) {
+	  return xhrAction({
+	    verb: 'DELETE', url: river_url,
+	    loaded_json: function loaded_json(dispatch, result) {
+	      dispatch(removeRiverSuccess(result.rivers));
+	    },
+	    error: function error(dispatch, xhr) {
+	      dispatch(removeRiverError(xhr.statusText));
 	    }
 	  });
 	}
@@ -24341,12 +24392,24 @@
 	  );
 	};
 	
-	var RiverSettingsBase = function RiverSettingsBase(_ref7) {
-	  var index = _ref7.index,
-	      river = _ref7.river,
-	      feedUrlChanged = _ref7.feedUrlChanged,
-	      addFeedToRiver = _ref7.addFeedToRiver,
-	      riverSetFeedMode = _ref7.riverSetFeedMode;
+	var DeleteRiverBox = function DeleteRiverBox(_ref7) {
+	  var deleteRiver = _ref7.deleteRiver;
+	
+	  return React.createElement(
+	    'div',
+	    null,
+	    React.createElement(SettingsSectionTitle, { text: 'Remove This River' }),
+	    React.createElement(SettingsButton, { onClick: deleteRiver, text: 'Remove' })
+	  );
+	};
+	
+	var RiverSettingsBase = function RiverSettingsBase(_ref8) {
+	  var index = _ref8.index,
+	      river = _ref8.river,
+	      feedUrlChanged = _ref8.feedUrlChanged,
+	      addFeedToRiver = _ref8.addFeedToRiver,
+	      riverSetFeedMode = _ref8.riverSetFeedMode,
+	      deleteRiver = _ref8.deleteRiver;
 	
 	  var style = {
 	    backgroundColor: _style.COLOR_VERY_LIGHT,
@@ -24367,12 +24430,16 @@
 	  var setFeedMode = function setFeedMode(mode) {
 	    return riverSetFeedMode(index, river, mode);
 	  };
+	  var delRiver = function delRiver() {
+	    return deleteRiver(river);
+	  };
 	
 	  return React.createElement(
 	    'div',
 	    { style: style },
 	    React.createElement(AddFeedBox, { feedUrlChanged: urlChanged, addFeedToRiver: addFeed }),
-	    React.createElement(FeedDisplayModeBox, { mode: river.mode, setFeedMode: setFeedMode })
+	    React.createElement(FeedDisplayModeBox, { mode: river.mode, setFeedMode: setFeedMode }),
+	    React.createElement(DeleteRiverBox, { deleteRiver: delRiver })
 	  );
 	};
 	
@@ -24389,6 +24456,9 @@
 	    },
 	    'riverSetFeedMode': function riverSetFeedMode(index, river, mode) {
 	      return dispatch((0, _actions.riverSetFeedMode)(index, river, mode));
+	    },
+	    'deleteRiver': function deleteRiver(river) {
+	      return dispatch((0, _actions.removeRiver)(river));
 	    }
 	  };
 	};
