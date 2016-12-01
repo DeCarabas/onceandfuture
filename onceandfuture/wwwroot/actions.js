@@ -56,9 +56,10 @@ export function riverAddFeedSuccess(index) {
 }
 
 export const RIVER_ADD_FEED_FAILED = 'RIVER_ADD_FEED_FAILED';
-export function riverAddFeedFailed(index) {
+export function riverAddFeedFailed(index, message) {
   return {
     type: RIVER_ADD_FEED_FAILED,
+    error: message,
     river_index: index,
   }
 }
@@ -154,6 +155,13 @@ export function refreshAllFeedsError(error) {
   };
 }
 
+export const ADD_RIVER_START = 'ADD_RIVER_START';
+export function addRiverStart() {
+  return {
+    type: ADD_RIVER_START,
+  };
+}
+
 export const ADD_RIVER_SUCCESS = 'ADD_RIVER_SUCCESS';
 export function addRiverSuccess(rivers) {
   return {
@@ -202,6 +210,25 @@ export function dismissBalloon() {
   };
 }
 
+export const DISMISS_RIVER_BALLOON = 'DISMISS_RIVER_BALLOON';
+export function dismissRiverBalloon(index) {
+  return {
+    type: DISMISS_RIVER_BALLOON,
+    river_index: index,
+  };
+}
+
+function decodeError(xhr) {
+  let  errorMessage = xhr.statusText;
+  try
+  {
+    const fault = JSON.parse(xhr.responseText);
+    errorMessage = fault.description || errorMessage;
+  }
+  catch(_) { }
+  return errorMessage;
+}
+
 function xhrAction(options) {
   return function doXHR(dispatch, getState) {
     if (options.precondition) {
@@ -218,13 +245,18 @@ function xhrAction(options) {
     if (options.progress) {
       xhr.addEventListener("progress", () => options.progress(dispatch, xhr));
     }
+    if (options.error) {      
+      xhr.addEventListener("error", () => options.error(dispatch, decodeError(xhr)));
+    }
     if (options.loaded_json || options.loaded) {
       xhr.addEventListener("load", () => {
         if (xhr.status == 403 /* Forbidden */) {
-          console.log("Got forbidden, redirecting to login...");
+          errorMessage = decodeError(xhr);
+          console.log("Got forbidden: ", errorMessage);
+          console.log("Redirecting to login...");
           window.location.href = "/login";
         } else if (options.error && xhr.status > 399) {
-          options.error(dispatch, xhr);
+          options.error(dispatch, decodeError(xhr));
         } else if (options.loaded_json) {
           let result = JSON.parse(xhr.responseText);
           options.loaded_json(dispatch, result, xhr);
@@ -232,9 +264,6 @@ function xhrAction(options) {
           options.loaded(dispatch, xhr);          
         }
       });
-    }
-    if (options.error) {
-      xhr.addEventListener("error", () => options.error(dispatch, xhr));
     }
     if (options.abort) {
       xhr.addEventListener("abort", () => options.aborted(dispatch, xhr));
@@ -272,8 +301,8 @@ export function addFeedToRiver(index, river) {
       dispatch(riverAddFeedSuccess(index));
       dispatch(refreshRiver(index, river.name, river.url, river.id));
     },
-    error: (dispatch, xhr) => {
-      dispatch(riverAddFeedFailed(index, xhr.statusText));
+    error: (dispatch, message) => {
+      dispatch(riverAddFeedFailed(index, message));
     },
   });
 }
@@ -282,11 +311,12 @@ export function addRiver(user, id = null) {
   return xhrAction({
     verb: 'POST', url: "/api/v1/river/" + user,
     msg: { name: null, id: id },
+    start: (dispatch) => dispatch(addRiverStart()),
     loaded_json: (dispatch, result) => {
       dispatch(addRiverSuccess(result.rivers));
     },
-    error: (dispatch, xhr) => {
-      dispatch(addRiverError(index, xhr.statusText));
+    error: (dispatch, message) => {
+      dispatch(addRiverError(index, message));
     },
   });
 }
@@ -298,8 +328,8 @@ export function removeRiver(user, river) {
     loaded_json: (dispatch, result) => {
       dispatch(removeRiverSuccess(user, river.id, result.rivers));
     },
-    error: (dispatch, xhr) => {
-      dispatch(removeRiverError(xhr.statusText));
+    error: (dispatch, message) => {
+      dispatch(removeRiverError(message));
     },
   });
 }
@@ -310,8 +340,8 @@ export function refreshRiver(index, river_name, river_url, river_id) {
     start: (dispatch) => dispatch(riverUpdateStart(index)),
     loaded_json: (dispatch, result) =>
       dispatch(riverUpdateSuccess(index, river_name, river_url, river_id, result)),
-    error: (dispatch, xhr) =>
-      dispatch(riverUpdateFailed(index, xhr.statusText)),
+    error: (dispatch, message) =>
+      dispatch(riverUpdateFailed(index, message)),
   });
 }
 
@@ -325,7 +355,7 @@ export function refreshRiverList(user) {
         dispatch(refreshRiver(index, river.name, river.url, river.id));
       });
     },
-    error: (dispatch, xhr) => dispatch(riverListUpdateFailed(xhr.statusText)),
+    error: (dispatch, message) => dispatch(riverListUpdateFailed(message)),
   });
 }
 
@@ -361,11 +391,11 @@ export function refreshAllFeeds(user) {
       dispatch(refreshAllFeedsSuccess());
       dispatch(refreshRiverList(user));
     },
-    error: (dispatch, xhr) => {
+    error: (dispatch, message) => {
       if (pollTimer) {
         clearInterval(pollTimer);
       }
-      dispatch(refreshAllFeedsError(xhr.statusText));
+      dispatch(refreshAllFeedsError(message));
     },
   })
 }

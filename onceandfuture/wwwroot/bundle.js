@@ -143,11 +143,46 @@
 	  }
 	}
 	
+	function state_river_info(action) {
+	  var errorDetail = action.error ? "  The error was " + action.error : "";
+	  switch (action.type) {
+	    case _actions.DISMISS_RIVER_BALLOON:
+	      return {};
+	
+	    // In-progress cases, clear the balloon.
+	    case _actions.RIVER_ADD_FEED_START:
+	    case _actions.RIVER_UPDATE_START:
+	      return {};
+	
+	    // Error cases.
+	    case _actions.RIVER_UPDATE_FAILED:
+	      return {
+	        text: "I can't update this river right now.",
+	        level: 'error'
+	      };
+	
+	    case _actions.RIVER_ADD_FEED_FAILED:
+	      return {
+	        text: "I can't add that feed to this river right now." + errorDetail,
+	        level: 'error'
+	      };
+	
+	    // Undo cases.
+	
+	    default:
+	      return {};
+	  }
+	}
+	
 	function state_river() {
 	  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : def_river;
 	  var action = arguments[1];
 	
 	  switch (action.type) {
+	    case _actions.DISMISS_RIVER_BALLOON:
+	      return Object.assign({}, state, {
+	        modal: { kind: 'none' }
+	      });
 	    case _actions.RIVER_ADD_FEED_START:
 	    case _actions.RIVER_UPDATE_START:
 	      return Object.assign({}, state, {
@@ -164,7 +199,7 @@
 	    case _actions.RIVER_ADD_FEED_FAILED:
 	    case _actions.RIVER_UPDATE_FAILED:
 	      return Object.assign({}, state, {
-	        modal: { kind: 'error', error: action.error }
+	        modal: { kind: 'bubble', info: state_river_info(action) }
 	      });
 	    case _actions.RIVER_UPDATE_SUCCESS:
 	      return Object.assign({}, state, {
@@ -221,6 +256,7 @@
 	      });
 	    case _actions.EXPAND_FEED_UPDATE:
 	    case _actions.COLLAPSE_FEED_UPDATE:
+	    case _actions.DISMISS_RIVER_BALLOON:
 	    case _actions.SHOW_RIVER_SETTINGS:
 	    case _actions.HIDE_RIVER_SETTINGS:
 	    case _actions.RIVER_SET_FEED_MODE:
@@ -272,23 +308,55 @@
 	  }
 	}
 	
-	function state_info_balloon() {
+	function state_top_info() {
 	  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 	  var action = arguments[1];
 	
+	  var errorDetail = action.error ? "  The error was " + action.error : "";
 	  switch (action.type) {
-	    case _actions.ADD_RIVER_SUCCESS:
 	    case _actions.DISMISS_BALLOON:
+	      return {};
+	
+	    // In-progress cases, clear the balloon.
+	    case _actions.ADD_RIVER_START:
 	    case _actions.REFRESH_ALL_FEEDS_START:
 	    case _actions.REMOVE_RIVER_START:
+	    case _actions.RIVER_LIST_UPDATE_START:
 	    case _actions.RIVER_UPDATE_START:
 	      return {};
 	
+	    // Error cases.
+	    case _actions.ADD_RIVER_ERROR:
+	      return {
+	        text: "I can't add a river right now.",
+	        level: 'error'
+	      };
+	
+	    case _actions.REFRESH_ALL_FEEDS_ERROR:
+	      return {
+	        text: "I can't refresh your feeds right now.",
+	        level: 'error'
+	      };
+	
+	    case _actions.REMOVE_RIVER_ERROR:
+	      return {
+	        text: "I can't remove the river right now.",
+	        level: 'error'
+	      };
+	
+	    case _actions.RIVER_LIST_UPDATE_FAILED:
+	      return {
+	        text: "I can't update your list of rivers right now.",
+	        level: 'error'
+	      };
+	
+	    // Undo cases.
 	    case _actions.REMOVE_RIVER_SUCCESS:
 	      return {
 	        text: "River removed.",
 	        action: (0, _actions.addRiver)(action.user, action.removed_id),
-	        action_label: "undo"
+	        action_label: "undo",
+	        level: 'info'
 	      };
 	
 	    default:
@@ -305,7 +373,7 @@
 	    rivers: state_rivers(state.rivers, action),
 	    loading: state_loading(state.loading, action),
 	    load_progress: state_load_progress(state.load_progress, action),
-	    top_info: state_info_balloon(state.top_info, action)
+	    top_info: state_top_info(state.top_info, action)
 	  };
 	}
 	
@@ -23431,7 +23499,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.RIVER_SET_FEED_MODE = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_URL_CHANGED = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
+	exports.RIVER_SET_FEED_MODE = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_URL_CHANGED = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
 	exports.expandFeedUpdate = expandFeedUpdate;
 	exports.collapseFeedUpdate = collapseFeedUpdate;
 	exports.showRiverSettings = showRiverSettings;
@@ -23450,12 +23518,14 @@
 	exports.refreshAllFeedsProgress = refreshAllFeedsProgress;
 	exports.refreshAllFeedsSuccess = refreshAllFeedsSuccess;
 	exports.refreshAllFeedsError = refreshAllFeedsError;
+	exports.addRiverStart = addRiverStart;
 	exports.addRiverSuccess = addRiverSuccess;
 	exports.addRiverError = addRiverError;
 	exports.removeRiverStart = removeRiverStart;
 	exports.removeRiverSuccess = removeRiverSuccess;
 	exports.removeRiverError = removeRiverError;
 	exports.dismissBalloon = dismissBalloon;
+	exports.dismissRiverBalloon = dismissRiverBalloon;
 	exports.riverSetFeedMode = riverSetFeedMode;
 	exports.addFeedToRiver = addFeedToRiver;
 	exports.addRiver = addRiver;
@@ -23523,9 +23593,10 @@
 	}
 	
 	var RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_FAILED = 'RIVER_ADD_FEED_FAILED';
-	function riverAddFeedFailed(index) {
+	function riverAddFeedFailed(index, message) {
 	  return {
 	    type: RIVER_ADD_FEED_FAILED,
+	    error: message,
 	    river_index: index
 	  };
 	}
@@ -23621,6 +23692,13 @@
 	  };
 	}
 	
+	var ADD_RIVER_START = exports.ADD_RIVER_START = 'ADD_RIVER_START';
+	function addRiverStart() {
+	  return {
+	    type: ADD_RIVER_START
+	  };
+	}
+	
 	var ADD_RIVER_SUCCESS = exports.ADD_RIVER_SUCCESS = 'ADD_RIVER_SUCCESS';
 	function addRiverSuccess(rivers) {
 	  return {
@@ -23669,6 +23747,23 @@
 	  };
 	}
 	
+	var DISMISS_RIVER_BALLOON = exports.DISMISS_RIVER_BALLOON = 'DISMISS_RIVER_BALLOON';
+	function dismissRiverBalloon(index) {
+	  return {
+	    type: DISMISS_RIVER_BALLOON,
+	    river_index: index
+	  };
+	}
+	
+	function decodeError(xhr) {
+	  var errorMessage = xhr.statusText;
+	  try {
+	    var fault = JSON.parse(xhr.responseText);
+	    errorMessage = fault.description || errorMessage;
+	  } catch (_) {}
+	  return errorMessage;
+	}
+	
 	function xhrAction(options) {
 	  return function doXHR(dispatch, getState) {
 	    if (options.precondition) {
@@ -23687,24 +23782,26 @@
 	        return options.progress(dispatch, xhr);
 	      });
 	    }
+	    if (options.error) {
+	      xhr.addEventListener("error", function () {
+	        return options.error(dispatch, decodeError(xhr));
+	      });
+	    }
 	    if (options.loaded_json || options.loaded) {
 	      xhr.addEventListener("load", function () {
 	        if (xhr.status == 403 /* Forbidden */) {
-	            console.log("Got forbidden, redirecting to login...");
+	            errorMessage = decodeError(xhr);
+	            console.log("Got forbidden: ", errorMessage);
+	            console.log("Redirecting to login...");
 	            window.location.href = "/login";
 	          } else if (options.error && xhr.status > 399) {
-	          options.error(dispatch, xhr);
+	          options.error(dispatch, decodeError(xhr));
 	        } else if (options.loaded_json) {
 	          var result = JSON.parse(xhr.responseText);
 	          options.loaded_json(dispatch, result, xhr);
 	        } else {
 	          options.loaded(dispatch, xhr);
 	        }
-	      });
-	    }
-	    if (options.error) {
-	      xhr.addEventListener("error", function () {
-	        return options.error(dispatch, xhr);
 	      });
 	    }
 	    if (options.abort) {
@@ -23749,8 +23846,8 @@
 	      dispatch(riverAddFeedSuccess(index));
 	      dispatch(refreshRiver(index, river.name, river.url, river.id));
 	    },
-	    error: function error(dispatch, xhr) {
-	      dispatch(riverAddFeedFailed(index, xhr.statusText));
+	    error: function error(dispatch, message) {
+	      dispatch(riverAddFeedFailed(index, message));
 	    }
 	  });
 	}
@@ -23761,11 +23858,14 @@
 	  return xhrAction({
 	    verb: 'POST', url: "/api/v1/river/" + user,
 	    msg: { name: null, id: id },
+	    start: function start(dispatch) {
+	      return dispatch(addRiverStart());
+	    },
 	    loaded_json: function loaded_json(dispatch, result) {
 	      dispatch(addRiverSuccess(result.rivers));
 	    },
-	    error: function error(dispatch, xhr) {
-	      dispatch(addRiverError(index, xhr.statusText));
+	    error: function error(dispatch, message) {
+	      dispatch(addRiverError(index, message));
 	    }
 	  });
 	}
@@ -23779,8 +23879,8 @@
 	    loaded_json: function loaded_json(dispatch, result) {
 	      dispatch(removeRiverSuccess(user, river.id, result.rivers));
 	    },
-	    error: function error(dispatch, xhr) {
-	      dispatch(removeRiverError(xhr.statusText));
+	    error: function error(dispatch, message) {
+	      dispatch(removeRiverError(message));
 	    }
 	  });
 	}
@@ -23794,8 +23894,8 @@
 	    loaded_json: function loaded_json(dispatch, result) {
 	      return dispatch(riverUpdateSuccess(index, river_name, river_url, river_id, result));
 	    },
-	    error: function error(dispatch, xhr) {
-	      return dispatch(riverUpdateFailed(index, xhr.statusText));
+	    error: function error(dispatch, message) {
+	      return dispatch(riverUpdateFailed(index, message));
 	    }
 	  });
 	}
@@ -23812,8 +23912,8 @@
 	        dispatch(refreshRiver(index, river.name, river.url, river.id));
 	      });
 	    },
-	    error: function error(dispatch, xhr) {
-	      return dispatch(riverListUpdateFailed(xhr.statusText));
+	    error: function error(dispatch, message) {
+	      return dispatch(riverListUpdateFailed(message));
 	    }
 	  });
 	}
@@ -23850,11 +23950,11 @@
 	      dispatch(refreshAllFeedsSuccess());
 	      dispatch(refreshRiverList(user));
 	    },
-	    error: function error(dispatch, xhr) {
+	    error: function error(dispatch, message) {
 	      if (pollTimer) {
 	        clearInterval(pollTimer);
 	      }
-	      dispatch(refreshAllFeedsError(xhr.statusText));
+	      dispatch(refreshAllFeedsError(message));
 	    }
 	  });
 	}
@@ -24203,6 +24303,10 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
+	var _riverballoon = __webpack_require__(/*! ./riverballoon */ 213);
+	
+	var _riverballoon2 = _interopRequireDefault(_riverballoon);
+	
 	var _riversettings = __webpack_require__(/*! ./riversettings */ 201);
 	
 	var _riversettings2 = _interopRequireDefault(_riversettings);
@@ -24226,13 +24330,15 @@
 	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
 	
 	
-	function modalForRiver(river, index) {
+	function modalForRiver(river, index, dismiss, dispatch) {
 	  var modal = river.modal || {};
 	  switch (modal.kind) {
 	    case 'loading':
 	      return React.createElement(_riverprogress2.default, { percent: modal.percent });
 	    case 'settings':
 	      return React.createElement(_riversettings2.default, { river: river, index: index });
+	    case 'bubble':
+	      return React.createElement(_riverballoon2.default, { info: modal.info, dismiss: dismiss, dispatchAction: dispatch });
 	    default:
 	      return React.createElement('span', null);
 	  }
@@ -24242,7 +24348,9 @@
 	  var rivers = _ref.rivers,
 	      index = _ref.index,
 	      onShowSettings = _ref.onShowSettings,
-	      onHideSettings = _ref.onHideSettings;
+	      onHideSettings = _ref.onHideSettings,
+	      onDismissBalloon = _ref.onDismissBalloon,
+	      dispatch = _ref.dispatch;
 	
 	  var style = {
 	    backgroundColor: _style.RIVER_COLUMN_BACKGROUND_COLOR,
@@ -24253,7 +24361,7 @@
 	  };
 	
 	  var river = rivers[index] || {};
-	  var modal = modalForRiver(river, index);
+	  var modal = modalForRiver(river, index, onDismissBalloon(index, river), dispatch);
 	  return React.createElement(
 	    'div',
 	    { style: style },
@@ -24285,7 +24393,13 @@
 	      return function () {
 	        return dispatch((0, _actions.hideRiverSettings)(i));
 	      };
-	    }
+	    },
+	    onDismissBalloon: function onDismissBalloon(i, r) {
+	      return function () {
+	        return dispatch((0, _actions.dismissRiverBalloon)(i));
+	      };
+	    },
+	    dispatch: dispatch
 	  };
 	};
 	
@@ -25112,12 +25226,68 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
+	var _riverballoon = __webpack_require__(/*! ./riverballoon */ 213);
+	
+	var _riverballoon2 = _interopRequireDefault(_riverballoon);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
 	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
 	
 	
-	var RiverSetBalloonBase = function RiverSetBalloonBase(_ref) {
+	var mapStateToProps = function mapStateToProps(state) {
+	  return {
+	    info: state.top_info
+	  };
+	};
+	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
+	  return {
+	    dispatch: dispatch,
+	    dismiss: function dismiss() {
+	      return dispatch((0, _actions.dismissBalloon)());
+	    }
+	  };
+	};
+	var RiverSetBalloon = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(_riverballoon2.default);
+	
+	exports.default = RiverSetBalloon;
+
+/***/ },
+/* 212 */
+/*!******************************!*\
+  !*** ./~/react-dom/index.js ***!
+  \******************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	module.exports = __webpack_require__(/*! react/lib/ReactDOM */ 6);
+
+/***/ },
+/* 213 */
+/*!********************************************!*\
+  !*** ./wwwroot/components/riverballoon.js ***!
+  \********************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
+	
+	var _actions = __webpack_require__(/*! ../actions */ 196);
+	
+	var _style = __webpack_require__(/*! ./style */ 199);
+	
+	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
+	
+	
+	var RiverBalloon = function RiverBalloon(_ref) {
 	  var info = _ref.info,
-	      dispatch = _ref.dispatch,
+	      dispatchAction = _ref.dispatchAction,
 	      dismiss = _ref.dismiss;
 	
 	  var style = {
@@ -25128,14 +25298,20 @@
 	    textAlign: 'center'
 	  };
 	
+	  var background = _style.RIVER_COLUMN_BACKGROUND_COLOR;
+	  if (info.level == 'error') {
+	    background = 'red';
+	  }
+	
 	  var span_style = {
 	    display: 'inline-block',
 	    borderStyle: 'solid',
 	    borderWidth: '0px 1px 1px 1px',
 	    borderRadius: '3px',
 	    padding: '0px 10px 3px 10px',
-	    backgroundColor: _style.RIVER_COLUMN_BACKGROUND_COLOR,
-	    fontSize: 16
+	    backgroundColor: background,
+	    fontSize: 16,
+	    maxWidth: _style.COLUMNWIDTH
 	  };
 	
 	  var link_span_style = {
@@ -25153,7 +25329,7 @@
 	    action_span = React.createElement(
 	      'span',
 	      { style: link_span_style, onClick: function onClick() {
-	          return dispatch(info.action);
+	          return dispatchAction(info.action);
 	        } },
 	      info.action_label
 	    );
@@ -25178,33 +25354,7 @@
 	  );
 	};
 	
-	var mapStateToProps = function mapStateToProps(state) {
-	  return {
-	    info: state.top_info
-	  };
-	};
-	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
-	  return {
-	    dispatch: dispatch,
-	    dismiss: function dismiss() {
-	      return dispatch((0, _actions.dismissBalloon)());
-	    }
-	  };
-	};
-	var RiverSetBalloon = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(RiverSetBalloonBase);
-	
-	exports.default = RiverSetBalloon;
-
-/***/ },
-/* 212 */
-/*!******************************!*\
-  !*** ./~/react-dom/index.js ***!
-  \******************************/
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	module.exports = __webpack_require__(/*! react/lib/ReactDOM */ 6);
+	exports.default = RiverBalloon;
 
 /***/ }
 /******/ ]);

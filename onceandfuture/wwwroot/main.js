@@ -11,18 +11,24 @@ import {
   RIVER_MODE_TEXT,
   RIVER_MODE_IMAGE,
 
+  ADD_RIVER_ERROR,
+  ADD_RIVER_START,
   ADD_RIVER_SUCCESS,
   DISMISS_BALLOON,
+  DISMISS_RIVER_BALLOON,
   EXPAND_FEED_UPDATE,
   COLLAPSE_FEED_UPDATE,
   SHOW_RIVER_SETTINGS,
   HIDE_RIVER_SETTINGS,
+  REMOVE_RIVER_ERROR,   
   REMOVE_RIVER_START,
   REMOVE_RIVER_SUCCESS,
   RIVER_ADD_FEED_URL_CHANGED,
   RIVER_ADD_FEED_START,
   RIVER_ADD_FEED_FAILED,
   RIVER_ADD_FEED_SUCCESS,
+  RIVER_LIST_UPDATE_FAILED,
+  RIVER_LIST_UPDATE_START,
   RIVER_LIST_UPDATE_SUCCESS,
   RIVER_SET_FEED_MODE,
   RIVER_UPDATE_START,
@@ -98,8 +104,44 @@ function state_river_feed_updates(state = [], action) {
   }
 }
 
+function state_river_info(action) {
+  let errorDetail = action.error ? "  The error was " + action.error : "";
+  switch(action.type) {
+    case DISMISS_RIVER_BALLOON:
+      return {};
+
+    // In-progress cases, clear the balloon.
+    case RIVER_ADD_FEED_START:
+    case RIVER_UPDATE_START:
+      return {};
+
+    // Error cases.
+    case RIVER_UPDATE_FAILED:
+      return {
+        text: "I can't update this river right now.",
+        level: 'error',
+      };
+
+    case RIVER_ADD_FEED_FAILED:          
+      return {
+        text: "I can't add that feed to this river right now." + errorDetail,
+        level: 'error',
+      };
+
+    // Undo cases.
+
+    default:
+      return {};
+  }
+}
+
+
 function state_river(state = def_river, action) {
   switch(action.type) {
+    case DISMISS_RIVER_BALLOON:
+      return Object.assign({}, state, {
+        modal: { kind: 'none', },
+      });      
     case RIVER_ADD_FEED_START:
     case RIVER_UPDATE_START:
       return Object.assign({}, state, {
@@ -116,7 +158,7 @@ function state_river(state = def_river, action) {
     case RIVER_ADD_FEED_FAILED:
     case RIVER_UPDATE_FAILED:
       return Object.assign({}, state, {
-        modal: { kind: 'error', error: action.error, },
+        modal: { kind: 'bubble', info: state_river_info(action), },
       });
     case RIVER_UPDATE_SUCCESS:
       return Object.assign({}, state, {
@@ -168,6 +210,7 @@ function state_rivers(state = [], action) {
       });
     case EXPAND_FEED_UPDATE:
     case COLLAPSE_FEED_UPDATE:
+    case DISMISS_RIVER_BALLOON:
     case SHOW_RIVER_SETTINGS:
     case HIDE_RIVER_SETTINGS:
     case RIVER_SET_FEED_MODE:
@@ -213,20 +256,52 @@ function state_load_progress(state = 0, action) {
   }
 }
 
-function state_info_balloon(state = {}, action) {
+function state_top_info(state = {}, action) {
+  let errorDetail = action.error ? "  The error was " + action.error : "";
   switch(action.type) {
-    case ADD_RIVER_SUCCESS:
     case DISMISS_BALLOON:
+      return {};
+
+    // In-progress cases, clear the balloon.
+    case ADD_RIVER_START:
     case REFRESH_ALL_FEEDS_START:    
     case REMOVE_RIVER_START:
+    case RIVER_LIST_UPDATE_START:
     case RIVER_UPDATE_START:
       return {};
 
+    // Error cases.
+    case ADD_RIVER_ERROR:
+      return {
+        text: "I can't add a river right now.",
+        level: 'error',
+      };
+
+    case REFRESH_ALL_FEEDS_ERROR:
+      return {
+        text: "I can't refresh your feeds right now.",
+        level: 'error',
+      };
+
+    case REMOVE_RIVER_ERROR:
+      return {
+        text: "I can't remove the river right now.",
+        level: 'error',
+      };
+
+    case RIVER_LIST_UPDATE_FAILED:
+      return {
+        text: "I can't update your list of rivers right now.",
+        level: 'error',
+      };
+
+    // Undo cases.
     case REMOVE_RIVER_SUCCESS:
       return {
         text: "River removed.",
         action: addRiver(action.user, action.removed_id),
         action_label: "undo",
+        level: 'info',
       };
 
     default:
@@ -240,7 +315,7 @@ function sociallistsApp(state = {}, action) {
     rivers: state_rivers(state.rivers, action),
     loading: state_loading(state.loading, action),
     load_progress: state_load_progress(state.load_progress, action),
-    top_info: state_info_balloon(state.top_info, action),
+    top_info: state_top_info(state.top_info, action),
   };
 }
 

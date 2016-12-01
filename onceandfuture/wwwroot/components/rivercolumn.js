@@ -6,22 +6,35 @@ import {
   RIVER_COLUMN_BACKGROUND_COLOR,
   COLOR_VERY_DARK
 } from './style'
+import RiverBalloon from './riverballoon'
 import RiverSettings from './riversettings'
 import RiverProgress from './riverprogress'
 import RiverTitle from './rivertitle'
 import RiverUpdates from './riverupdates'
-import { showRiverSettings, hideRiverSettings } from '../actions'
+import { 
+  showRiverSettings,
+  hideRiverSettings,
+  dismissRiverBalloon,
+} from '../actions'
 
-function modalForRiver(river, index) {
+function modalForRiver(river, index, dismiss, dispatch) {
   const modal = river.modal || {};
   switch (modal.kind) {
     case 'loading': return <RiverProgress percent={modal.percent} />;
     case 'settings': return <RiverSettings river={river} index={index} />;
+    case 'bubble': return <RiverBalloon info={modal.info}  dismiss={dismiss} dispatchAction={dispatch} />;
     default: return <span />;
   }
 }
 
-const RiverColumnBase = ({rivers, index, onShowSettings, onHideSettings}) => {
+const RiverColumnBase = ({
+  rivers, 
+  index,
+  onShowSettings, 
+  onHideSettings,
+  onDismissBalloon,
+  dispatch,
+}) => {
   const style = {
     backgroundColor: RIVER_COLUMN_BACKGROUND_COLOR,
     borderRadius: 10,
@@ -31,7 +44,7 @@ const RiverColumnBase = ({rivers, index, onShowSettings, onHideSettings}) => {
   };
 
   const river = rivers[index] || {};
-  const modal = modalForRiver(river, index);
+  const modal = modalForRiver(river, index, onDismissBalloon(index, river), dispatch);
   return (
     <div style={style}>
       <RiverTitle
@@ -56,6 +69,8 @@ const vrc_mapDispatchToProps = (dispatch) => {
   return {
     onShowSettings: (i, r) => (() => dispatch(showRiverSettings(i))),
     onHideSettings: (i, r) => (() => dispatch(hideRiverSettings(i))),
+    onDismissBalloon: (i, r) => (() => dispatch(dismissRiverBalloon(i))),
+    dispatch: dispatch,
   };
 };
 
