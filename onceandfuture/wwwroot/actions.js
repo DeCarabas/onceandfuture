@@ -170,10 +170,19 @@ export function addRiverError(error) {
   };
 }
 
+export const REMOVE_RIVER_START = 'REMOVE_RIVER_START';
+export function removeRiverStart() {
+  return {
+    type: REMOVE_RIVER_START,    
+  };
+}
+
 export const REMOVE_RIVER_SUCCESS = 'REMOVE_RIVER_SUCCESS';
-export function removeRiverSuccess(rivers) {
+export function removeRiverSuccess(user, removed_id, rivers) {
   return {
     type: REMOVE_RIVER_SUCCESS,
+    user: user,
+    removed_id: removed_id,
     rivers: rivers,
   };
 }
@@ -183,6 +192,13 @@ export function removeRiverError(error) {
   return {
     type: REMOVE_RIVER_ERROR,
     error: error,
+  };
+}
+
+export const DISMISS_BALLOON = 'DISMISS_BALLOON';
+export function dismissBalloon() {
+  return {
+    type: DISMISS_BALLOON,
   };
 }
 
@@ -262,10 +278,10 @@ export function addFeedToRiver(index, river) {
   });
 }
 
-export function addRiver(user) {
+export function addRiver(user, id = null) {
   return xhrAction({
     verb: 'POST', url: "/api/v1/river/" + user,
-    msg: { name: null },
+    msg: { name: null, id: id },
     loaded_json: (dispatch, result) => {
       dispatch(addRiverSuccess(result.rivers));
     },
@@ -275,11 +291,12 @@ export function addRiver(user) {
   });
 }
 
-export function removeRiver(river_url) {
+export function removeRiver(user, river) {
   return xhrAction({
-    verb: 'DELETE', url: river_url,
+    verb: 'DELETE', url: river.url,
+    start: (dispatch) => dispatch(removeRiverStart()),
     loaded_json: (dispatch, result) => {
-      dispatch(removeRiverSuccess(result.rivers));
+      dispatch(removeRiverSuccess(user, river.id, result.rivers));
     },
     error: (dispatch, xhr) => {
       dispatch(removeRiverError(xhr.statusText));
@@ -305,7 +322,7 @@ export function refreshRiverList(user) {
     loaded_json: (dispatch, result) => {
       dispatch(riverListUpdateSuccess(result.rivers));
       result.rivers.forEach((river, index) => {
-        dispatch(refreshRiver(index, river.name, river.url));
+        dispatch(refreshRiver(index, river.name, river.url, river.id));
       });
     },
     error: (dispatch, xhr) => dispatch(riverListUpdateFailed(xhr.statusText)),

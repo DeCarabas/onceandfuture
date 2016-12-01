@@ -239,6 +239,7 @@ namespace onceandfuture
             public DateTimeOffset ExpireAt;
         }
     }
+    // TODO: Url.Action
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
     public class EnforceAuthenticationAttribute : Attribute, IAsyncAuthorizationFilter
@@ -398,8 +399,10 @@ namespace onceandfuture
             if (requestBody.Id != null)
             {
                 var existing = await this.aggregateStore.LoadAggregate(requestBody.Id);
-                if (String.CompareOrdinal(existing.Metadata.Owner, user) != 0)
+                if (existing.Metadata.Owner != null && String.CompareOrdinal(existing.Metadata.Owner, user) != 0)
                 {
+                    Serilog.Log.Warning("{user} attempted to add river {id} owned by {owner}",
+                        user, requestBody.Id, existing.Metadata.Owner);
                     return new JsonResult(new Fault
                     {
                         Status = "error",
@@ -453,7 +456,7 @@ namespace onceandfuture
             UserProfile profile = await this.profileStore.GetProfileFor(user);
             UserProfile newProfile = profile.With(
                 rivers: profile.Rivers.RemoveAll(rd => String.CompareOrdinal(rd.Id, id) == 0));
-            // await this.profileStore.SaveProfileFor(user, newProfile);
+            await this.profileStore.SaveProfileFor(user, newProfile);
 
             var rivers = (from r in newProfile.Rivers
                           select new
@@ -1032,6 +1035,7 @@ namespace onceandfuture
                 .AddOption("url", "The URL to find a feed for.", o => o.IsRequired())
             )
             ;
+
 
         static int Main(string[] args)
         {

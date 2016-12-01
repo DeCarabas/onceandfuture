@@ -11,10 +11,14 @@ import {
   RIVER_MODE_TEXT,
   RIVER_MODE_IMAGE,
 
+  ADD_RIVER_SUCCESS,
+  DISMISS_BALLOON,
   EXPAND_FEED_UPDATE,
   COLLAPSE_FEED_UPDATE,
   SHOW_RIVER_SETTINGS,
   HIDE_RIVER_SETTINGS,
+  REMOVE_RIVER_START,
+  REMOVE_RIVER_SUCCESS,
   RIVER_ADD_FEED_URL_CHANGED,
   RIVER_ADD_FEED_START,
   RIVER_ADD_FEED_FAILED,
@@ -28,8 +32,8 @@ import {
   REFRESH_ALL_FEEDS_SUCCESS,
   REFRESH_ALL_FEEDS_ERROR,
   REFRESH_ALL_FEEDS_PROGRESS,
-  ADD_RIVER_SUCCESS,
-  REMOVE_RIVER_SUCCESS,
+
+  addRiver,
   refreshRiverList
 } from './actions';
 
@@ -159,6 +163,7 @@ function state_rivers(state = [], action) {
         return Object.assign({}, old_river, {
           name: nr.name,
           url: nr.url,
+          id: nr.id,
         });
       });
     case EXPAND_FEED_UPDATE:
@@ -208,12 +213,34 @@ function state_load_progress(state = 0, action) {
   }
 }
 
+function state_info_balloon(state = {}, action) {
+  switch(action.type) {
+    case ADD_RIVER_SUCCESS:
+    case DISMISS_BALLOON:
+    case REFRESH_ALL_FEEDS_START:    
+    case REMOVE_RIVER_START:
+    case RIVER_UPDATE_START:
+      return {};
+
+    case REMOVE_RIVER_SUCCESS:
+      return {
+        text: "River removed.",
+        action: addRiver(action.user, action.removed_id),
+        action_label: "undo",
+      };
+
+    default:
+      return state;
+  }
+}
+
 function sociallistsApp(state = {}, action) {
   return {
     user: user,
     rivers: state_rivers(state.rivers, action),
     loading: state_loading(state.loading, action),
     load_progress: state_load_progress(state.load_progress, action),
+    top_info: state_info_balloon(state.top_info, action),
   };
 }
 

@@ -15,6 +15,7 @@ import {
 } from './style'
 import RiverColumn from './rivercolumn'
 import RiverProgress from './riverprogress'
+import RiverSetBalloon from './riversetballoon'
 
 const TITLE_HEIGHT = 33; // <div>"Rivers"..."refresh"</div>
 const TOP_BAR_HEIGHT = TITLE_HEIGHT + PROGRESS_HEIGHT; 
@@ -53,6 +54,7 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh}) => {
       progress={load_progress / 100} 
       backgroundColor={APP_BACKGROUND_COLOR}
       />
+    <RiverSetBalloon />
   </div>
 }
 

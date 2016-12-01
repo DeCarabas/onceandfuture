@@ -118,6 +118,7 @@ const DeleteRiverBox = ({deleteRiver}) => {
 const RiverSettingsBase = ({
   index,
   river,
+  user,
   feedUrlChanged,
   addFeedToRiver,
   riverSetFeedMode,
@@ -136,7 +137,7 @@ const RiverSettingsBase = ({
   const addFeed = () => addFeedToRiver(index, river);
   const urlChanged = (text) => feedUrlChanged(index, text);
   const setFeedMode = (mode) => riverSetFeedMode(index, river, mode);
-  const delRiver = () => deleteRiver(river);
+  const delRiver = () => deleteRiver(user, river);
 
   return <div style={style}>
     <AddFeedBox feedUrlChanged={urlChanged} addFeedToRiver={addFeed} />
@@ -147,6 +148,7 @@ const RiverSettingsBase = ({
 
 const mapStateToProps = (state) => {
   return {
+    user: state.user,
   };
 };
 const mapDispatchToProps = (dispatch) => {
@@ -154,7 +156,7 @@ const mapDispatchToProps = (dispatch) => {
     'feedUrlChanged': (index, new_value) => dispatch(riverAddFeedUrlChanged(index, new_value)),
     'addFeedToRiver': (index, river) => dispatch(addFeedToRiver(index, river)),
     'riverSetFeedMode': (index, river, mode) => dispatch(riverSetFeedMode(index, river, mode)),
-    'deleteRiver': (river) => dispatch(removeRiver(river)),
+    'deleteRiver': (user, river) => dispatch(removeRiver(user, river)),
   };
 };
 
