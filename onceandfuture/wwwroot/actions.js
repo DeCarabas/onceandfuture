@@ -247,6 +247,38 @@ export function riverGetFeedSourcesError(index, river, error) {
   };
 }
 
+export const RIVER_REMOVE_SOURCE_START = 'RIVER_REMOVE_SOURCE_START';
+export function riverRemoveSourceStart(index, river, source_id, source_url) {
+  return {
+    type: RIVER_REMOVE_SOURCE_START,
+    river_index: index,
+    river: river,
+    source_id: source_id,
+    source_url: source_url,
+  };
+}
+
+export const RIVER_REMOVE_SOURCE_SUCCESS = 'RIVER_REMOVE_SOURCE_SUCCESS';
+export function riverRemoveSourceSuccess(index, river, result, source_url) {
+  return {
+    type: RIVER_REMOVE_SOURCE_SUCCESS,
+    river_index: index,
+    river: river,
+    sources: result.sources,
+    source_url: source_url,
+  };
+}
+
+export const RIVER_REMOVE_SOURCE_ERROR = 'RIVER_REMOVE_SOURCE_ERROR';
+export function riverRemoveSourceError(index, river, error) {
+  return {
+    type: RIVER_REMOVE_SOURCE_ERROR,
+    river_index: index,
+    river: river,
+    error: error,
+  };
+}
+
 function decodeError(xhr) {
   let  errorMessage = xhr.statusText;
   try
@@ -330,10 +362,10 @@ export function riverSetFeedMode(river_index, river, mode) {
   });
 }
 
-export function addFeedToRiver(index, river) {
+export function riverAddFeed(index, river, url) {
   return xhrAction({
-    verb: 'POST', url: river.url,
-    msg: { 'url': river.modal.value },
+    verb: 'POST', url: river.url + '/sources',
+    msg: { 'url': url },
     start: (dispatch) => dispatch(riverAddFeedStart(index)),
     loaded: (dispatch, xhr) => {
       dispatch(riverAddFeedSuccess(index));
@@ -451,4 +483,19 @@ export function riverGetFeedSources(index, river) {
       dispatch(riverGetFeedSourcesError(index, river, message));
     },
   });
+}
+
+export function riverRemoveSource(index, river, source_id, source_url) {
+  return xhrAction({
+    url: river.url + '/sources/' + source_id, verb: 'DELETE',
+    start: (dispatch, xhr) => {
+      dispatch(riverRemoveSourceStart(index, river, source_id, source_url));
+    },
+    loaded_json: (dispatch, result) => {
+      dispatch(riverRemoveSourceSuccess(index, river, result, source_url));
+    },
+    error: (dispatch, message) => {
+      dispatch(riverRemoveSourceError(index, river, message));
+    },
+  })
 }

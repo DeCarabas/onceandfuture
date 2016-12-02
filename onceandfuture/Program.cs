@@ -36,6 +36,83 @@ namespace onceandfuture
 
         [JsonProperty("details")]
         public string Details { get; set; }
+
+        public override string ToString()
+        {
+            return String.Format("Fault: {0}: {1}", Code, Details);
+        }
+    }
+
+    public class FaultException : Exception
+    {
+        public FaultException(HttpStatusCode statusCode, Fault fault) : base(fault.ToString())
+        {
+            StatusCode = statusCode;
+            Fault = fault;
+        }
+
+        public HttpStatusCode StatusCode { get; }
+
+        public Fault Fault { get; }
+
+        public static FaultException AccessDenied(string message = null) =>
+            new FaultException(HttpStatusCode.Forbidden, new Fault
+            {
+                Status = "error",
+                Code = "accessdenied",
+                Details = message ?? "User is not authorized to access this resource.",
+            });
+
+        public static FaultException DecodingError(string message) =>
+            new FaultException(HttpStatusCode.BadRequest, new Fault
+            {
+                Status = "error",
+                Code = "badrequest",
+                Details = "Error decoding request: " + message,
+            });
+
+        public static FaultException NoFeed(string url) =>
+            new FaultException(HttpStatusCode.BadRequest, new Fault
+            {
+                Status = "error",
+                Code = "nofeed",
+                Details = "No feed found @ " + url
+            });
+
+        internal static Exception NoRiver(string id) =>
+            new FaultException(HttpStatusCode.BadRequest, new Fault
+            {
+                Status = "error",
+                Code = "noriver",
+                Details = "No river found @ " + id
+            });
+    }
+
+    public static class FaultHandlerExtensions
+    {
+        public static IApplicationBuilder UseFaultHandler(this IApplicationBuilder builder)
+        {
+            builder.Use(async (ctxt, next) =>
+            {
+                try
+                {
+                    await next();
+                }
+                catch (FaultException fe)
+                {
+                    if (!ctxt.Response.HasStarted)
+                    {
+                        ctxt.Response.StatusCode = (int)fe.StatusCode;
+
+                        byte[] resp = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(fe.Fault));
+                        ctxt.Response.ContentLength = resp.Length;
+                        ctxt.Response.ContentType = "application/json";
+                        await ctxt.Response.Body.WriteAsync(resp, 0, resp.Length);
+                    }
+                }
+            });
+            return builder;
+        }
     }
 
     public class AuthenticationManager
@@ -239,7 +316,7 @@ namespace onceandfuture
             public DateTimeOffset ExpireAt;
         }
     }
-    // TODO: Url.Action
+    // TODO: Url.Action to generate the URL for the rivers.
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
     public class EnforceAuthenticationAttribute : Attribute, IAsyncAuthorizationFilter
@@ -260,15 +337,7 @@ namespace onceandfuture
 
             if (authn_user == null || !String.Equals(user, authn_user, StringComparison.OrdinalIgnoreCase))
             {
-                context.Result = new JsonResult(new Fault
-                {
-                    Code = "accessDenied",
-                    Status = "error",
-                    Details = "User is not authorized to access this resource.",
-                })
-                {
-                    StatusCode = (int)HttpStatusCode.Forbidden
-                };
+                throw FaultException.AccessDenied();
             }
         }
     }
@@ -387,13 +456,7 @@ namespace onceandfuture
             }
             catch (Exception e)
             {
-                return new JsonResult(new Fault
-                {
-                    Status = "error",
-                    Code = "badrequest",
-                    Details = "Error decoding request: " + e.Message,
-                })
-                { StatusCode = (int)HttpStatusCode.BadRequest };
+                throw FaultException.DecodingError(e.Message);
             }
 
             if (requestBody.Id != null)
@@ -403,13 +466,7 @@ namespace onceandfuture
                 {
                     Serilog.Log.Warning("{user} attempted to add river {id} owned by {owner}",
                         user, requestBody.Id, existing.Metadata.Owner);
-                    return new JsonResult(new Fault
-                    {
-                        Status = "error",
-                        Code = "forbidden",
-                        Details = "Not allowed to add somebody else's river.",
-                    })
-                    { StatusCode = (int)HttpStatusCode.Forbidden };
+                    throw FaultException.AccessDenied("Not allowed to add somebody else's river.");
                 }
             }
 
@@ -462,13 +519,7 @@ namespace onceandfuture
             River river = await this.aggregateStore.LoadAggregate(id);
             if (river.Metadata.Owner != null && String.CompareOrdinal(river.Metadata.Owner, user) != 0)
             {
-                return new JsonResult(new Fault
-                {
-                    Status = "error",
-                    Code = "forbidden",
-                    Details = "Not allowed to get somebody else's river.",
-                })
-                { StatusCode = (int)HttpStatusCode.Forbidden };
+                throw FaultException.AccessDenied("Not allowed to get somebody else's river.");
             }
             return Json(river);
         }
@@ -478,7 +529,11 @@ namespace onceandfuture
         {
             UserProfile profile = await this.profileStore.GetProfileFor(user);
             RiverDefinition river = profile.Rivers.FirstOrDefault(rd => String.CompareOrdinal(rd.Id, id) == 0);
+            return await GetSourcesForRiver(river);
+        }
 
+        async Task<IActionResult> GetSourcesForRiver(RiverDefinition river)
+        {
             IList<Uri> feedUris = river.Feeds ?? (IList<Uri>)(Array.Empty<Uri>());
             River[] feedrivers = await Task.WhenAll(feedUris.Select(f => this.feedStore.LoadRiverForFeed(f)));
 
@@ -486,6 +541,7 @@ namespace onceandfuture
             {
                 sources = feedrivers.Select(r => new
                 {
+                    id = Util.HashString(r.Metadata.OriginUrl.AbsoluteUri),
                     name = r.UpdatedFeeds.Feeds.FirstOrDefault()?.FeedTitle ?? r.Metadata.OriginUrl.AbsoluteUri,
                     webUrl = r.UpdatedFeeds.Feeds.FirstOrDefault()?.WebsiteUrl ?? r.Metadata.OriginUrl.AbsoluteUri,
                     feedUrl = r.Metadata.OriginUrl,
@@ -497,8 +553,8 @@ namespace onceandfuture
             });
         }
 
-        [HttpPost("/api/v1/river/{user}/{id}")]
-        public async Task<IActionResult> AddFeed(string user, string id)
+        [HttpPost("/api/v1/river/{user}/{id}/sources")]
+        public async Task<IActionResult> AddRiverSource(string user, string id)
         {
             AddFeedRequest requestBody;
 
@@ -515,49 +571,50 @@ namespace onceandfuture
             }
             catch (Exception e)
             {
-                return new JsonResult(new Fault
-                {
-                    Status = "error",
-                    Code = "badrequest",
-                    Details = "Error decoding request: " + e.Message,
-                })
-                { StatusCode = (int)HttpStatusCode.BadRequest };
+                throw FaultException.DecodingError(e.Message);
             }
 
             IList<Uri> feedUrls = await FeedDetector.GetFeedUrls(requestBody.Url, HttpContext.RequestAborted);
-            if (feedUrls.Count == 0)
-            {
-                return new JsonResult(new Fault
-                {
-                    Status = "error",
-                    Code = "nofeed",
-                    Details = "No feed found @ " + requestBody.Url
-                })
-                { StatusCode = (int)HttpStatusCode.BadRequest };
-            }
+            if (feedUrls.Count == 0) { throw FaultException.NoFeed(requestBody.Url); }
 
             Uri feedUrl = feedUrls[0];
 
             UserProfile profile = await this.profileStore.GetProfileFor(user);
             RiverDefinition river = profile.Rivers.FirstOrDefault(rd => String.CompareOrdinal(rd.Id, id) == 0);
-            if (river == null)
+            if (river == null) { throw FaultException.NoRiver(id); }
+
+            if (!river.Feeds.Contains(feedUrl))
             {
-                return new JsonResult(new Fault
-                {
-                    Status = "error",
-                    Code = "nofeed",
-                    Details = "No river found @ " + id
-                })
-                { StatusCode = (int)HttpStatusCode.BadRequest };
+                RiverDefinition newRiver = river.With(feeds: river.Feeds.Add(feedUrl));
+                UserProfile newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
+                await this.profileStore.SaveProfileFor(user, newProfile);
+
+                await feedParser.RefreshAggregateRiverWithFeeds(
+                    newRiver.Id, new[] { feedUrl }, this.aggregateStore, this.feedStore, HttpContext.RequestAborted);
+
+                river = newRiver;
             }
-            RiverDefinition newRiver = river.With(feeds: river.Feeds.Add(feedUrl));
-            UserProfile newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
-            await this.profileStore.SaveProfileFor(user, newProfile);
 
-            await feedParser.RefreshAggregateRiverWithFeeds(
-                newRiver.Id, new[] { feedUrl }, this.aggregateStore, this.feedStore, HttpContext.RequestAborted);
+            return await GetSourcesForRiver(river);
+        }
 
-            return Json(new { status = "ok" });
+        [HttpDelete("/api/v1/river/{user}/{id}/sources/{sourceId}")]
+        public async Task<IActionResult> RemoveRiverSource(string user, string id, string sourceId)
+        {
+            UserProfile profile = await this.profileStore.GetProfileFor(user);
+            RiverDefinition river = profile.Rivers.FirstOrDefault(rd => String.CompareOrdinal(rd.Id, id) == 0);
+            if (river == null) { throw FaultException.NoRiver(id); }
+
+            RiverDefinition newRiver = river.With(
+                feeds: river.Feeds.RemoveAll(f => Util.HashString(f.AbsoluteUri) == sourceId)
+            );
+            if (newRiver.Feeds.Count != river.Feeds.Count)
+            {
+                UserProfile newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
+                await this.profileStore.SaveProfileFor(user, newProfile);
+            }
+
+            return await GetSourcesForRiver(newRiver);
         }
 
         [HttpPost("/api/v1/river/{user}/{id}/mode")]
@@ -1000,6 +1057,9 @@ namespace onceandfuture
 
             // serve static files from wwwroot/*
             app.UseStaticFiles();
+
+            // Transform fault exceptions to responses.
+            app.UseFaultHandler();
 
             // use MVC framework
             app.UseMvc();

@@ -1,10 +1,6 @@
 Todo:
 
 UI:
-- Remove feeds from rivers
-  - Getting sources but still need: fetch source progress and error
-  - Then need to make it prettier
-  - Then need to add unsubscribe action
 - Add/remove river sets
 - Rename river
 - Re-order rivers
@@ -22,6 +18,7 @@ Back-end Stuff:
 - Replace inline log with static log method
 - Pull images from content soup rather than link soup if present.
 - Login cookie cache scrubber
+- Max request size
 
 Shipping:
 - Re-pack font awesome fonts

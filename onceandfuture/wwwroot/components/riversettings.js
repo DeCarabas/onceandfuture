@@ -12,10 +12,11 @@ import {
   RIVER_MODE_TEXT,
   RIVER_MODE_IMAGE,
 
-  addFeedToRiver,
   removeRiver,
+  riverAddFeed,
   riverAddFeedUrlChanged,
   riverGetFeedSources,
+  riverRemoveSource,
   riverSetFeedMode,
 } from '../actions'
 import RelTime from './reltime'
@@ -100,22 +101,22 @@ const FeedDisplayModeBox = ({mode, setFeedMode}) => {
       <SettingsSectionTitle text="River Display Mode" />
       <div style={{paddingTop: COLUMNSPACER}}>
         <div style={end_space} />
-        <DisplayModeButton 
-          text={"Auto"} 
-          enabled={mode === RIVER_MODE_AUTO} 
-          click={() => setFeedMode(RIVER_MODE_AUTO)} 
+        <DisplayModeButton
+          text={"Auto"}
+          enabled={mode === RIVER_MODE_AUTO}
+          click={() => setFeedMode(RIVER_MODE_AUTO)}
         />
         <div style={mid_space} />
-        <DisplayModeButton 
-          text={"Image"} 
-          enabled={mode === RIVER_MODE_IMAGE} 
-          click={() => setFeedMode(RIVER_MODE_IMAGE)} 
+        <DisplayModeButton
+          text={"Image"}
+          enabled={mode === RIVER_MODE_IMAGE}
+          click={() => setFeedMode(RIVER_MODE_IMAGE)}
         />
         <div style={mid_space} />
-        <DisplayModeButton 
-          text={"Text"} 
-          enabled={mode === RIVER_MODE_TEXT} 
-          click={() => setFeedMode(RIVER_MODE_TEXT)} 
+        <DisplayModeButton
+          text={"Text"}
+          enabled={mode === RIVER_MODE_TEXT}
+          click={() => setFeedMode(RIVER_MODE_TEXT)}
         />
         <div style={end_space} />
       </div>
@@ -131,7 +132,7 @@ const DeleteRiverBox = ({deleteRiver}) => {
   </div>;
 }
 
-const RiverSource = ({source}) => {
+const RiverSource = ({source, deleteSource}) => {
   const timeStyle = {
     textAlign: 'right',
   };
@@ -140,12 +141,12 @@ const RiverSource = ({source}) => {
     cursor: 'pointer',
   };
 
-  const tooltip = <span>Remove this feed.</span>; 
+  const tooltip = <span>Remove this feed.</span>;
 
   return <tr>
     <td><a href={source.webUrl}>{source.name}</a></td>
     <td style={timeStyle}><RelTime time={source.lastUpdated} /></td>
-    <td style={unsubscribeStyle}>
+    <td style={unsubscribeStyle} onClick={() => deleteSource(source.id, source.feedUrl)}>
       <Tooltip tip={tooltip}>
         <i className="fa fa-remove" aria-hidden="true" />
       </Tooltip>
@@ -153,7 +154,7 @@ const RiverSource = ({source}) => {
   </tr>
 }
 
-const RiverSourcesBox = ({sources}) => {
+const RiverSourcesBox = ({sources, deleteSource}) => {
   var tbl;
   if (sources === 'PENDING') {
     tbl = <div />; // TODO: Progress bar.
@@ -178,8 +179,8 @@ const RiverSourcesBox = ({sources}) => {
         </tr>
       </thead>
       <tbody>
-        { sources.map(s => <RiverSource source={s} key={s.feedUrl} />) }
-      </tbody>    
+        { sources.map(s => <RiverSource source={s} key={s.feedUrl} deleteSource={deleteSource} />) }
+      </tbody>
     </table>;
   } else {
     tbl = <div />; // TODO: Huh?
@@ -200,7 +201,7 @@ const RiverSettingsBase = ({
   addFeedToRiver,
   riverSetFeedMode,
   deleteRiver,
-  fetchSources
+  removeSource,
 }) => {
   const style = {
     backgroundColor: COLOR_VERY_LIGHT,
@@ -216,6 +217,7 @@ const RiverSettingsBase = ({
   const urlChanged = (text) => feedUrlChanged(index, text);
   const setFeedMode = (mode) => riverSetFeedMode(index, river, mode);
   const delRiver = () => deleteRiver(user, river);
+  const delSource = (source_id, source_url) => removeSource(index, river, source_id, source_url);
 
   return <div style={style}>
     <AddFeedBox feedUrlChanged={urlChanged} addFeedToRiver={addFeed} />
@@ -223,8 +225,8 @@ const RiverSettingsBase = ({
     <FeedDisplayModeBox mode={river.mode} setFeedMode={setFeedMode} />
     <hr />
     <DeleteRiverBox deleteRiver={delRiver} />
-    <hr />   
-    <RiverSourcesBox sources={river.sources} /> 
+    <hr />
+    <RiverSourcesBox sources={river.sources} deleteSource={delSource} />
   </div>;
 }
 
@@ -236,10 +238,11 @@ const mapStateToProps = (state) => {
 const mapDispatchToProps = (dispatch) => {
   return {
     'feedUrlChanged': (index, new_value) => dispatch(riverAddFeedUrlChanged(index, new_value)),
-    'addFeedToRiver': (index, river) => dispatch(addFeedToRiver(index, river)),
+    'addFeedToRiver': (index, river) => dispatch(riverAddFeed(index, river, river.modal.value)),
     'riverSetFeedMode': (index, river, mode) => dispatch(riverSetFeedMode(index, river, mode)),
     'deleteRiver': (user, river) => dispatch(removeRiver(user, river)),
-    'fetchSources': (index, river) => dispatch(riverGetFeedSources(index, river)),
+    'removeSource': (index, river, source_id, source_url) =>
+      dispatch(riverRemoveSource(index, river, source_id, source_url)),
   };
 };
 

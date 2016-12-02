@@ -20,7 +20,7 @@ import {
   COLLAPSE_FEED_UPDATE,
   SHOW_RIVER_SETTINGS,
   HIDE_RIVER_SETTINGS,
-  REMOVE_RIVER_ERROR,   
+  REMOVE_RIVER_ERROR,
   REMOVE_RIVER_START,
   REMOVE_RIVER_SUCCESS,
   RIVER_ADD_FEED_URL_CHANGED,
@@ -33,6 +33,9 @@ import {
   RIVER_LIST_UPDATE_FAILED,
   RIVER_LIST_UPDATE_START,
   RIVER_LIST_UPDATE_SUCCESS,
+  RIVER_REMOVE_SOURCE_ERROR,
+  RIVER_REMOVE_SOURCE_START,
+  RIVER_REMOVE_SOURCE_SUCCESS,
   RIVER_SET_FEED_MODE,
   RIVER_UPDATE_START,
   RIVER_UPDATE_FAILED,
@@ -43,7 +46,8 @@ import {
   REFRESH_ALL_FEEDS_PROGRESS,
 
   addRiver,
-  refreshRiverList
+  refreshRiverList,
+  riverAddFeed,
 } from './actions';
 
 // import { data } from './data'
@@ -117,9 +121,15 @@ function get_river_info(action) {
         level: 'error',
       };
 
-    case RIVER_ADD_FEED_FAILED:          
+    case RIVER_ADD_FEED_FAILED:
       return {
         text: "I can't add that feed to this river right now." + errorDetail,
+        level: 'error',
+      };
+
+    case RIVER_REMOVE_SOURCE_ERROR:
+      return {
+        text: "I can't remove that feed right now." + errorDetail,
         level: 'error',
       };
 
@@ -138,6 +148,7 @@ function state_river(state = def_river, action) {
 
     case RIVER_ADD_FEED_START:
     case RIVER_UPDATE_START:
+    case RIVER_REMOVE_SOURCE_START:
       return Object.assign({}, state, {
         modal: { kind: 'loading', percent: 1 },
       });
@@ -155,6 +166,7 @@ function state_river(state = def_river, action) {
 
     case RIVER_ADD_FEED_FAILED:
     case RIVER_UPDATE_FAILED:
+    case RIVER_REMOVE_SOURCE_ERROR:
       return Object.assign({}, state, {
         modal: { kind: 'bubble', info: get_river_info(action), },
       });
@@ -206,6 +218,17 @@ function state_river(state = def_river, action) {
     case RIVER_GET_FEED_SOURCES_START:
       return Object.assign({}, state, {
         sources: 'PENDING',
+      });
+
+    case RIVER_REMOVE_SOURCE_SUCCESS:
+      return Object.assign({}, state, {
+        sources: action.sources,
+        modal: { kind: 'bubble', info: {
+          text: "Feed removed.",
+          action: riverAddFeed(action.river_index, action.river, action.source_url),
+          action_label: "undo",
+          level: 'info',
+        }},
       });
 
     default:
@@ -269,7 +292,7 @@ function state_top_info(state = {}, action) {
 
     // In-progress cases, clear the balloon.
     case ADD_RIVER_START:
-    case REFRESH_ALL_FEEDS_START:    
+    case REFRESH_ALL_FEEDS_START:
     case REMOVE_RIVER_START:
     case RIVER_LIST_UPDATE_START:
     case RIVER_UPDATE_START:
