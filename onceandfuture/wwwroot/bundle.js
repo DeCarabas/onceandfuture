@@ -72,7 +72,7 @@
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var React = __webpack_require__(/*! react */ 4);
-	var ReactDOM = __webpack_require__(/*! react-dom */ 212);
+	var ReactDOM = __webpack_require__(/*! react-dom */ 213);
 	
 	// import { data } from './data'
 	
@@ -143,18 +143,9 @@
 	  }
 	}
 	
-	function state_river_info(action) {
+	function get_river_info(action) {
 	  var errorDetail = action.error ? "  The error was " + action.error : "";
 	  switch (action.type) {
-	    case _actions.DISMISS_RIVER_BALLOON:
-	      return {};
-	
-	    // In-progress cases, clear the balloon.
-	    case _actions.RIVER_ADD_FEED_START:
-	    case _actions.RIVER_UPDATE_START:
-	      return {};
-	
-	    // Error cases.
 	    case _actions.RIVER_UPDATE_FAILED:
 	      return {
 	        text: "I can't update this river right now.",
@@ -166,8 +157,6 @@
 	        text: "I can't add that feed to this river right now." + errorDetail,
 	        level: 'error'
 	      };
-	
-	    // Undo cases.
 	
 	    default:
 	      return {};
@@ -183,54 +172,81 @@
 	      return Object.assign({}, state, {
 	        modal: { kind: 'none' }
 	      });
+	
 	    case _actions.RIVER_ADD_FEED_START:
 	    case _actions.RIVER_UPDATE_START:
 	      return Object.assign({}, state, {
 	        modal: { kind: 'loading', percent: 1 }
 	      });
+	
 	    case _actions.RIVER_SET_FEED_MODE:
 	      return Object.assign({}, state, {
 	        mode: action.mode
 	      });
+	
 	    case _actions.RIVER_ADD_FEED_SUCCESS:
 	      return Object.assign({}, state, {
-	        modal: { kind: 'none' }
+	        modal: { kind: 'none' },
+	        sources: null
 	      });
+	
 	    case _actions.RIVER_ADD_FEED_FAILED:
 	    case _actions.RIVER_UPDATE_FAILED:
 	      return Object.assign({}, state, {
-	        modal: { kind: 'bubble', info: state_river_info(action) }
+	        modal: { kind: 'bubble', info: get_river_info(action) }
 	      });
+	
 	    case _actions.RIVER_UPDATE_SUCCESS:
 	      return Object.assign({}, state, {
 	        modal: { kind: 'none' },
 	        name: action.name,
 	        updates: state_river_feed_updates(state.updates, action),
+	        feeds: action.feeds,
 	        url: action.url,
 	        id: action.id,
-	        mode: action.response.metadata.mode || state.mode
+	        mode: action.response.metadata.mode || state.mode,
+	        sources: null
 	      });
+	
 	    case _actions.RIVER_ADD_FEED_URL_CHANGED:
-	      if (state.modal && state.modal.kind === 'settings') {
-	        return Object.assign({}, state, {
-	          modal: { kind: 'settings', value: action.new_value }
-	        });
-	      } else {
+	      if (!state.modal || state.modal.kind !== 'settings') {
 	        return state;
 	      }
+	      return Object.assign({}, state, {
+	        modal: { kind: 'settings', value: action.new_value }
+	      });
+	
 	    case _actions.SHOW_RIVER_SETTINGS:
 	      return Object.assign({}, state, {
 	        modal: { kind: 'settings', value: '' }
 	      });
+	
 	    case _actions.HIDE_RIVER_SETTINGS:
 	      return Object.assign({}, state, {
 	        modal: { kind: 'none' }
 	      });
+	
 	    case _actions.EXPAND_FEED_UPDATE:
 	    case _actions.COLLAPSE_FEED_UPDATE:
 	      return Object.assign({}, state, {
 	        updates: state_river_feed_updates(state.updates, action)
 	      });
+	
+	    case _actions.RIVER_GET_FEED_SOURCES_ERROR:
+	      return Object.assign({}, state, {
+	        sources: 'ERROR'
+	      });
+	
+	    case _actions.RIVER_GET_FEED_SOURCES_SUCCESS:
+	      return Object.assign({}, state, {
+	        sources: action.result.sources
+	      });
+	
+	    case _actions.RIVER_GET_FEED_SOURCES_START:
+	      return Object.assign({}, state, {
+	        sources: 'PENDING'
+	      });
+	
 	    default:
 	      return state;
 	  }
@@ -259,6 +275,9 @@
 	    case _actions.DISMISS_RIVER_BALLOON:
 	    case _actions.SHOW_RIVER_SETTINGS:
 	    case _actions.HIDE_RIVER_SETTINGS:
+	    case _actions.RIVER_GET_FEED_SOURCES_ERROR:
+	    case _actions.RIVER_GET_FEED_SOURCES_START:
+	    case _actions.RIVER_GET_FEED_SOURCES_SUCCESS:
 	    case _actions.RIVER_SET_FEED_MODE:
 	    case _actions.RIVER_UPDATE_START:
 	    case _actions.RIVER_UPDATE_FAILED:
@@ -23499,7 +23518,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.RIVER_SET_FEED_MODE = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_URL_CHANGED = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
+	exports.RIVER_SET_FEED_MODE = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_URL_CHANGED = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
 	exports.expandFeedUpdate = expandFeedUpdate;
 	exports.collapseFeedUpdate = collapseFeedUpdate;
 	exports.showRiverSettings = showRiverSettings;
@@ -23526,6 +23545,9 @@
 	exports.removeRiverError = removeRiverError;
 	exports.dismissBalloon = dismissBalloon;
 	exports.dismissRiverBalloon = dismissRiverBalloon;
+	exports.riverGetFeedSourcesStart = riverGetFeedSourcesStart;
+	exports.riverGetFeedSourcesSuccess = riverGetFeedSourcesSuccess;
+	exports.riverGetFeedSourcesError = riverGetFeedSourcesError;
 	exports.riverSetFeedMode = riverSetFeedMode;
 	exports.addFeedToRiver = addFeedToRiver;
 	exports.addRiver = addRiver;
@@ -23533,6 +23555,7 @@
 	exports.refreshRiver = refreshRiver;
 	exports.refreshRiverList = refreshRiverList;
 	exports.refreshAllFeeds = refreshAllFeeds;
+	exports.riverGetFeedSources = riverGetFeedSources;
 	
 	var _util = __webpack_require__(/*! ./util */ 195);
 	
@@ -23755,6 +23778,35 @@
 	  };
 	}
 	
+	var RIVER_GET_FEED_SOURCES_START = exports.RIVER_GET_FEED_SOURCES_START = 'RIVER_GET_FEED_SOURCES_START';
+	function riverGetFeedSourcesStart(index, river) {
+	  return {
+	    type: RIVER_GET_FEED_SOURCES_START,
+	    river_index: index,
+	    river: river
+	  };
+	}
+	
+	var RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_SUCCESS = 'RIVER_GET_FEED_SOURCES_SUCCESS';
+	function riverGetFeedSourcesSuccess(index, river, result) {
+	  return {
+	    type: RIVER_GET_FEED_SOURCES_SUCCESS,
+	    river_index: index,
+	    river: river,
+	    result: result
+	  };
+	}
+	
+	var RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_ERROR = 'RIVER_GET_FEED_SOURCES_ERROR';
+	function riverGetFeedSourcesError(index, river, error) {
+	  return {
+	    type: RIVER_GET_FEED_SOURCES_ERROR,
+	    river_index: index,
+	    river: river,
+	    error: error
+	  };
+	}
+	
 	function decodeError(xhr) {
 	  var errorMessage = xhr.statusText;
 	  try {
@@ -23958,6 +24010,21 @@
 	    }
 	  });
 	}
+	
+	function riverGetFeedSources(index, river) {
+	  return xhrAction({
+	    url: river.url + '/sources',
+	    start: function start(dispatch, xhr) {
+	      dispatch(riverGetFeedSourcesStart(index, river));
+	    },
+	    loaded_json: function loaded_json(dispatch, result) {
+	      dispatch(riverGetFeedSourcesSuccess(index, river, result));
+	    },
+	    error: function error(dispatch, message) {
+	      dispatch(riverGetFeedSourcesError(index, river, message));
+	    }
+	  });
+	}
 
 /***/ },
 /* 197 */
@@ -24034,11 +24101,11 @@
 	
 	var _rivercolumn2 = _interopRequireDefault(_rivercolumn);
 	
-	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 202);
+	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 203);
 	
 	var _riverprogress2 = _interopRequireDefault(_riverprogress);
 	
-	var _riversetballoon = __webpack_require__(/*! ./riversetballoon */ 211);
+	var _riversetballoon = __webpack_require__(/*! ./riversetballoon */ 212);
 	
 	var _riversetballoon2 = _interopRequireDefault(_riversetballoon);
 	
@@ -24303,23 +24370,23 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
-	var _riverballoon = __webpack_require__(/*! ./riverballoon */ 213);
+	var _riverballoon = __webpack_require__(/*! ./riverballoon */ 201);
 	
 	var _riverballoon2 = _interopRequireDefault(_riverballoon);
 	
-	var _riversettings = __webpack_require__(/*! ./riversettings */ 201);
+	var _riversettings = __webpack_require__(/*! ./riversettings */ 202);
 	
 	var _riversettings2 = _interopRequireDefault(_riversettings);
 	
-	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 202);
+	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 203);
 	
 	var _riverprogress2 = _interopRequireDefault(_riverprogress);
 	
-	var _rivertitle = __webpack_require__(/*! ./rivertitle */ 203);
+	var _rivertitle = __webpack_require__(/*! ./rivertitle */ 204);
 	
 	var _rivertitle2 = _interopRequireDefault(_rivertitle);
 	
-	var _riverupdates = __webpack_require__(/*! ./riverupdates */ 204);
+	var _riverupdates = __webpack_require__(/*! ./riverupdates */ 205);
 	
 	var _riverupdates2 = _interopRequireDefault(_riverupdates);
 	
@@ -24386,7 +24453,8 @@
 	  return {
 	    onShowSettings: function onShowSettings(i, r) {
 	      return function () {
-	        return dispatch((0, _actions.showRiverSettings)(i));
+	        dispatch((0, _actions.showRiverSettings)(i));
+	        dispatch((0, _actions.riverGetFeedSources)(i, r));
 	      };
 	    },
 	    onHideSettings: function onHideSettings(i, r) {
@@ -24409,6 +24477,99 @@
 
 /***/ },
 /* 201 */
+/*!********************************************!*\
+  !*** ./wwwroot/components/riverballoon.js ***!
+  \********************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
+	
+	var _actions = __webpack_require__(/*! ../actions */ 196);
+	
+	var _style = __webpack_require__(/*! ./style */ 199);
+	
+	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
+	
+	
+	var RiverBalloon = function RiverBalloon(_ref) {
+	  var info = _ref.info,
+	      dispatchAction = _ref.dispatchAction,
+	      dismiss = _ref.dismiss;
+	
+	  var style = {
+	    margin: '0 auto',
+	    zIndex: 1000,
+	    position: 'absolute',
+	    width: '100%',
+	    textAlign: 'center'
+	  };
+	
+	  var background = _style.RIVER_COLUMN_BACKGROUND_COLOR;
+	  if (info.level == 'error') {
+	    background = 'red';
+	  }
+	
+	  var span_style = {
+	    display: 'inline-block',
+	    borderStyle: 'solid',
+	    borderWidth: '0px 1px 1px 1px',
+	    borderRadius: '3px',
+	    padding: '0px 10px 3px 10px',
+	    backgroundColor: background,
+	    fontSize: 16,
+	    maxWidth: _style.COLUMNWIDTH
+	  };
+	
+	  var link_span_style = {
+	    cursor: 'pointer',
+	    color: 'blue',
+	    fontWeight: 'bold'
+	  };
+	
+	  if (!info.text) {
+	    return React.createElement('div', null);
+	  }
+	
+	  var action_span = React.createElement('span', null);
+	  if (info.action) {
+	    action_span = React.createElement(
+	      'span',
+	      { style: link_span_style, onClick: function onClick() {
+	          return dispatchAction(info.action);
+	        } },
+	      info.action_label
+	    );
+	  }
+	
+	  return React.createElement(
+	    'div',
+	    { style: style },
+	    React.createElement(
+	      'span',
+	      { style: span_style },
+	      React.createElement(
+	        'span',
+	        { style: link_span_style, onClick: dismiss },
+	        'x'
+	      ),
+	      ' ',
+	      info.text,
+	      ' ',
+	      action_span
+	    )
+	  );
+	};
+	
+	exports.default = RiverBalloon;
+
+/***/ },
+/* 202 */
 /*!*********************************************!*\
   !*** ./wwwroot/components/riversettings.js ***!
   \*********************************************/
@@ -24567,18 +24728,102 @@
 	    'div',
 	    null,
 	    React.createElement(SettingsSectionTitle, { text: 'Remove This River' }),
+	    React.createElement(
+	      'p',
+	      null,
+	      'Do you want to remove this river? (Don\'t worry, you can undo this later if you change your mind.)'
+	    ),
 	    React.createElement(SettingsButton, { onClick: deleteRiver, text: 'Remove' })
 	  );
 	};
 	
-	var RiverSettingsBase = function RiverSettingsBase(_ref8) {
-	  var index = _ref8.index,
-	      river = _ref8.river,
-	      user = _ref8.user,
-	      feedUrlChanged = _ref8.feedUrlChanged,
-	      addFeedToRiver = _ref8.addFeedToRiver,
-	      riverSetFeedMode = _ref8.riverSetFeedMode,
-	      deleteRiver = _ref8.deleteRiver;
+	var RiverSource = function RiverSource(_ref8) {
+	  var source = _ref8.source;
+	
+	  return React.createElement(
+	    'tr',
+	    null,
+	    React.createElement(
+	      'td',
+	      null,
+	      React.createElement(
+	        'a',
+	        { href: source.webUrl },
+	        source.name
+	      )
+	    ),
+	    React.createElement(
+	      'td',
+	      null,
+	      source.lastUpdated
+	    )
+	  );
+	};
+	
+	var RiverSourcesBox = function RiverSourcesBox(_ref9) {
+	  var sources = _ref9.sources;
+	
+	  var tbl;
+	  if (sources === 'PENDING') {
+	    tbl = React.createElement('div', null); // TODO: Progress bar.
+	  } else if (sources === 'ERROR') {
+	    tbl = React.createElement('div', null); // TODO: Message!
+	  } else if (sources) {
+	    tbl = React.createElement(
+	      'table',
+	      null,
+	      React.createElement(
+	        'thead',
+	        null,
+	        React.createElement(
+	          'tr',
+	          null,
+	          React.createElement(
+	            'th',
+	            null,
+	            'Feed Name'
+	          ),
+	          React.createElement(
+	            'th',
+	            null,
+	            'Last Updated'
+	          )
+	        )
+	      ),
+	      React.createElement(
+	        'tbody',
+	        null,
+	        sources.map(function (s) {
+	          return React.createElement(RiverSource, { source: s, key: s.feedUrl });
+	        })
+	      )
+	    );
+	  } else {
+	    tbl = React.createElement('div', null); // TODO: Huh?
+	  }
+	
+	  return React.createElement(
+	    'div',
+	    null,
+	    React.createElement(SettingsSectionTitle, { text: 'Feeds' }),
+	    React.createElement(
+	      'p',
+	      null,
+	      'This river is subscribed to these sites:'
+	    ),
+	    tbl
+	  );
+	};
+	
+	var RiverSettingsBase = function RiverSettingsBase(_ref10) {
+	  var index = _ref10.index,
+	      river = _ref10.river,
+	      user = _ref10.user,
+	      feedUrlChanged = _ref10.feedUrlChanged,
+	      addFeedToRiver = _ref10.addFeedToRiver,
+	      riverSetFeedMode = _ref10.riverSetFeedMode,
+	      deleteRiver = _ref10.deleteRiver,
+	      fetchSources = _ref10.fetchSources;
 	
 	  var style = {
 	    backgroundColor: _style.COLOR_VERY_LIGHT,
@@ -24607,8 +24852,12 @@
 	    'div',
 	    { style: style },
 	    React.createElement(AddFeedBox, { feedUrlChanged: urlChanged, addFeedToRiver: addFeed }),
+	    React.createElement('hr', null),
 	    React.createElement(FeedDisplayModeBox, { mode: river.mode, setFeedMode: setFeedMode }),
-	    React.createElement(DeleteRiverBox, { deleteRiver: delRiver })
+	    React.createElement('hr', null),
+	    React.createElement(DeleteRiverBox, { deleteRiver: delRiver }),
+	    React.createElement('hr', null),
+	    React.createElement(RiverSourcesBox, { sources: river.sources })
 	  );
 	};
 	
@@ -24630,6 +24879,9 @@
 	    },
 	    'deleteRiver': function deleteRiver(user, river) {
 	      return dispatch((0, _actions.removeRiver)(user, river));
+	    },
+	    'fetchSources': function fetchSources(index, river) {
+	      return dispatch((0, _actions.riverGetFeedSources)(index, river));
 	    }
 	  };
 	};
@@ -24639,7 +24891,7 @@
 	exports.default = RiverSettings;
 
 /***/ },
-/* 202 */
+/* 203 */
 /*!*********************************************!*\
   !*** ./wwwroot/components/riverprogress.js ***!
   \*********************************************/
@@ -24702,7 +24954,7 @@
 	exports.default = RiverProgress;
 
 /***/ },
-/* 203 */
+/* 204 */
 /*!******************************************!*\
   !*** ./wwwroot/components/rivertitle.js ***!
   \******************************************/
@@ -24767,7 +25019,7 @@
 	exports.default = RiverTitle;
 
 /***/ },
-/* 204 */
+/* 205 */
 /*!********************************************!*\
   !*** ./wwwroot/components/riverupdates.js ***!
   \********************************************/
@@ -24779,7 +25031,7 @@
 	  value: true
 	});
 	
-	var _riverfeedupdate = __webpack_require__(/*! ./riverfeedupdate */ 205);
+	var _riverfeedupdate = __webpack_require__(/*! ./riverfeedupdate */ 206);
 	
 	var _riverfeedupdate2 = _interopRequireDefault(_riverfeedupdate);
 	
@@ -24826,7 +25078,7 @@
 	exports.default = RiverUpdates;
 
 /***/ },
-/* 205 */
+/* 206 */
 /*!***********************************************!*\
   !*** ./wwwroot/components/riverfeedupdate.js ***!
   \***********************************************/
@@ -24844,11 +25096,11 @@
 	
 	var _util = __webpack_require__(/*! ../util */ 195);
 	
-	var _riverfeedupdatetitle = __webpack_require__(/*! ./riverfeedupdatetitle */ 206);
+	var _riverfeedupdatetitle = __webpack_require__(/*! ./riverfeedupdatetitle */ 207);
 	
 	var _riverfeedupdatetitle2 = _interopRequireDefault(_riverfeedupdatetitle);
 	
-	var _riveritem = __webpack_require__(/*! ./riveritem */ 208);
+	var _riveritem = __webpack_require__(/*! ./riveritem */ 209);
 	
 	var _riveritem2 = _interopRequireDefault(_riveritem);
 	
@@ -24949,7 +25201,7 @@
 	exports.default = RiverFeedUpdate;
 
 /***/ },
-/* 206 */
+/* 207 */
 /*!****************************************************!*\
   !*** ./wwwroot/components/riverfeedupdatetitle.js ***!
   \****************************************************/
@@ -24963,7 +25215,7 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 207);
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 208);
 	
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	
@@ -24999,7 +25251,7 @@
 	exports.default = RiverFeedUpdateTitle;
 
 /***/ },
-/* 207 */
+/* 208 */
 /*!*****************************************!*\
   !*** ./wwwroot/components/riverlink.js ***!
   \*****************************************/
@@ -25049,7 +25301,7 @@
 	exports.default = RiverLink;
 
 /***/ },
-/* 208 */
+/* 209 */
 /*!*****************************************!*\
   !*** ./wwwroot/components/riveritem.js ***!
   \*****************************************/
@@ -25061,11 +25313,11 @@
 	  value: true
 	});
 	
-	var _riveritemtitle = __webpack_require__(/*! ./riveritemtitle */ 209);
+	var _riveritemtitle = __webpack_require__(/*! ./riveritemtitle */ 210);
 	
 	var _riveritemtitle2 = _interopRequireDefault(_riveritemtitle);
 	
-	var _riveritemthumbnail = __webpack_require__(/*! ./riveritemthumbnail */ 210);
+	var _riveritemthumbnail = __webpack_require__(/*! ./riveritemthumbnail */ 211);
 	
 	var _riveritemthumbnail2 = _interopRequireDefault(_riveritemthumbnail);
 	
@@ -25102,7 +25354,7 @@
 	exports.default = RiverItem;
 
 /***/ },
-/* 209 */
+/* 210 */
 /*!**********************************************!*\
   !*** ./wwwroot/components/riveritemtitle.js ***!
   \**********************************************/
@@ -25116,7 +25368,7 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 207);
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 208);
 	
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	
@@ -25146,7 +25398,7 @@
 	exports.default = RiverItemTitle;
 
 /***/ },
-/* 210 */
+/* 211 */
 /*!**************************************************!*\
   !*** ./wwwroot/components/riveritemthumbnail.js ***!
   \**************************************************/
@@ -25162,7 +25414,7 @@
 	
 	var _util = __webpack_require__(/*! ../util */ 195);
 	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 207);
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 208);
 	
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	
@@ -25208,7 +25460,7 @@
 	exports.default = RiverItemThumbnail;
 
 /***/ },
-/* 211 */
+/* 212 */
 /*!***********************************************!*\
   !*** ./wwwroot/components/riversetballoon.js ***!
   \***********************************************/
@@ -25226,7 +25478,7 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
-	var _riverballoon = __webpack_require__(/*! ./riverballoon */ 213);
+	var _riverballoon = __webpack_require__(/*! ./riverballoon */ 201);
 	
 	var _riverballoon2 = _interopRequireDefault(_riverballoon);
 	
@@ -25253,7 +25505,7 @@
 	exports.default = RiverSetBalloon;
 
 /***/ },
-/* 212 */
+/* 213 */
 /*!******************************!*\
   !*** ./~/react-dom/index.js ***!
   \******************************/
@@ -25262,99 +25514,6 @@
 	'use strict';
 	
 	module.exports = __webpack_require__(/*! react/lib/ReactDOM */ 6);
-
-/***/ },
-/* 213 */
-/*!********************************************!*\
-  !*** ./wwwroot/components/riverballoon.js ***!
-  \********************************************/
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-	
-	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
-	
-	var _actions = __webpack_require__(/*! ../actions */ 196);
-	
-	var _style = __webpack_require__(/*! ./style */ 199);
-	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
-	
-	var RiverBalloon = function RiverBalloon(_ref) {
-	  var info = _ref.info,
-	      dispatchAction = _ref.dispatchAction,
-	      dismiss = _ref.dismiss;
-	
-	  var style = {
-	    margin: '0 auto',
-	    zIndex: 1000,
-	    position: 'absolute',
-	    width: '100%',
-	    textAlign: 'center'
-	  };
-	
-	  var background = _style.RIVER_COLUMN_BACKGROUND_COLOR;
-	  if (info.level == 'error') {
-	    background = 'red';
-	  }
-	
-	  var span_style = {
-	    display: 'inline-block',
-	    borderStyle: 'solid',
-	    borderWidth: '0px 1px 1px 1px',
-	    borderRadius: '3px',
-	    padding: '0px 10px 3px 10px',
-	    backgroundColor: background,
-	    fontSize: 16,
-	    maxWidth: _style.COLUMNWIDTH
-	  };
-	
-	  var link_span_style = {
-	    cursor: 'pointer',
-	    color: 'blue',
-	    fontWeight: 'bold'
-	  };
-	
-	  if (!info.text) {
-	    return React.createElement('div', null);
-	  }
-	
-	  var action_span = React.createElement('span', null);
-	  if (info.action) {
-	    action_span = React.createElement(
-	      'span',
-	      { style: link_span_style, onClick: function onClick() {
-	          return dispatchAction(info.action);
-	        } },
-	      info.action_label
-	    );
-	  }
-	
-	  return React.createElement(
-	    'div',
-	    { style: style },
-	    React.createElement(
-	      'span',
-	      { style: span_style },
-	      React.createElement(
-	        'span',
-	        { style: link_span_style, onClick: dismiss },
-	        'x'
-	      ),
-	      ' ',
-	      info.text,
-	      ' ',
-	      action_span
-	    )
-	  );
-	};
-	
-	exports.default = RiverBalloon;
 
 /***/ }
 /******/ ]);

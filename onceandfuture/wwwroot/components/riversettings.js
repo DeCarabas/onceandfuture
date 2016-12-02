@@ -13,9 +13,10 @@ import {
   RIVER_MODE_IMAGE,
 
   addFeedToRiver,
-  riverAddFeedUrlChanged,
-  riverSetFeedMode,
   removeRiver,
+  riverAddFeedUrlChanged,
+  riverGetFeedSources,
+  riverSetFeedMode,
 } from '../actions'
 
 const SettingsSectionTitle = ({text}) => {
@@ -111,7 +112,44 @@ const FeedDisplayModeBox = ({mode, setFeedMode}) => {
 const DeleteRiverBox = ({deleteRiver}) => {
   return <div>
     <SettingsSectionTitle text="Remove This River" />
+    <p>Do you want to remove this river? (Don't worry, you can undo this later if you change your mind.)</p>
     <SettingsButton onClick={deleteRiver} text="Remove" />
+  </div>;
+}
+
+const RiverSource = ({source}) => {
+  return <tr>
+    <td><a href={source.webUrl}>{source.name}</a></td>
+    <td>{source.lastUpdated}</td>
+  </tr>
+}
+
+const RiverSourcesBox = ({sources}) => {
+  var tbl;
+  if (sources === 'PENDING') {
+    tbl = <div />; // TODO: Progress bar.
+  } else if (sources === 'ERROR') {
+    tbl = <div />; // TODO: Message!
+  } else if (sources) {
+    tbl = <table>
+      <thead>
+        <tr>
+          <th>Feed Name</th>
+          <th>Last Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        { sources.map(s => <RiverSource source={s} key={s.feedUrl} />) }
+      </tbody>    
+    </table>;
+  } else {
+    tbl = <div />; // TODO: Huh?
+  }
+
+  return <div>
+    <SettingsSectionTitle text="Feeds" />
+    <p>This river is subscribed to these sites:</p>
+    {tbl}
   </div>;
 }
 
@@ -122,7 +160,8 @@ const RiverSettingsBase = ({
   feedUrlChanged,
   addFeedToRiver,
   riverSetFeedMode,
-  deleteRiver
+  deleteRiver,
+  fetchSources
 }) => {
   const style = {
     backgroundColor: COLOR_VERY_LIGHT,
@@ -141,8 +180,12 @@ const RiverSettingsBase = ({
 
   return <div style={style}>
     <AddFeedBox feedUrlChanged={urlChanged} addFeedToRiver={addFeed} />
+    <hr />
     <FeedDisplayModeBox mode={river.mode} setFeedMode={setFeedMode} />
+    <hr />
     <DeleteRiverBox deleteRiver={delRiver} />
+    <hr />   
+    <RiverSourcesBox sources={river.sources} /> 
   </div>;
 }
 
@@ -157,6 +200,7 @@ const mapDispatchToProps = (dispatch) => {
     'addFeedToRiver': (index, river) => dispatch(addFeedToRiver(index, river)),
     'riverSetFeedMode': (index, river, mode) => dispatch(riverSetFeedMode(index, river, mode)),
     'deleteRiver': (user, river) => dispatch(removeRiver(user, river)),
+    'fetchSources': (index, river) => dispatch(riverGetFeedSources(index, river)),
   };
 };
 

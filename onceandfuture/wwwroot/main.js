@@ -27,6 +27,9 @@ import {
   RIVER_ADD_FEED_START,
   RIVER_ADD_FEED_FAILED,
   RIVER_ADD_FEED_SUCCESS,
+  RIVER_GET_FEED_SOURCES_ERROR,
+  RIVER_GET_FEED_SOURCES_START,
+  RIVER_GET_FEED_SOURCES_SUCCESS,
   RIVER_LIST_UPDATE_FAILED,
   RIVER_LIST_UPDATE_START,
   RIVER_LIST_UPDATE_SUCCESS,
@@ -104,18 +107,9 @@ function state_river_feed_updates(state = [], action) {
   }
 }
 
-function state_river_info(action) {
+function get_river_info(action) {
   let errorDetail = action.error ? "  The error was " + action.error : "";
   switch(action.type) {
-    case DISMISS_RIVER_BALLOON:
-      return {};
-
-    // In-progress cases, clear the balloon.
-    case RIVER_ADD_FEED_START:
-    case RIVER_UPDATE_START:
-      return {};
-
-    // Error cases.
     case RIVER_UPDATE_FAILED:
       return {
         text: "I can't update this river right now.",
@@ -128,8 +122,6 @@ function state_river_info(action) {
         level: 'error',
       };
 
-    // Undo cases.
-
     default:
       return {};
   }
@@ -141,55 +133,80 @@ function state_river(state = def_river, action) {
     case DISMISS_RIVER_BALLOON:
       return Object.assign({}, state, {
         modal: { kind: 'none', },
-      });      
+      });
+
     case RIVER_ADD_FEED_START:
     case RIVER_UPDATE_START:
       return Object.assign({}, state, {
         modal: { kind: 'loading', percent: 1 },
       });
+
     case RIVER_SET_FEED_MODE:
       return Object.assign({}, state, {
         mode: action.mode,
       });
+
     case RIVER_ADD_FEED_SUCCESS:
       return Object.assign({}, state, {
         modal: { kind: 'none', },
+        sources: null,
       });
+
     case RIVER_ADD_FEED_FAILED:
     case RIVER_UPDATE_FAILED:
       return Object.assign({}, state, {
-        modal: { kind: 'bubble', info: state_river_info(action), },
+        modal: { kind: 'bubble', info: get_river_info(action), },
       });
+
     case RIVER_UPDATE_SUCCESS:
       return Object.assign({}, state, {
         modal: { kind: 'none', },
         name: action.name,
         updates: state_river_feed_updates(state.updates, action),
+        feeds: action.feeds,
         url: action.url,
         id: action.id,
         mode: action.response.metadata.mode || state.mode,
+        sources: null,
       });
+
     case RIVER_ADD_FEED_URL_CHANGED:
-      if (state.modal && state.modal.kind === 'settings') {
-        return Object.assign({}, state, {
-          modal: { kind: 'settings', value: action.new_value },
-        });
-      } else {
-        return state;
-      }
+      if (!state.modal || state.modal.kind !== 'settings') { return state; }
+      return Object.assign({}, state, {
+        modal: { kind: 'settings', value: action.new_value },
+      });
+
     case SHOW_RIVER_SETTINGS:
       return Object.assign({}, state, {
         modal: { kind: 'settings', value: '', },
       });
+
     case HIDE_RIVER_SETTINGS:
       return Object.assign({}, state, {
         modal: { kind: 'none', },
       });
+
     case EXPAND_FEED_UPDATE:
     case COLLAPSE_FEED_UPDATE:
       return Object.assign({}, state, {
         updates: state_river_feed_updates(state.updates, action),
       });
+
+    case RIVER_GET_FEED_SOURCES_ERROR:
+      return Object.assign({}, state, {
+        sources: 'ERROR',
+      });
+
+    case RIVER_GET_FEED_SOURCES_SUCCESS:
+      return Object.assign({}, state, {
+        sources: action.result.sources,
+      });
+
+    case RIVER_GET_FEED_SOURCES_START:
+      return Object.assign({}, state, {
+        sources: 'PENDING',
+      });
+
     default:
       return state;
   }
@@ -213,6 +230,9 @@ function state_rivers(state = [], action) {
     case DISMISS_RIVER_BALLOON:
     case SHOW_RIVER_SETTINGS:
     case HIDE_RIVER_SETTINGS:
+    case RIVER_GET_FEED_SOURCES_ERROR:
+    case RIVER_GET_FEED_SOURCES_START:
+    case RIVER_GET_FEED_SOURCES_SUCCESS:
     case RIVER_SET_FEED_MODE:
     case RIVER_UPDATE_START:
     case RIVER_UPDATE_FAILED:

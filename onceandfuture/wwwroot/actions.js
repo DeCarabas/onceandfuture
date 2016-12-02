@@ -24,7 +24,7 @@ export function collapseFeedUpdate(river_index, update_key) {
 }
 
 export const SHOW_RIVER_SETTINGS = 'SHOW_RIVER_SETTINGS';
-export function showRiverSettings(river_index) {
+export function showRiverSettings(river_index) {  
   return {
     type: SHOW_RIVER_SETTINGS,
     river_index: river_index,
@@ -218,6 +218,35 @@ export function dismissRiverBalloon(index) {
   };
 }
 
+export const RIVER_GET_FEED_SOURCES_START = 'RIVER_GET_FEED_SOURCES_START';
+export function riverGetFeedSourcesStart(index, river) {
+  return {
+    type: RIVER_GET_FEED_SOURCES_START,
+    river_index: index,
+    river: river,
+  };
+}
+
+export const RIVER_GET_FEED_SOURCES_SUCCESS = 'RIVER_GET_FEED_SOURCES_SUCCESS';
+export function riverGetFeedSourcesSuccess(index, river, result) {
+  return {
+    type: RIVER_GET_FEED_SOURCES_SUCCESS,
+    river_index: index,
+    river: river,
+    result: result,
+  };
+}
+
+export const RIVER_GET_FEED_SOURCES_ERROR = 'RIVER_GET_FEED_SOURCES_ERROR';
+export function riverGetFeedSourcesError(index, river, error) {
+  return {
+    type: RIVER_GET_FEED_SOURCES_ERROR,
+    river_index: index,
+    river: river,
+    error: error,
+  };
+}
+
 function decodeError(xhr) {
   let  errorMessage = xhr.statusText;
   try
@@ -398,4 +427,19 @@ export function refreshAllFeeds(user) {
       dispatch(refreshAllFeedsError(message));
     },
   })
+}
+
+export function riverGetFeedSources(index, river) {
+  return xhrAction({
+    url: river.url + '/sources',
+    start: (dispatch, xhr) => {
+      dispatch(riverGetFeedSourcesStart(index, river));
+    },
+    loaded_json: (dispatch, result) => {
+      dispatch(riverGetFeedSourcesSuccess(index, river, result));
+    },
+    error: (dispatch, message) => {
+      dispatch(riverGetFeedSourcesError(index, river, message));
+    },
+  });
 }
