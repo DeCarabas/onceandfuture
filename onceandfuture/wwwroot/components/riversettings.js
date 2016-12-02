@@ -18,6 +18,7 @@ import {
   riverGetFeedSources,
   riverSetFeedMode,
 } from '../actions'
+import RelTime from './reltime'
 
 const SettingsSectionTitle = ({text}) => {
   const style = {
@@ -120,7 +121,7 @@ const DeleteRiverBox = ({deleteRiver}) => {
 const RiverSource = ({source}) => {
   return <tr>
     <td><a href={source.webUrl}>{source.name}</a></td>
-    <td>{source.lastUpdated}</td>
+    <td><RelTime time={source.lastUpdated} /></td>
   </tr>
 }
 

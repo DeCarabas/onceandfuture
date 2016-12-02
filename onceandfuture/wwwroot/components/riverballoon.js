@@ -1,5 +1,4 @@
 var React = require('react'); // N.B. Still need this because JSX.
-import { connect } from 'react-redux'
 import { dismissBalloon } from '../actions'
 import {
   COLUMNWIDTH,
