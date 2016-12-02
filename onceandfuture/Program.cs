@@ -424,7 +424,7 @@ namespace onceandfuture
             this.feedStore = feedStore;
         }
 
-        [HttpGet("/api/v1/river/{user}")]
+        [HttpGet("/api/v1/user/{user}")]
         public async Task<IActionResult> GetRiverList(string user)
         {
             UserProfile profile = await this.profileStore.GetProfileFor(user);
@@ -433,12 +433,12 @@ namespace onceandfuture
                           {
                               name = r.Name,
                               id = r.Id,
-                              url = String.Format("/api/v1/river/{0}/{1}", user, r.Id),
+                              url = Url.Action(nameof(GetRiver), new { user = user, id = r.Id }),
                           }).ToArray();
             return Json(new { rivers = rivers });
         }
 
-        [HttpPost("/api/v1/river/{user}")]
+        [HttpPost("/api/v1/user/{user}")]
         public async Task<IActionResult> CreateOrRestoreRiver(string user)
         {
             CreateOrRestoreRequest requestBody;
@@ -472,7 +472,7 @@ namespace onceandfuture
 
             UserProfile profile = await this.profileStore.GetProfileFor(user);
 
-            string name = requestBody.Name ?? Util.RiverName(profile.Rivers.Count);
+            string name = requestBody.Name ?? Util.RiverName(profile.Rivers);
             RiverDefinition river = profile.Rivers.FirstOrDefault(
                 rd => String.Equals(rd.Name, name, StringComparison.OrdinalIgnoreCase));
             if (river == null)
@@ -490,12 +490,12 @@ namespace onceandfuture
                           {
                               name = r.Name,
                               id = r.Id,
-                              url = String.Format("/api/v1/river/{0}/{1}", user, r.Id),
+                              url = Url.Action(nameof(GetRiver), new { user = user, id = r.Id }),
                           }).ToArray();
             return Json(new { status = "ok", rivers = rivers });
         }
 
-        [HttpDelete("/api/v1/river/{user}/{id}")]
+        [HttpDelete("/api/v1/user/{user}/river/{id}")]
         public async Task<IActionResult> DeleteRiver(string user, string id)
         {
             UserProfile profile = await this.profileStore.GetProfileFor(user);
@@ -508,12 +508,12 @@ namespace onceandfuture
                           {
                               name = r.Name,
                               id = r.Id,
-                              url = String.Format("/api/v1/river/{0}/{1}", user, r.Id),
+                              url = Url.Action(nameof(GetRiver), new { user = user, id = r.Id }),                              
                           }).ToArray();
             return Json(new { status = "ok", rivers = rivers });
         }
 
-        [HttpGet("/api/v1/river/{user}/{id}")]
+        [HttpGet("/api/v1/user/{user}/river/{id}")]
         public async Task<IActionResult> GetRiver(string user, string id)
         {
             River river = await this.aggregateStore.LoadAggregate(id);
@@ -524,7 +524,7 @@ namespace onceandfuture
             return Json(river);
         }
 
-        [HttpGet("/api/v1/river/{user}/{id}/sources")]
+        [HttpGet("/api/v1/user/{user}/river/{id}/sources")]
         public async Task<IActionResult> GetRiverSources(string user, string id)
         {
             UserProfile profile = await this.profileStore.GetProfileFor(user);
@@ -532,28 +532,7 @@ namespace onceandfuture
             return await GetSourcesForRiver(river);
         }
 
-        async Task<IActionResult> GetSourcesForRiver(RiverDefinition river)
-        {
-            IList<Uri> feedUris = river.Feeds ?? (IList<Uri>)(Array.Empty<Uri>());
-            River[] feedrivers = await Task.WhenAll(feedUris.Select(f => this.feedStore.LoadRiverForFeed(f)));
-
-            return Json(new
-            {
-                sources = feedrivers.Select(r => new
-                {
-                    id = Util.HashString(r.Metadata.OriginUrl.AbsoluteUri),
-                    name = r.UpdatedFeeds.Feeds.FirstOrDefault()?.FeedTitle ?? r.Metadata.OriginUrl.AbsoluteUri,
-                    webUrl = r.UpdatedFeeds.Feeds.FirstOrDefault()?.WebsiteUrl ?? r.Metadata.OriginUrl.AbsoluteUri,
-                    feedUrl = r.Metadata.OriginUrl,
-                    lastStatus = r.Metadata.LastStatus,
-                    lastUpdated = r.UpdatedFeeds.Feeds.Count > 0
-                        ? r.UpdatedFeeds.Feeds.Max(f => f.WhenLastUpdate)
-                        : DateTimeOffset.MinValue,
-                }).ToArray()
-            });
-        }
-
-        [HttpPost("/api/v1/river/{user}/{id}/sources")]
+        [HttpPost("/api/v1/user/{user}/river/{id}/sources")]
         public async Task<IActionResult> AddRiverSource(string user, string id)
         {
             AddFeedRequest requestBody;
@@ -598,7 +577,7 @@ namespace onceandfuture
             return await GetSourcesForRiver(river);
         }
 
-        [HttpDelete("/api/v1/river/{user}/{id}/sources/{sourceId}")]
+        [HttpDelete("/api/v1/user/{user}/river/{id}/sources/{sourceId}")]
         public async Task<IActionResult> RemoveRiverSource(string user, string id, string sourceId)
         {
             UserProfile profile = await this.profileStore.GetProfileFor(user);
@@ -617,13 +596,13 @@ namespace onceandfuture
             return await GetSourcesForRiver(newRiver);
         }
 
-        [HttpPost("/api/v1/river/{user}/{id}/mode")]
+        [HttpPost("/api/v1/user/{user}/river/{id}/mode")]
         public Task<IActionResult> PostRiverMode(string user, string id)
         {
             throw new NotImplementedException();
         }
 
-        [HttpPost("/api/v1/river/{user}/refresh_all")]
+        [HttpPost("/api/v1/user/{user}/refresh_all")]
         public async Task<IActionResult> PostRefreshAll(string user)
         {
             var parser = new RiverFeedParser();
@@ -650,6 +629,27 @@ namespace onceandfuture
             }
 
             return Ok(); // TODO: Progress?
+        }
+
+        async Task<IActionResult> GetSourcesForRiver(RiverDefinition river)
+        {
+            IList<Uri> feedUris = river.Feeds ?? (IList<Uri>)(Array.Empty<Uri>());
+            River[] feedrivers = await Task.WhenAll(feedUris.Select(f => this.feedStore.LoadRiverForFeed(f)));
+
+            return Json(new
+            {
+                sources = feedrivers.Select(r => new
+                {
+                    id = Util.HashString(r.Metadata.OriginUrl.AbsoluteUri),
+                    name = r.UpdatedFeeds.Feeds.FirstOrDefault()?.FeedTitle ?? r.Metadata.OriginUrl.AbsoluteUri,
+                    webUrl = r.UpdatedFeeds.Feeds.FirstOrDefault()?.WebsiteUrl ?? r.Metadata.OriginUrl.AbsoluteUri,
+                    feedUrl = r.Metadata.OriginUrl,
+                    lastStatus = r.Metadata.LastStatus,
+                    lastUpdated = r.UpdatedFeeds.Feeds.Count > 0
+                        ? r.UpdatedFeeds.Feeds.Max(f => f.WhenLastUpdate)
+                        : DateTimeOffset.MinValue,
+                }).ToArray()
+            });
         }
 
         public class AddFeedRequest

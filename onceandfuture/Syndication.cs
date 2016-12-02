@@ -426,9 +426,14 @@ namespace onceandfuture
             "Vistula", "Aruwimi", "Daugava", "Gila", "Loire", "Essequibo", "Khoper", "Tagus",
         };
 
-        public static string RiverName(int number)
+        public static string RiverName(IList<RiverDefinition> rivers)
         {
-            return RiverNames[number % RiverNames.Length];
+            int index = (rivers.Count + 1) % RiverNames.Length;
+            while(rivers.Any(rd => rd.Name == RiverNames[index]))
+            {
+                index = (index + 1) % RiverNames.Length;
+            }
+            return RiverNames[index];
         }
 
         public static IEnumerable<TItem> ConcatSequence<TItem>(params IEnumerable<TItem>[] sequences)

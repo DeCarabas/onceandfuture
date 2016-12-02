@@ -23983,7 +23983,7 @@
 	  var id = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 	
 	  return xhrAction({
-	    verb: 'POST', url: "/api/v1/river/" + user,
+	    verb: 'POST', url: "/api/v1/user/" + user,
 	    msg: { name: null, id: id },
 	    start: function start(dispatch) {
 	      return dispatch(addRiverStart());
@@ -24029,7 +24029,7 @@
 	
 	function refreshRiverList(user) {
 	  return xhrAction({
-	    url: "/api/v1/river/" + user,
+	    url: "/api/v1/user/" + user,
 	    start: function start(dispatch) {
 	      return dispatch(riverListUpdateStart());
 	    },
@@ -24052,7 +24052,7 @@
 	      var state = getState();
 	      return !state.loading;
 	    },
-	    verb: "POST", url: "/api/v1/river/" + user + "/refresh_all",
+	    verb: "POST", url: "/api/v1/user/" + user + "/refresh_all",
 	    start: function start(dispatch, xhr) {
 	      pollTimer = setInterval(function () {
 	        var text = xhr.responseText;

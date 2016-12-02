@@ -389,7 +389,7 @@ export function riverAddFeed(index, river, url) {
 
 export function addRiver(user, id = null) {
   return xhrAction({
-    verb: 'POST', url: "/api/v1/river/" + user,
+    verb: 'POST', url: "/api/v1/user/" + user,
     msg: { name: null, id: id },
     start: (dispatch) => dispatch(addRiverStart()),
     loaded_json: (dispatch, result) => {
@@ -427,7 +427,7 @@ export function refreshRiver(index, river_name, river_url, river_id) {
 
 export function refreshRiverList(user) {
   return xhrAction({
-    url: "/api/v1/river/" + user,
+    url: "/api/v1/user/" + user,
     start: (dispatch) => dispatch(riverListUpdateStart()),
     loaded_json: (dispatch, result) => {
       dispatch(riverListUpdateSuccess(result.rivers));
@@ -446,7 +446,7 @@ export function refreshAllFeeds(user) {
       const state = getState();
       return !state.loading;
     },
-    verb: "POST", url: "/api/v1/river/"+user+"/refresh_all",
+    verb: "POST", url: "/api/v1/user/"+user+"/refresh_all",
     start: (dispatch, xhr) => {
       pollTimer = setInterval(() => {
         let text = xhr.responseText;
