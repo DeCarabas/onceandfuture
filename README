@@ -2,17 +2,18 @@ Todo:
 
 UI:
 - Remove feeds from rivers
+  - Getting sources but still need: fetch source progress and error
+  - Then need to make it prettier
+  - Then need to add unsubscribe action
 - Add/remove river sets
 - Rename river
 - Re-order rivers
 - Import/export OPML
-- Pretty Dates
 - Sign Out
 - Update Progress
-- Rename river
 - More/less UX is jarring.
 
-Code Stuff:
+Back-end Stuff:
 - Cancellation tokens everywhere
 - Single HttpClient (or factory) everywhere
 - Measure things:
