@@ -66,6 +66,7 @@ export const AddRiverButton = ({onAddRiver}) => {
     cursor: 'pointer',
   };  
 
+//what
   return <div style={add_button_style} onClick={onAddRiver}>
       <i className="fa fa-plus-square" />
   </div>
