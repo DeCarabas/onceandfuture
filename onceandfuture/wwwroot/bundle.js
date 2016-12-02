@@ -293,6 +293,20 @@
 	        });
 	      });
 	
+	    case _actions.DROP_RIVER:
+	      var source_river_index = state.findIndex(function (r) {
+	        return r.id === action.dragged_river_id;
+	      });
+	      if (source_river_index < 0) {
+	        return state;
+	      }
+	
+	      // Leave out the source river...
+	      var state_without_source = [].concat(state.slice(0, source_river_index), state.slice(source_river_index + 1, state.length));
+	
+	      // And splice it to the left of the target index.
+	      return [].concat(state_without_source.slice(0, action.target_index), [state[source_river_index]], state_without_source.slice(action.target_index, state_without_source.length));
+	
 	    default:
 	      // By default forward events to the appropriate element.
 	      return apply_state_array(state, action.river_index, state_river, action);
@@ -23525,7 +23539,8 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.RIVER_SET_FEED_MODE = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_URL_CHANGED = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
+	exports.RIVER_SET_FEED_MODE = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_URL_CHANGED = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
+	exports.dropRiver = dropRiver;
 	exports.expandFeedUpdate = expandFeedUpdate;
 	exports.collapseFeedUpdate = collapseFeedUpdate;
 	exports.showRiverSettings = showRiverSettings;
@@ -23575,6 +23590,16 @@
 	var RIVER_MODE_AUTO = exports.RIVER_MODE_AUTO = 'auto';
 	var RIVER_MODE_IMAGE = exports.RIVER_MODE_IMAGE = 'image';
 	var RIVER_MODE_TEXT = exports.RIVER_MODE_TEXT = 'text';
+	
+	var DROP_RIVER = exports.DROP_RIVER = 'DROP_RIVER';
+	function dropRiver(target_index, target_river, dragged_river_id) {
+	  return {
+	    type: DROP_RIVER,
+	    target_index: target_index,
+	    target_river: target_river,
+	    dragged_river_id: dragged_river_id
+	  };
+	}
 	
 	var EXPAND_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = 'EXPAND_FEED_UPDATE';
 	function expandFeedUpdate(river_index, update_key) {
@@ -24483,7 +24508,8 @@
 	      onShowSettings = _ref.onShowSettings,
 	      onHideSettings = _ref.onHideSettings,
 	      onDismissBalloon = _ref.onDismissBalloon,
-	      dispatch = _ref.dispatch;
+	      dispatch = _ref.dispatch,
+	      onDropRiver = _ref.onDropRiver;
 	
 	  var style = {
 	    backgroundColor: _style.RIVER_COLUMN_BACKGROUND_COLOR,
@@ -24495,9 +24521,23 @@
 	
 	  var river = rivers[index] || {};
 	  var modal = modalForRiver(river, index, onDismissBalloon(index, river), dispatch);
+	
+	  var onDragOver = function onDragOver(ev) {
+	    ev.preventDefault();
+	    ev.dataTransfer.dropEffect = "move";
+	  };
+	
+	  var onDrop = function onDrop(ev) {
+	    ev.preventDefault();
+	    var source_river = ev.dataTransfer.getData('river');
+	    if (source_river) {
+	      onDropRiver(index, river, source_river);
+	    }
+	  };
+	
 	  return React.createElement(
 	    'div',
-	    { style: style },
+	    { style: style, onDragOver: onDragOver, onDrop: onDrop },
 	    React.createElement(_rivertitle2.default, {
 	      river: river,
 	      onShowSettings: onShowSettings(index, river),
@@ -24535,7 +24575,10 @@
 	        return dispatch((0, _actions.dismissRiverBalloon)(i));
 	      };
 	    },
-	    dispatch: dispatch
+	    dispatch: dispatch,
+	    onDropRiver: function onDropRiver(target_index, target_river, dragged_river_id) {
+	      return dispatch((0, _actions.dropRiver)(target_index, target_river, dragged_river_id));
+	    }
 	  };
 	};
 	
@@ -25277,19 +25320,41 @@
 	  return React.createElement('i', { className: 'fa ' + icon, style: style, onClick: onClick });
 	};
 	
-	var RiverTitle = function RiverTitle(_ref2) {
-	  var river = _ref2.river,
-	      onShowSettings = _ref2.onShowSettings,
-	      onHideSettings = _ref2.onHideSettings;
+	var RiverDragHandle = function RiverDragHandle(_ref2) {
+	  var river = _ref2.river;
+	
+	  var style = Object.assign({}, _style.BUTTON_STYLE, {
+	    paddingTop: 6,
+	    cursor: 'move',
+	    float: null
+	  });
+	
+	  var onDrag = function onDrag(ev) {
+	    ev.dataTransfer.setData("river", river.id);
+	    var draggo = ev.target.parentNode.parentNode; //.parentNode; but too slow.
+	    ev.dataTransfer.setDragImage(draggo, 0, 0);
+	  };
+	
+	  return React.createElement('i', { className: 'fa fa-bars', draggable: 'true', style: style, onDragStart: onDrag });
+	};
+	
+	var RiverTitle = function RiverTitle(_ref3) {
+	  var river = _ref3.river,
+	      onShowSettings = _ref3.onShowSettings,
+	      onHideSettings = _ref3.onHideSettings;
 	
 	  var divStyle = {
 	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR,
-	    verticalAlign: 'middle'
+	    verticalAlign: 'middle',
+	    userSelect: 'none',
+	    draggable: 'true'
 	  };
 	  var style = {
 	    paddingLeft: _style.COLUMNSPACER,
 	    fontSize: _style.RIVER_TITLE_FONT_SIZE,
-	    marginBottom: 0
+	    marginBottom: 0,
+	    userSelect: 'none',
+	    draggable: 'true'
 	  };
 	
 	  return React.createElement(
@@ -25303,6 +25368,8 @@
 	    React.createElement(
 	      'h1',
 	      { style: style },
+	      React.createElement(RiverDragHandle, { river: river }),
+	      ' ',
 	      river.name
 	    )
 	  );

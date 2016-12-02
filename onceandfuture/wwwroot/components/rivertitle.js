@@ -18,16 +18,37 @@ const RiverSettingsButton = ({river, onShowSettings, onHideSettings}) => {
   return <i className={'fa ' + icon} style={style} onClick={onClick} />
 }
 
+const RiverDragHandle = ({river}) => {
+  const style = Object.assign({}, BUTTON_STYLE, {
+    paddingTop: 6,
+    cursor: 'move',
+    float: null,
+  });
+
+  const onDrag = (ev) => {
+    ev.dataTransfer.setData("river", river.id);
+    const draggo = ev.target.parentNode.parentNode; //.parentNode; but too slow.
+    ev.dataTransfer.setDragImage(draggo, 0, 0);
+  };
+
+  return <i className='fa fa-bars' draggable="true" style={style} onDragStart={onDrag}  />
+}
+
 const RiverTitle = ({river, onShowSettings, onHideSettings}) => {
   const divStyle = {
     backgroundColor: RIVER_TITLE_BACKGROUND_COLOR,
-    verticalAlign: 'middle',    
+    verticalAlign: 'middle',
+    userSelect: 'none',
+    draggable: 'true',
   }
   const style = {
     paddingLeft: COLUMNSPACER,
     fontSize: RIVER_TITLE_FONT_SIZE,
     marginBottom: 0,
+    userSelect: 'none',
+    draggable: 'true',
   }
+
 
   return <div style={divStyle}>
     <RiverSettingsButton
@@ -35,7 +56,7 @@ const RiverTitle = ({river, onShowSettings, onHideSettings}) => {
       onShowSettings={onShowSettings}
       onHideSettings={onHideSettings}
       />
-    <h1 style={style}>{river.name}</h1>
+    <h1 style={style}><RiverDragHandle river={river} /> {river.name}</h1>
   </div>;
 };
 

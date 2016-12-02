@@ -5,6 +5,16 @@ export const RIVER_MODE_AUTO = 'auto';
 export const RIVER_MODE_IMAGE = 'image';
 export const RIVER_MODE_TEXT = 'text';
 
+export const DROP_RIVER = 'DROP_RIVER';
+export function dropRiver(target_index, target_river, dragged_river_id) {
+  return {
+    type: DROP_RIVER,
+    target_index: target_index,
+    target_river: target_river,
+    dragged_river_id: dragged_river_id,
+  }
+}
+
 export const EXPAND_FEED_UPDATE = 'EXPAND_FEED_UPDATE';
 export function expandFeedUpdate(river_index, update_key) {
   return {
@@ -24,7 +34,7 @@ export function collapseFeedUpdate(river_index, update_key) {
 }
 
 export const SHOW_RIVER_SETTINGS = 'SHOW_RIVER_SETTINGS';
-export function showRiverSettings(river_index) {  
+export function showRiverSettings(river_index) {
   return {
     type: SHOW_RIVER_SETTINGS,
     river_index: river_index,
@@ -181,7 +191,7 @@ export function addRiverError(error) {
 export const REMOVE_RIVER_START = 'REMOVE_RIVER_START';
 export function removeRiverStart() {
   return {
-    type: REMOVE_RIVER_START,    
+    type: REMOVE_RIVER_START,
   };
 }
 
@@ -306,7 +316,7 @@ function xhrAction(options) {
     if (options.progress) {
       xhr.addEventListener("progress", () => options.progress(dispatch, xhr));
     }
-    if (options.error) {      
+    if (options.error) {
       xhr.addEventListener("error", () => {
         if (xhr.status == 403 /* Forbidden */) {
           const errorMessage = decodeError(xhr);
@@ -315,7 +325,7 @@ function xhrAction(options) {
           window.location.href = "/login";
         } else {
           options.error(dispatch, decodeError(xhr));
-        }        
+        }
       });
     }
     if (options.loaded_json || options.loaded) {
@@ -331,7 +341,7 @@ function xhrAction(options) {
           let result = JSON.parse(xhr.responseText);
           options.loaded_json(dispatch, result, xhr);
         } else {
-          options.loaded(dispatch, xhr);          
+          options.loaded(dispatch, xhr);
         }
       });
     }

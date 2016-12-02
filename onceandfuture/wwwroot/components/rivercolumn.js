@@ -11,7 +11,8 @@ import RiverSettings from './riversettings'
 import RiverProgress from './riverprogress'
 import RiverTitle from './rivertitle'
 import RiverUpdates from './riverupdates'
-import { 
+import {
+  dropRiver,
   showRiverSettings,
   hideRiverSettings,
   dismissRiverBalloon,
@@ -29,12 +30,13 @@ function modalForRiver(river, index, dismiss, dispatch) {
 }
 
 const RiverColumnBase = ({
-  rivers, 
+  rivers,
   index,
-  onShowSettings, 
+  onShowSettings,
   onHideSettings,
   onDismissBalloon,
   dispatch,
+  onDropRiver,
 }) => {
   const style = {
     backgroundColor: RIVER_COLUMN_BACKGROUND_COLOR,
@@ -46,8 +48,22 @@ const RiverColumnBase = ({
 
   const river = rivers[index] || {};
   const modal = modalForRiver(river, index, onDismissBalloon(index, river), dispatch);
+
+  const onDragOver = (ev) => {
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = "move";
+  };
+
+  const onDrop = (ev) => {
+    ev.preventDefault();
+    var source_river = ev.dataTransfer.getData('river');
+    if (source_river) {
+      onDropRiver(index, river, source_river);
+    }
+  }
+
   return (
-    <div style={style}>
+    <div style={style} onDragOver={onDragOver} onDrop={onDrop}>
       <RiverTitle
         river={river}
         onShowSettings={onShowSettings(index, river)}
@@ -72,11 +88,13 @@ const vrc_mapDispatchToProps = (dispatch) => {
       dispatch(showRiverSettings(i));
       if (r.sources === null) {
         dispatch(riverGetFeedSources(i, r));
-      }      
+      }
     }),
     onHideSettings: (i, r) => (() => dispatch(hideRiverSettings(i))),
     onDismissBalloon: (i, r) => (() => dispatch(dismissRiverBalloon(i))),
     dispatch: dispatch,
+    onDropRiver: (target_index, target_river, dragged_river_id) =>
+      dispatch(dropRiver(target_index, target_river, dragged_river_id)),
   };
 };
 

@@ -16,6 +16,7 @@ import {
   ADD_RIVER_SUCCESS,
   DISMISS_BALLOON,
   DISMISS_RIVER_BALLOON,
+  DROP_RIVER,
   EXPAND_FEED_UPDATE,
   COLLAPSE_FEED_UPDATE,
   SHOW_RIVER_SETTINGS,
@@ -249,6 +250,23 @@ function state_rivers(state = [], action) {
           id: nr.id,
         });
       });
+
+    case DROP_RIVER:
+      const source_river_index = state.findIndex((r) => r.id === action.dragged_river_id);
+      if (source_river_index < 0) { return state; }
+
+      // Leave out the source river...
+      const state_without_source = [].concat(
+        state.slice(0, source_river_index),
+        state.slice(source_river_index + 1, state.length)
+      );
+
+      // And splice it to the left of the target index.
+      return [].concat(
+        state_without_source.slice(0, action.target_index),
+        [ state[source_river_index] ],
+        state_without_source.slice(action.target_index, state_without_source.length)
+      )
 
     default: // By default forward events to the appropriate element.
       return apply_state_array(state, action.river_index, state_river, action);
