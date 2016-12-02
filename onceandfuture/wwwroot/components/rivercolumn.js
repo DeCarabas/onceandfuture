@@ -70,7 +70,9 @@ const vrc_mapDispatchToProps = (dispatch) => {
   return {
     onShowSettings: (i, r) => (() => {
       dispatch(showRiverSettings(i));
-      dispatch(riverGetFeedSources(i, r));
+      if (r.sources === null) {
+        dispatch(riverGetFeedSources(i, r));
+      }      
     }),
     onHideSettings: (i, r) => (() => dispatch(hideRiverSettings(i))),
     onDismissBalloon: (i, r) => (() => dispatch(dismissRiverBalloon(i))),

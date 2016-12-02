@@ -275,12 +275,21 @@ function xhrAction(options) {
       xhr.addEventListener("progress", () => options.progress(dispatch, xhr));
     }
     if (options.error) {      
-      xhr.addEventListener("error", () => options.error(dispatch, decodeError(xhr)));
+      xhr.addEventListener("error", () => {
+        if (xhr.status == 403 /* Forbidden */) {
+          const errorMessage = decodeError(xhr);
+          console.log("Got forbidden: ", errorMessage);
+          console.log("Redirecting to login...");
+          window.location.href = "/login";
+        } else {
+          options.error(dispatch, decodeError(xhr));
+        }        
+      });
     }
     if (options.loaded_json || options.loaded) {
       xhr.addEventListener("load", () => {
         if (xhr.status == 403 /* Forbidden */) {
-          errorMessage = decodeError(xhr);
+          const errorMessage = decodeError(xhr);
           console.log("Got forbidden: ", errorMessage);
           console.log("Redirecting to login...");
           window.location.href = "/login";

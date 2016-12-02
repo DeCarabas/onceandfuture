@@ -19,6 +19,7 @@ import {
   riverSetFeedMode,
 } from '../actions'
 import RelTime from './reltime'
+import Tooltip from './tooltip'
 
 const SettingsSectionTitle = ({text}) => {
   const style = {
@@ -99,11 +100,23 @@ const FeedDisplayModeBox = ({mode, setFeedMode}) => {
       <SettingsSectionTitle text="River Display Mode" />
       <div style={{paddingTop: COLUMNSPACER}}>
         <div style={end_space} />
-        <DisplayModeButton text={"Auto"} enabled={mode === RIVER_MODE_AUTO} click={() => setFeedMode(RIVER_MODE_AUTO)} />
+        <DisplayModeButton 
+          text={"Auto"} 
+          enabled={mode === RIVER_MODE_AUTO} 
+          click={() => setFeedMode(RIVER_MODE_AUTO)} 
+        />
         <div style={mid_space} />
-        <DisplayModeButton text={"Image"} enabled={mode === RIVER_MODE_IMAGE} click={() => setFeedMode(RIVER_MODE_IMAGE)} />
+        <DisplayModeButton 
+          text={"Image"} 
+          enabled={mode === RIVER_MODE_IMAGE} 
+          click={() => setFeedMode(RIVER_MODE_IMAGE)} 
+        />
         <div style={mid_space} />
-        <DisplayModeButton text={"Text"} enabled={mode === RIVER_MODE_TEXT} click={() => setFeedMode(RIVER_MODE_TEXT)} />
+        <DisplayModeButton 
+          text={"Text"} 
+          enabled={mode === RIVER_MODE_TEXT} 
+          click={() => setFeedMode(RIVER_MODE_TEXT)} 
+        />
         <div style={end_space} />
       </div>
     </div>
@@ -113,15 +126,30 @@ const FeedDisplayModeBox = ({mode, setFeedMode}) => {
 const DeleteRiverBox = ({deleteRiver}) => {
   return <div>
     <SettingsSectionTitle text="Remove This River" />
-    <p>Do you want to remove this river? (Don't worry, you can undo this later if you change your mind.)</p>
+    <p>Do you want to remove this river? Don't worry, you can undo this later if you change your mind.</p>
     <SettingsButton onClick={deleteRiver} text="Remove" />
   </div>;
 }
 
 const RiverSource = ({source}) => {
+  const timeStyle = {
+    textAlign: 'right',
+  };
+  const unsubscribeStyle = {
+    textAlign: 'center',
+    cursor: 'pointer',
+  };
+
+  const tooltip = <span>Remove this feed.</span>; 
+
   return <tr>
     <td><a href={source.webUrl}>{source.name}</a></td>
-    <td><RelTime time={source.lastUpdated} /></td>
+    <td style={timeStyle}><RelTime time={source.lastUpdated} /></td>
+    <td style={unsubscribeStyle}>
+      <Tooltip tip={tooltip}>
+        <i className="fa fa-remove" aria-hidden="true" />
+      </Tooltip>
+    </td>
   </tr>
 }
 
@@ -132,11 +160,21 @@ const RiverSourcesBox = ({sources}) => {
   } else if (sources === 'ERROR') {
     tbl = <div />; // TODO: Message!
   } else if (sources) {
-    tbl = <table>
+    const tableStyle = {
+      width: '100%',
+      borderSpacing: '0px 4px',
+    };
+
+    const headItemStyle = {
+      borderBottom: '1px solid',
+    };
+
+    tbl = <table style={tableStyle}>
       <thead>
         <tr>
-          <th>Feed Name</th>
-          <th>Last Updated</th>
+          <th style={headItemStyle}>Feed Name</th>
+          <th style={headItemStyle}>Last Updated</th>
+          <th style={headItemStyle}></th>
         </tr>
       </thead>
       <tbody>
@@ -149,7 +187,7 @@ const RiverSourcesBox = ({sources}) => {
 
   return <div>
     <SettingsSectionTitle text="Feeds" />
-    <p>This river is subscribed to these sites:</p>
+    <p>This river is subscribed to these feeds:</p>
     {tbl}
   </div>;
 }

@@ -34,13 +34,11 @@ Feed Stuff:
 
 Bugs:
 - b0rk's feed refreshes completely every time there's a new article; fix it!
-- Feed settings
-
 
 Later:
 - Extract enclosures and the like, store locally (in the DB) and present them
   in the river. (Then do UI work to expose audio enclosures and the like.)
-
+- Trim rivers that get too big
 
 Far future:
 - For the future, we'll probably need options on individual feeds for

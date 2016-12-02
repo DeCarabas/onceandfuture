@@ -93,6 +93,9 @@
 	};
 	
 	function apply_state_array(state, index, reduce, action) {
+	  if (index === undefined) {
+	    return state;
+	  }
 	  return index < 0 ? state : [].concat(state.slice(0, index), reduce(state[index], action), state.slice(index + 1, state.length));
 	}
 	
@@ -270,25 +273,10 @@
 	          id: nr.id
 	        });
 	      });
-	    case _actions.EXPAND_FEED_UPDATE:
-	    case _actions.COLLAPSE_FEED_UPDATE:
-	    case _actions.DISMISS_RIVER_BALLOON:
-	    case _actions.SHOW_RIVER_SETTINGS:
-	    case _actions.HIDE_RIVER_SETTINGS:
-	    case _actions.RIVER_GET_FEED_SOURCES_ERROR:
-	    case _actions.RIVER_GET_FEED_SOURCES_START:
-	    case _actions.RIVER_GET_FEED_SOURCES_SUCCESS:
-	    case _actions.RIVER_SET_FEED_MODE:
-	    case _actions.RIVER_UPDATE_START:
-	    case _actions.RIVER_UPDATE_FAILED:
-	    case _actions.RIVER_UPDATE_SUCCESS:
-	    case _actions.RIVER_ADD_FEED_START:
-	    case _actions.RIVER_ADD_FEED_FAILED:
-	    case _actions.RIVER_ADD_FEED_SUCCESS:
-	    case _actions.RIVER_ADD_FEED_URL_CHANGED:
-	      return apply_state_array(state, action.river_index, state_river, action);
+	
 	    default:
-	      return state;
+	      // By default forward events to the appropriate element.
+	      return apply_state_array(state, action.river_index, state_river, action);
 	  }
 	}
 	
@@ -23836,13 +23824,20 @@
 	    }
 	    if (options.error) {
 	      xhr.addEventListener("error", function () {
-	        return options.error(dispatch, decodeError(xhr));
+	        if (xhr.status == 403 /* Forbidden */) {
+	            var errorMessage = decodeError(xhr);
+	            console.log("Got forbidden: ", errorMessage);
+	            console.log("Redirecting to login...");
+	            window.location.href = "/login";
+	          } else {
+	          options.error(dispatch, decodeError(xhr));
+	        }
 	      });
 	    }
 	    if (options.loaded_json || options.loaded) {
 	      xhr.addEventListener("load", function () {
 	        if (xhr.status == 403 /* Forbidden */) {
-	            errorMessage = decodeError(xhr);
+	            var errorMessage = decodeError(xhr);
 	            console.log("Got forbidden: ", errorMessage);
 	            console.log("Redirecting to login...");
 	            window.location.href = "/login";
@@ -24455,7 +24450,9 @@
 	    onShowSettings: function onShowSettings(i, r) {
 	      return function () {
 	        dispatch((0, _actions.showRiverSettings)(i));
-	        dispatch((0, _actions.riverGetFeedSources)(i, r));
+	        if (r.sources === null) {
+	          dispatch((0, _actions.riverGetFeedSources)(i, r));
+	        }
 	      };
 	    },
 	    onHideSettings: function onHideSettings(i, r) {
@@ -24590,6 +24587,10 @@
 	
 	var _reltime2 = _interopRequireDefault(_reltime);
 	
+	var _tooltip = __webpack_require__(/*! ./tooltip */ 215);
+	
+	var _tooltip2 = _interopRequireDefault(_tooltip);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
@@ -24710,17 +24711,29 @@
 	      'div',
 	      { style: { paddingTop: _style.COLUMNSPACER } },
 	      React.createElement('div', { style: end_space }),
-	      React.createElement(DisplayModeButton, { text: "Auto", enabled: mode === _actions.RIVER_MODE_AUTO, click: function click() {
+	      React.createElement(DisplayModeButton, {
+	        text: "Auto",
+	        enabled: mode === _actions.RIVER_MODE_AUTO,
+	        click: function click() {
 	          return setFeedMode(_actions.RIVER_MODE_AUTO);
-	        } }),
+	        }
+	      }),
 	      React.createElement('div', { style: mid_space }),
-	      React.createElement(DisplayModeButton, { text: "Image", enabled: mode === _actions.RIVER_MODE_IMAGE, click: function click() {
+	      React.createElement(DisplayModeButton, {
+	        text: "Image",
+	        enabled: mode === _actions.RIVER_MODE_IMAGE,
+	        click: function click() {
 	          return setFeedMode(_actions.RIVER_MODE_IMAGE);
-	        } }),
+	        }
+	      }),
 	      React.createElement('div', { style: mid_space }),
-	      React.createElement(DisplayModeButton, { text: "Text", enabled: mode === _actions.RIVER_MODE_TEXT, click: function click() {
+	      React.createElement(DisplayModeButton, {
+	        text: "Text",
+	        enabled: mode === _actions.RIVER_MODE_TEXT,
+	        click: function click() {
 	          return setFeedMode(_actions.RIVER_MODE_TEXT);
-	        } }),
+	        }
+	      }),
 	      React.createElement('div', { style: end_space })
 	    )
 	  );
@@ -24736,7 +24749,7 @@
 	    React.createElement(
 	      'p',
 	      null,
-	      'Do you want to remove this river? (Don\'t worry, you can undo this later if you change your mind.)'
+	      'Do you want to remove this river? Don\'t worry, you can undo this later if you change your mind.'
 	    ),
 	    React.createElement(SettingsButton, { onClick: deleteRiver, text: 'Remove' })
 	  );
@@ -24744,6 +24757,20 @@
 	
 	var RiverSource = function RiverSource(_ref8) {
 	  var source = _ref8.source;
+	
+	  var timeStyle = {
+	    textAlign: 'right'
+	  };
+	  var unsubscribeStyle = {
+	    textAlign: 'center',
+	    cursor: 'pointer'
+	  };
+	
+	  var tooltip = React.createElement(
+	    'span',
+	    null,
+	    'Remove this feed.'
+	  );
 	
 	  return React.createElement(
 	    'tr',
@@ -24759,8 +24786,17 @@
 	    ),
 	    React.createElement(
 	      'td',
-	      null,
+	      { style: timeStyle },
 	      React.createElement(_reltime2.default, { time: source.lastUpdated })
+	    ),
+	    React.createElement(
+	      'td',
+	      { style: unsubscribeStyle },
+	      React.createElement(
+	        _tooltip2.default,
+	        { tip: tooltip },
+	        React.createElement('i', { className: 'fa fa-remove', 'aria-hidden': 'true' })
+	      )
 	    )
 	  );
 	};
@@ -24774,9 +24810,18 @@
 	  } else if (sources === 'ERROR') {
 	    tbl = React.createElement('div', null); // TODO: Message!
 	  } else if (sources) {
+	    var tableStyle = {
+	      width: '100%',
+	      borderSpacing: '0px 4px'
+	    };
+	
+	    var headItemStyle = {
+	      borderBottom: '1px solid'
+	    };
+	
 	    tbl = React.createElement(
 	      'table',
-	      null,
+	      { style: tableStyle },
 	      React.createElement(
 	        'thead',
 	        null,
@@ -24785,14 +24830,15 @@
 	          null,
 	          React.createElement(
 	            'th',
-	            null,
+	            { style: headItemStyle },
 	            'Feed Name'
 	          ),
 	          React.createElement(
 	            'th',
-	            null,
+	            { style: headItemStyle },
 	            'Last Updated'
-	          )
+	          ),
+	          React.createElement('th', { style: headItemStyle })
 	        )
 	      ),
 	      React.createElement(
@@ -24814,7 +24860,7 @@
 	    React.createElement(
 	      'p',
 	      null,
-	      'This river is subscribed to these sites:'
+	      'This river is subscribed to these feeds:'
 	    ),
 	    tbl
 	  );
@@ -25590,6 +25636,104 @@
 	'use strict';
 	
 	module.exports = __webpack_require__(/*! react/lib/ReactDOM */ 6);
+
+/***/ },
+/* 215 */
+/*!***************************************!*\
+  !*** ./wwwroot/components/tooltip.js ***!
+  \***************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+	
+	var _style = __webpack_require__(/*! ./style */ 199);
+	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+	
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+	
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+	
+	var React = __webpack_require__(/*! react */ 4);
+	
+	
+	var TIP_STYLE = {
+	  backgroundColor: _style.COLOR_VERY_DARK,
+	  color: _style.COLOR_VERY_LIGHT,
+	  textAlign: 'center',
+	  padding: '5px 10px',
+	  borderRadius: '6px',
+	  display: 'inline-block',
+	  position: 'absolute',
+	  zIndex: 1,
+	  top: -5,
+	  left: '105%'
+	};
+	
+	var DIV_STYLE = {
+	  position: 'relative'
+	};
+	
+	var Tooltip = function (_React$Component) {
+	  _inherits(Tooltip, _React$Component);
+	
+	  function Tooltip(props) {
+	    _classCallCheck(this, Tooltip);
+	
+	    var _this = _possibleConstructorReturn(this, (Tooltip.__proto__ || Object.getPrototypeOf(Tooltip)).call(this, props));
+	
+	    _this.state = { inside: false };
+	
+	    _this.handleMouseEnter = _this.handleMouseEnter.bind(_this);
+	    _this.handleMouseLeave = _this.handleMouseLeave.bind(_this);
+	    return _this;
+	  }
+	
+	  _createClass(Tooltip, [{
+	    key: 'render',
+	    value: function render() {
+	      var tip = React.createElement('span', null);
+	      if (this.state.inside) {
+	        tip = React.createElement(
+	          'span',
+	          { style: TIP_STYLE },
+	          this.props.tip
+	        );
+	      }
+	
+	      return React.createElement(
+	        'div',
+	        { style: DIV_STYLE, onMouseEnter: this.handleMouseEnter, onMouseLeave: this.handleMouseLeave },
+	        tip,
+	        this.props.children
+	      );
+	    }
+	  }, {
+	    key: 'handleMouseEnter',
+	    value: function handleMouseEnter() {
+	      this.setState(function (prevState) {
+	        return { inside: true };
+	      });
+	    }
+	  }, {
+	    key: 'handleMouseLeave',
+	    value: function handleMouseLeave() {
+	      this.setState(function (prevState) {
+	        return { inside: false };
+	      });
+	    }
+	  }]);
+	
+	  return Tooltip;
+	}(React.Component);
+	
+	exports.default = Tooltip;
 
 /***/ }
 /******/ ]);

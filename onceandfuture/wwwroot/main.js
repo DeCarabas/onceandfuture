@@ -65,6 +65,7 @@ const def_river = {
 };
 
 function apply_state_array(state, index, reduce, action) {
+  if (index === undefined) { return state; }
   return index < 0
     ? state
     : [].concat(
@@ -225,25 +226,9 @@ function state_rivers(state = [], action) {
           id: nr.id,
         });
       });
-    case EXPAND_FEED_UPDATE:
-    case COLLAPSE_FEED_UPDATE:
-    case DISMISS_RIVER_BALLOON:
-    case SHOW_RIVER_SETTINGS:
-    case HIDE_RIVER_SETTINGS:
-    case RIVER_GET_FEED_SOURCES_ERROR:
-    case RIVER_GET_FEED_SOURCES_START:
-    case RIVER_GET_FEED_SOURCES_SUCCESS:
-    case RIVER_SET_FEED_MODE:
-    case RIVER_UPDATE_START:
-    case RIVER_UPDATE_FAILED:
-    case RIVER_UPDATE_SUCCESS:
-    case RIVER_ADD_FEED_START:
-    case RIVER_ADD_FEED_FAILED:
-    case RIVER_ADD_FEED_SUCCESS:
-    case RIVER_ADD_FEED_URL_CHANGED:
+
+    default: // By default forward events to the appropriate element.
       return apply_state_array(state, action.river_index, state_river, action);
-    default:
-      return state;
   }
 }
 
