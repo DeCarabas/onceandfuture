@@ -24730,6 +24730,10 @@
 	
 	var _reltime2 = _interopRequireDefault(_reltime);
 	
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 210);
+	
+	var _riverlink2 = _interopRequireDefault(_riverlink);
+	
 	var _tooltip = __webpack_require__(/*! ./tooltip */ 204);
 	
 	var _tooltip2 = _interopRequireDefault(_tooltip);
@@ -24923,7 +24927,7 @@
 	      'td',
 	      null,
 	      React.createElement(
-	        'a',
+	        _riverlink2.default,
 	        { href: source.webUrl },
 	        source.name
 	      )

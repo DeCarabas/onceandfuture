@@ -20,6 +20,7 @@ import {
   riverSetFeedMode,
 } from '../actions'
 import RelTime from './reltime'
+import RiverLink from './riverlink'
 import Tooltip from './tooltip'
 
 const SettingsSectionTitle = ({text}) => {
@@ -144,7 +145,7 @@ const RiverSource = ({source, deleteSource}) => {
   const tooltip = <span>Remove this feed.</span>;
 
   return <tr>
-    <td><a href={source.webUrl}>{source.name}</a></td>
+    <td><RiverLink href={source.webUrl}>{source.name}</RiverLink></td>
     <td style={timeStyle}><RelTime time={source.lastUpdated} /></td>
     <td style={unsubscribeStyle} onClick={() => deleteSource(source.id, source.feedUrl)}>
       <Tooltip tip={tooltip}>
