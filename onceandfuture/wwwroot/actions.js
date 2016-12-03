@@ -497,7 +497,7 @@ export function riverGetFeedSources(index, river) {
 
 export function riverRemoveSource(index, river, source_id, source_url) {
   return xhrAction({
-    url: river.url + '/sources/' + source_id, verb: 'DELETE',
+    verb: 'DELETE', url: river.url + '/sources/' + source_id,
     start: (dispatch, xhr) => {
       dispatch(riverRemoveSourceStart(index, river, source_id, source_url));
     },
@@ -507,5 +507,12 @@ export function riverRemoveSource(index, river, source_id, source_url) {
     error: (dispatch, message) => {
       dispatch(riverRemoveSourceError(index, river, message));
     },
-  })
+  });
+}
+
+export function setRiverOrder(user, river_order) {
+  return xhrAction({
+    verb: 'POST', url: '/api/v1/user/' + user + '/set_order',
+    msg: { riverIds: river_order },
+  });
 }

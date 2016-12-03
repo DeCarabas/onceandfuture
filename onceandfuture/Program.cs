@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -495,6 +496,35 @@ namespace onceandfuture
             return Json(new { status = "ok", rivers = rivers });
         }
 
+        [HttpPost("/api/v1/user/{user}/refresh_all")]
+        public async Task<IActionResult> PostRefreshAll(string user)
+        {
+            var parser = new RiverFeedParser();
+
+            UserProfile profile = await this.profileStore.GetProfileFor(user);
+            River[] rivers = await Task.WhenAll(
+                profile.Rivers.Select(r => parser.RefreshAggregateRiverWithFeeds(
+                    r.Id, r.Feeds, this.aggregateStore, this.feedStore, HttpContext.RequestAborted)));
+
+            // Make sure owner is filled in for these rivers.
+            List<Task> saveTasks = null;
+            for (int i = 0; i < rivers.Length; i++)
+            {
+                if (rivers[i].Metadata.Owner == null)
+                {
+                    if (saveTasks == null) { saveTasks = new List<Task>(); }
+                    var newRiver = rivers[i].With(metadata: rivers[i].Metadata.With(owner: user));
+                    saveTasks.Add(aggregateStore.WriteAggregate(profile.Rivers[i].Id, newRiver));
+                }
+            }
+            if (saveTasks != null)
+            {
+                await Task.WhenAll(saveTasks);
+            }
+
+            return Ok(); // TODO: Progress?
+        }
+
         [HttpDelete("/api/v1/user/{user}/river/{id}")]
         public async Task<IActionResult> DeleteRiver(string user, string id)
         {
@@ -602,31 +632,51 @@ namespace onceandfuture
             throw new NotImplementedException();
         }
 
-        [HttpPost("/api/v1/user/{user}/refresh_all")]
-        public async Task<IActionResult> PostRefreshAll(string user)
+        [HttpPost("/api/v1/user/{user}/set_order")]
+        public async Task<IActionResult> PostSetOrder(string user)
         {
-            var parser = new RiverFeedParser();
+            SetOrderRequest requestBody;
 
-            UserProfile profile = await this.profileStore.GetProfileFor(user);
-            River[] rivers = await Task.WhenAll(
-                profile.Rivers.Select(r => parser.RefreshAggregateRiverWithFeeds(
-                    r.Id, r.Feeds, this.aggregateStore, this.feedStore, HttpContext.RequestAborted)));
-
-            // Make sure owner is filled in for these rivers.
-            List<Task> saveTasks = null;
-            for (int i = 0; i < rivers.Length; i++)
+            try
             {
-                if (rivers[i].Metadata.Owner == null)
+                var content = new MemoryStream();
+                await Request.Body.CopyToAsync(content);
+                content.Position = 0;
+                using (var reader = new StreamReader(content))
                 {
-                    if (saveTasks == null) { saveTasks = new List<Task>(); }
-                    var newRiver = rivers[i].With(metadata: rivers[i].Metadata.With(owner: user));
-                    saveTasks.Add(aggregateStore.WriteAggregate(profile.Rivers[i].Id, newRiver));
+                    string data = reader.ReadToEnd();
+                    requestBody = JsonConvert.DeserializeObject<SetOrderRequest>(data);
                 }
             }
-            if (saveTasks != null)
+            catch (Exception e)
             {
-                await Task.WhenAll(saveTasks);
+                throw FaultException.DecodingError(e.Message);
             }
+            
+            UserProfile profile = await this.profileStore.GetProfileFor(user);
+
+            Dictionary<string, RiverDefinition> rivers = profile.Rivers.ToDictionary(rd => rd.Id);
+            var newRivers = new List<RiverDefinition>();
+            foreach(string id in requestBody.RiverIds)
+            {
+                RiverDefinition rd;
+                if (rivers.TryGetValue(id, out rd))
+                {
+                    newRivers.Add(rd);
+                    rivers.Remove(id);
+                }
+            }
+
+            foreach(RiverDefinition rd in profile.Rivers)
+            {
+                if (rivers.ContainsKey(rd.Id))
+                {
+                    newRivers.Add(rd);
+                }
+            }
+
+            UserProfile newProfile = profile.With(rivers: newRivers);
+            await this.profileStore.SaveProfileFor(user, newProfile);
 
             return Ok(); // TODO: Progress?
         }
@@ -669,6 +719,17 @@ namespace onceandfuture
 
             [JsonProperty("id")]
             public string Id { get; }
+        }
+
+        public class SetOrderRequest
+        {
+            public SetOrderRequest(IEnumerable<string> riverIds)
+            {
+                RiverIds = ImmutableList.CreateRange(riverIds);
+            }
+
+            [JsonProperty("riverIds", Required = Required.Always)]
+            public ImmutableList<string> RiverIds { get; }
         }
     }
 

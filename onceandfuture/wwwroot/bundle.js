@@ -424,6 +424,28 @@
 	});
 	var store = (0, _redux.createStore)(sociallistsApp, (0, _redux.applyMiddleware)(_reduxThunk2.default, logger));
 	
+	/////// COLUMN ORDER TRACKING DIRTY HACK.
+	
+	function arrayEqual(a1, a2) {
+	  return a1.length == a2.length && a1.every(function (v, i) {
+	    return v === a2[i];
+	  });
+	}
+	
+	var last_column_order = null;
+	store.subscribe(function () {
+	  var state = store.getState();
+	  if (state.rivers && state.rivers.length > 1) {
+	    var new_column_order = state.rivers.map(function (r) {
+	      return r.id;
+	    });
+	    if (last_column_order != null && !arrayEqual(new_column_order, last_column_order)) {
+	      store.dispatch((0, _actions.setRiverOrder)(user, new_column_order));
+	    }
+	    last_column_order = new_column_order;
+	  }
+	});
+	
 	ReactDOM.render(React.createElement(
 	  _reactRedux.Provider,
 	  { store: store },
@@ -23582,6 +23604,7 @@
 	exports.refreshAllFeeds = refreshAllFeeds;
 	exports.riverGetFeedSources = riverGetFeedSources;
 	exports.riverRemoveSource = riverRemoveSource;
+	exports.setRiverOrder = setRiverOrder;
 	
 	var _util = __webpack_require__(/*! ./util */ 195);
 	
@@ -24103,7 +24126,7 @@
 	
 	function riverRemoveSource(index, river, source_id, source_url) {
 	  return xhrAction({
-	    url: river.url + '/sources/' + source_id, verb: 'DELETE',
+	    verb: 'DELETE', url: river.url + '/sources/' + source_id,
 	    start: function start(dispatch, xhr) {
 	      dispatch(riverRemoveSourceStart(index, river, source_id, source_url));
 	    },
@@ -24113,6 +24136,13 @@
 	    error: function error(dispatch, message) {
 	      dispatch(riverRemoveSourceError(index, river, message));
 	    }
+	  });
+	}
+	
+	function setRiverOrder(user, river_order) {
+	  return xhrAction({
+	    verb: 'POST', url: '/api/v1/user/' + user + '/set_order',
+	    msg: { riverIds: river_order }
 	  });
 	}
 

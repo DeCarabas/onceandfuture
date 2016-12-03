@@ -49,6 +49,7 @@ import {
   addRiver,
   refreshRiverList,
   riverAddFeed,
+  setRiverOrder,
 } from './actions';
 
 // import { data } from './data'
@@ -266,7 +267,7 @@ function state_rivers(state = [], action) {
         state_without_source.slice(0, action.target_index),
         [ state[source_river_index] ],
         state_without_source.slice(action.target_index, state_without_source.length)
-      )
+      );
 
     default: // By default forward events to the appropriate element.
       return apply_state_array(state, action.river_index, state_river, action);
@@ -374,6 +375,24 @@ const store = createStore(
   sociallistsApp,
   applyMiddleware(thunkMiddleware, logger)
 );
+
+/////// COLUMN ORDER TRACKING DIRTY HACK.
+
+function arrayEqual(a1, a2) {
+  return a1.length == a2.length && a1.every((v,i) => v === a2[i]);
+}
+
+let last_column_order = null;
+store.subscribe(() => {
+  const state = store.getState();
+  if (state.rivers && state.rivers.length > 1) {
+    const new_column_order = state.rivers.map(r => r.id);
+    if (last_column_order != null && !arrayEqual(new_column_order, last_column_order)) {
+      store.dispatch(setRiverOrder(user, new_column_order));
+    }
+    last_column_order = new_column_order;
+  }
+});
 
 ReactDOM.render(
   <Provider store={store}>
