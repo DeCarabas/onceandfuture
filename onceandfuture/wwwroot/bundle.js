@@ -25832,7 +25832,7 @@
 	      marginRight: 3,
 	      marginBottom: 3
 	    };
-	    if (mode === 'text' || mode === 'auto' && (item.body || '').length > 140) {
+	    if (mode === 'text' || mode === 'auto' && (item.body || '').length > 100) {
 	      imgstyle.float = 'right';
 	      imgstyle.width = 100;
 	      imgstyle.height = 100;

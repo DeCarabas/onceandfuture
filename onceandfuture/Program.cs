@@ -442,33 +442,11 @@ namespace onceandfuture
         [HttpPost("/api/v1/user/{user}")]
         public async Task<IActionResult> CreateOrRestoreRiver(string user)
         {
-            CreateOrRestoreRequest requestBody;
-
-            try
-            {
-                var content = new MemoryStream();
-                await Request.Body.CopyToAsync(content);
-                content.Position = 0;
-                using (var reader = new StreamReader(content))
-                {
-                    string data = reader.ReadToEnd();
-                    requestBody = JsonConvert.DeserializeObject<CreateOrRestoreRequest>(data);
-                }
-            }
-            catch (Exception e)
-            {
-                throw FaultException.DecodingError(e.Message);
-            }
-
+            var requestBody = await ReadRequest<CreateOrRestoreRequest>();
             if (requestBody.Id != null)
             {
-                var existing = await this.aggregateStore.LoadAggregate(requestBody.Id);
-                if (existing.Metadata.Owner != null && String.CompareOrdinal(existing.Metadata.Owner, user) != 0)
-                {
-                    Serilog.Log.Warning("{user} attempted to add river {id} owned by {owner}",
-                        user, requestBody.Id, existing.Metadata.Owner);
-                    throw FaultException.AccessDenied("Not allowed to add somebody else's river.");
-                }
+                // Just check it for correctness; we don't need the contents.
+                River existing = await this.LoadAggregate(user, requestBody.Id);
             }
 
             UserProfile profile = await this.profileStore.GetProfileFor(user);
@@ -538,7 +516,7 @@ namespace onceandfuture
                           {
                               name = r.Name,
                               id = r.Id,
-                              url = Url.Action(nameof(GetRiver), new { user = user, id = r.Id }),                              
+                              url = Url.Action(nameof(GetRiver), new { user = user, id = r.Id }),
                           }).ToArray();
             return Json(new { status = "ok", rivers = rivers });
         }
@@ -546,11 +524,7 @@ namespace onceandfuture
         [HttpGet("/api/v1/user/{user}/river/{id}")]
         public async Task<IActionResult> GetRiver(string user, string id)
         {
-            River river = await this.aggregateStore.LoadAggregate(id);
-            if (river.Metadata.Owner != null && String.CompareOrdinal(river.Metadata.Owner, user) != 0)
-            {
-                throw FaultException.AccessDenied("Not allowed to get somebody else's river.");
-            }
+            River river = await this.LoadAggregate(user, id);
             return Json(river);
         }
 
@@ -565,24 +539,7 @@ namespace onceandfuture
         [HttpPost("/api/v1/user/{user}/river/{id}/sources")]
         public async Task<IActionResult> AddRiverSource(string user, string id)
         {
-            AddFeedRequest requestBody;
-
-            try
-            {
-                var content = new MemoryStream();
-                await Request.Body.CopyToAsync(content);
-                content.Position = 0;
-                using (var reader = new StreamReader(content))
-                {
-                    string data = reader.ReadToEnd();
-                    requestBody = JsonConvert.DeserializeObject<AddFeedRequest>(data);
-                }
-            }
-            catch (Exception e)
-            {
-                throw FaultException.DecodingError(e.Message);
-            }
-
+            var requestBody = await ReadRequest<AddFeedRequest>();
             IList<Uri> feedUrls = await FeedDetector.GetFeedUrls(requestBody.Url, HttpContext.RequestAborted);
             if (feedUrls.Count == 0) { throw FaultException.NoFeed(requestBody.Url); }
 
@@ -627,37 +584,26 @@ namespace onceandfuture
         }
 
         [HttpPost("/api/v1/user/{user}/river/{id}/mode")]
-        public Task<IActionResult> PostRiverMode(string user, string id)
+        public async Task<IActionResult> PostRiverMode(string user, string id)
         {
-            throw new NotImplementedException();
+            var requestBody = await ReadRequest<SetModeRequest>();
+            River river = await LoadAggregate(user, id);
+            RiverFeedMeta newMeta = river.Metadata.With(mode: requestBody.Mode);
+            River newRiver = river.With(metadata: newMeta);
+            await this.aggregateStore.WriteAggregate(id, newRiver);
+            return Ok();            
         }
 
         [HttpPost("/api/v1/user/{user}/set_order")]
         public async Task<IActionResult> PostSetOrder(string user)
         {
-            SetOrderRequest requestBody;
-
-            try
-            {
-                var content = new MemoryStream();
-                await Request.Body.CopyToAsync(content);
-                content.Position = 0;
-                using (var reader = new StreamReader(content))
-                {
-                    string data = reader.ReadToEnd();
-                    requestBody = JsonConvert.DeserializeObject<SetOrderRequest>(data);
-                }
-            }
-            catch (Exception e)
-            {
-                throw FaultException.DecodingError(e.Message);
-            }
-            
+            // should be genva
+            var requestBody = await ReadRequest<SetOrderRequest>();
             UserProfile profile = await this.profileStore.GetProfileFor(user);
 
             Dictionary<string, RiverDefinition> rivers = profile.Rivers.ToDictionary(rd => rd.Id);
             var newRivers = new List<RiverDefinition>();
-            foreach(string id in requestBody.RiverIds)
+            foreach (string id in requestBody.RiverIds)
             {
                 RiverDefinition rd;
                 if (rivers.TryGetValue(id, out rd))
@@ -667,7 +613,7 @@ namespace onceandfuture
                 }
             }
 
-            foreach(RiverDefinition rd in profile.Rivers)
+            foreach (RiverDefinition rd in profile.Rivers)
             {
                 if (rivers.ContainsKey(rd.Id))
                 {
@@ -702,6 +648,37 @@ namespace onceandfuture
             });
         }
 
+        async Task<TRequest> ReadRequest<TRequest>()
+        {
+            try
+            {
+                var content = new MemoryStream();
+                await Request.Body.CopyToAsync(content);
+                content.Position = 0;
+                using (var reader = new StreamReader(content))
+                {
+                    string data = reader.ReadToEnd();
+                    return JsonConvert.DeserializeObject<TRequest>(data);
+                }
+            }
+            catch (Exception e)
+            {
+                throw FaultException.DecodingError(e.Message);
+            }
+        }
+
+        async Task<River> LoadAggregate(string user, string riverId)
+        {
+            River river = await this.aggregateStore.LoadAggregate(riverId);
+            if (river.Metadata.Owner != null && String.CompareOrdinal(river.Metadata.Owner, user) != 0)
+            {
+                Serilog.Log.Warning("{user} attempted to access river {id} owned by {owner}",
+                    user, riverId, river.Metadata.Owner);
+                throw FaultException.AccessDenied("Not allowed to access somebody else's river.");
+            }
+            return river;
+        }
+
         public class AddFeedRequest
         {
             public AddFeedRequest(string url) { Url = url; }
@@ -730,6 +707,17 @@ namespace onceandfuture
 
             [JsonProperty("riverIds", Required = Required.Always)]
             public ImmutableList<string> RiverIds { get; }
+        }
+
+        public class SetModeRequest
+        {
+            public SetModeRequest(string mode)
+            {
+                Mode = mode;
+            }
+
+            [JsonProperty("mode", Required = Required.Always)]
+            public string Mode { get; }
         }
     }
 

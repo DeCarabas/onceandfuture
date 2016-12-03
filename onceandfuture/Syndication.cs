@@ -427,7 +427,7 @@ namespace onceandfuture
         };
 
         public static string RiverName(IList<RiverDefinition> rivers)
-        {
+        {            
             int index = (rivers.Count + 1) % RiverNames.Length;
             while(rivers.Any(rd => rd.Name == RiverNames[index]))
             {
@@ -1104,7 +1104,8 @@ namespace onceandfuture
             string etag = null,
             DateTimeOffset? lastModified = null,
             HttpStatusCode? lastStatus = null,
-            string owner = null)
+            string owner = null,
+            string mode = null)
         {
             Name = name;
             OriginUrl = originUrl;
@@ -1113,6 +1114,7 @@ namespace onceandfuture
             LastModified = lastModified;
             LastStatus = lastStatus ?? HttpStatusCode.OK;
             Owner = owner;
+            Mode = mode;
         }
 
         public RiverFeedMeta With(
@@ -1122,7 +1124,8 @@ namespace onceandfuture
             string etag = null,
             DateTimeOffset? lastModified = null,
             HttpStatusCode? lastStatus = null,
-            string owner = null)
+            string owner = null,
+            string mode = null)
         {
             return new RiverFeedMeta(
                 name ?? Name,
@@ -1131,7 +1134,8 @@ namespace onceandfuture
                 etag ?? Etag,
                 lastModified ?? LastModified,
                 lastStatus ?? LastStatus,
-                owner ?? Owner);
+                owner ?? Owner,
+                mode ?? Mode);
         }
 
         [JsonProperty(PropertyName = "name")]
@@ -1154,6 +1158,9 @@ namespace onceandfuture
 
         [JsonProperty(PropertyName = "owner")]
         public string Owner { get; }
+
+        [JsonProperty(PropertyName ="mode")]
+        public string Mode { get; }
     }
 
     public class UpdatedFeeds
