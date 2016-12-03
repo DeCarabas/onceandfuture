@@ -1127,6 +1127,7 @@ namespace onceandfuture
             .AddVerb("show", "Show items in one or more feeds.", DoShow, v => v
                 .AddOption("feed", "The single feed URL to show.", o => o.AcceptValue())
                 .AddOption("user", "The user to show for.", o => o.AcceptValue())
+                .AddOption("noload", "Do not load the feed from the feed store first.")
             )
             .AddVerb("sub", "Subscribe to a feed.", DoSubscribe, v => v
                 .AddOption("user", "The user to add a subscription for.", o => o.IsRequired())
@@ -1218,8 +1219,18 @@ namespace onceandfuture
                 return 100;
             }
 
-            var feedStore = new RiverFeedStore();
-            River river = feedStore.LoadRiverForFeed(feedUrl).Result;
+            River river;
+            if (args["noload"].Flag)
+            {
+                var cleanRiver = new River(metadata: new RiverFeedMeta(originUrl: feedUrl));
+                river = new RiverFeedParser().UpdateAsync(cleanRiver, CancellationToken.None).Result;
+            }
+            else
+            {
+                var feedStore = new RiverFeedStore();
+                river = feedStore.LoadRiverForFeed(feedUrl).Result;
+            }
+           
             if (river.UpdatedFeeds.Feeds.Count > 0)
             {
                 foreach (RiverFeed feed in river.UpdatedFeeds.Feeds)

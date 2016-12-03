@@ -427,9 +427,9 @@ namespace onceandfuture
         };
 
         public static string RiverName(IList<RiverDefinition> rivers)
-        {            
+        {
             int index = (rivers.Count + 1) % RiverNames.Length;
-            while(rivers.Any(rd => rd.Name == RiverNames[index]))
+            while (rivers.Any(rd => rd.Name == RiverNames[index]))
             {
                 index = (index + 1) % RiverNames.Length;
             }
@@ -789,6 +789,37 @@ namespace onceandfuture
 
     public static class XNames
     {
+        public static class Atom
+        {
+            public static readonly XNamespace Namespace = XNamespace.Get("http://www.w3.org/2005/Atom");
+            public static readonly XName Feed = Namespace.GetName("feed");
+            public static readonly XName Title = Namespace.GetName("title");
+            public static readonly XName Id = Namespace.GetName("id");
+            public static readonly XName Link = Namespace.GetName("link");
+            public static readonly XName Summary = Namespace.GetName("summary");
+            public static readonly XName Entry = Namespace.GetName("entry");
+            public static readonly XName Content = Namespace.GetName("content");
+            public static readonly XName Published = Namespace.GetName("published");
+            public static readonly XName Updated = Namespace.GetName("updated");
+
+            public static readonly XName Rel = XName.Get("rel");
+            public static readonly XName Type = XName.Get("type");
+            public static readonly XName Href = XName.Get("href");
+            public static readonly XName Length = XName.Get("length");
+        }
+
+        public static class Media
+        {
+            public static readonly XNamespace Namespace = XNamespace.Get("http://search.yahoo.com/mrss/");
+
+            public static readonly XName Content = Namespace.GetName("content");
+
+            public static readonly XName Url = XName.Get("url");
+            public static readonly XName Medium = XName.Get("medium");
+            public static readonly XName Width = XName.Get("width");
+            public static readonly XName Height = XName.Get("height");
+        }
+
         public static class Content
         {
             public static readonly XNamespace Namespace = XNamespace.Get("http://purl.org/rss/1.0/modules/content/");
@@ -812,6 +843,13 @@ namespace onceandfuture
             public static readonly XName XmlUrl = XName.Get("xmlUrl");
         }
 
+        public static class RDF
+        {
+            public static readonly XNamespace Namespace = XNamespace.Get("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+
+            public static readonly XName Rdf = Namespace.GetName("RDF");
+        }
+
         public static class RSS
         {
             public static readonly XName Title = XName.Get("title");
@@ -828,32 +866,6 @@ namespace onceandfuture
             public static readonly XName Length = XName.Get("length");
             public static readonly XName Type = XName.Get("type");
             public static readonly XName Url = XName.Get("url");
-        }
-
-        public static class Atom
-        {
-            public static readonly XNamespace Namespace = XNamespace.Get("http://www.w3.org/2005/Atom");
-            public static readonly XName Feed = Namespace.GetName("feed");
-            public static readonly XName Title = Namespace.GetName("title");
-            public static readonly XName Id = Namespace.GetName("id");
-            public static readonly XName Link = Namespace.GetName("link");
-            public static readonly XName Summary = Namespace.GetName("summary");
-            public static readonly XName Entry = Namespace.GetName("entry");
-            public static readonly XName Content = Namespace.GetName("content");
-            public static readonly XName Published = Namespace.GetName("published");
-            public static readonly XName Updated = Namespace.GetName("updated");
-
-            public static readonly XName Rel = XName.Get("rel");
-            public static readonly XName Type = XName.Get("type");
-            public static readonly XName Href = XName.Get("href");
-            public static readonly XName Length = XName.Get("length");
-        }
-
-        public static class RDF
-        {
-            public static readonly XNamespace Namespace = XNamespace.Get("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
-
-            public static readonly XName Rdf = Namespace.GetName("RDF");
         }
 
         public static class RSS10
@@ -981,7 +993,10 @@ namespace onceandfuture
             string comments = null,
             string id = null,
             RiverItemThumbnail thumbnail = null,
-            IEnumerable<RiverItemEnclosure> enclosures = null)
+            IEnumerable<RiverItemEnclosure> enclosures = null,
+            XElement content = null,
+            XElement description = null,
+            XElement summary = null)
         {
             Title = title ?? String.Empty;
             Link = link;
@@ -991,6 +1006,9 @@ namespace onceandfuture
             Comments = comments;
             Id = id;
             Thumbnail = thumbnail;
+            Content = content;
+            Description = description;
+            Summary = summary;
 
             Enclosures = ImmutableList.CreateRange<RiverItemEnclosure>(
                 enclosures ?? Enumerable.Empty<RiverItemEnclosure>());
@@ -1005,7 +1023,10 @@ namespace onceandfuture
             string comments = null,
             string id = null,
             RiverItemThumbnail thumbnail = null,
-            IEnumerable<RiverItemEnclosure> enclosures = null)
+            IEnumerable<RiverItemEnclosure> enclosures = null,
+            XElement content = null,
+            XElement description = null,
+            XElement summary = null)
         {
             return new RiverItem(
                 title ?? Title,
@@ -1016,7 +1037,10 @@ namespace onceandfuture
                 comments ?? Comments,
                 id ?? Id,
                 thumbnail ?? Thumbnail,
-                enclosures ?? Enclosures);
+                enclosures ?? Enclosures,
+                content ?? Content,
+                description ?? Description,
+                summary ?? Summary);
         }
 
         [JsonProperty(PropertyName = "title")]
@@ -1045,24 +1069,32 @@ namespace onceandfuture
 
         [JsonProperty(PropertyName = "enclosure")]
         public ImmutableList<RiverItemEnclosure> Enclosures { get; }
+
+        // Tracking elements during parsing; not stored or used afterwards.
+        [JsonIgnore]
+        public XElement Content { get; }
+        [JsonIgnore]
+        public XElement Description { get; }
+        [JsonIgnore]
+        public XElement Summary { get; }
     }
 
     public class RiverItemThumbnail
     {
-        public RiverItemThumbnail(string url, int width, int height)
+        public RiverItemThumbnail(Uri url, int width, int height)
         {
             Url = url;
             Width = width;
             Height = height;
         }
 
-        public RiverItemThumbnail With(string url = null, int? width = null, int? height = null)
+        public RiverItemThumbnail With(Uri url = null, int? width = null, int? height = null)
         {
             return new RiverItemThumbnail(url ?? Url, width ?? Width, height ?? Height);
         }
 
         [JsonProperty(PropertyName = "url")]
-        public string Url { get; }
+        public Uri Url { get; }
 
         [JsonProperty(PropertyName = "width")]
         public int Width { get; }
@@ -1159,7 +1191,7 @@ namespace onceandfuture
         [JsonProperty(PropertyName = "owner")]
         public string Owner { get; }
 
-        [JsonProperty(PropertyName ="mode")]
+        [JsonProperty(PropertyName = "mode")]
         public string Mode { get; }
     }
 
@@ -1540,6 +1572,12 @@ namespace onceandfuture
         }
     }
 
+    // TODO: 
+    // http://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml
+    // xmlns:media="http://search.yahoo.com/mrss/"
+    // <media:content url="https://static01.nyt.com/images/2016/12/04/world/CHINATRUMP/CHINATRUMP-moth.jpg" medium="image" height="151" width="151"/>
+
+
     class ThumbnailExtractor
     {
         readonly RiverThumbnailStore thumbnailStore = new RiverThumbnailStore();
@@ -1575,8 +1613,7 @@ namespace onceandfuture
             });
         }
 
-        public async Task<RiverItem[]> LoadItemThumbnailsAsync(
-            Uri baseUri, RiverItem[] items, CancellationToken token)
+        public async Task<RiverItem[]> LoadItemThumbnailsAsync(Uri baseUri, RiverItem[] items, CancellationToken token)
         {
             Stopwatch loadTimer = Stopwatch.StartNew();
             Log.BeginLoadThumbnails(baseUri);
@@ -1591,19 +1628,69 @@ namespace onceandfuture
             return newItems;
         }
 
+        static IHtmlDocument SoupFromElement(XElement element)
+        {
+            string htmlText = element.HasElements
+                ? element.ToString(SaveOptions.DisableFormatting)
+                : element.Value;
+            return new HtmlParser().Parse(htmlText);
+        }
+
         async Task<RiverItem> GetItemThumbnailAsync(Uri baseUri, RiverItem item, CancellationToken token)
         {
-            if (item.Thumbnail != null) { return item; }
-            if (item.Link == null) { return item; }
-
             Uri itemLink = Util.Rebase(item.Link, baseUri);
-            ImageData sourceImage = await FindThumbnailAsync(itemLink, token);
+            ImageData sourceImage = null;
+
+            // We might already have found a thumbnail...
+            if (item.Thumbnail != null)
+            {
+                Uri baseUrl = itemLink ?? baseUri;
+                Uri turl = MakeThumbnailUrl(baseUrl, item.Thumbnail.Url);
+                if (turl != null)
+                {
+                    sourceImage = await FetchThumbnailAsync(
+                        new ImageUrl { Kind = "EmbeddedThumb", Uri = turl },
+                        baseUrl,
+                        token);
+                    if (sourceImage != null)
+                    {
+                        Log.FoundThumbnail(baseUrl, turl, "EmbeddedThumb");
+                    }
+                }
+            }
+
+            // Look in the item soup; maybe we have it?
+            XElement[] soups = new XElement[] { item.Content, item.Description, item.Summary };
+            for (int i = 0; i < soups.Length && sourceImage == null; i++)
+            {
+                XElement xe = soups[i];
+                if (xe != null)
+                {
+                    Uri soupBase = null;
+                    if (!String.IsNullOrWhiteSpace(xe.BaseUri) &&
+                        Uri.TryCreate(xe.BaseUri, UriKind.RelativeOrAbsolute, out soupBase))
+                    {
+                        soupBase = Util.Rebase(soupBase, baseUri);
+                    }
+                    if (soupBase == null)
+                    {
+                        soupBase = itemLink ?? baseUri;
+                    }
+
+                    sourceImage = await FindThumbnailInSoupAsync(soupBase, SoupFromElement(soups[i]), token);
+                }
+            }
+            if (sourceImage == null && itemLink != null)
+            {
+                sourceImage = await FindImageAsync(itemLink, token);
+            }
+
             if (sourceImage == null) { return item; }
             ImageData thumbnail = MakeThumbnail(sourceImage);
 
             Uri thumbnailUri = await this.thumbnailStore.StoreImage(thumbnail.Data);
             return item.With(
-                thumbnail: new RiverItemThumbnail(thumbnailUri.AbsoluteUri, thumbnail.Width, thumbnail.Height));
+                thumbnail: new RiverItemThumbnail(thumbnailUri, thumbnail.Width, thumbnail.Height));
         }
 
         public static ImageData MakeThumbnail(ImageData sourceImage)
@@ -1621,7 +1708,7 @@ namespace onceandfuture
             }
         }
 
-        static async Task<ImageData> FindThumbnailAsync(Uri uri, CancellationToken cancellationToken)
+        static async Task<ImageData> FindImageAsync(Uri uri, CancellationToken cancellationToken)
         {
             try
             {
@@ -1914,11 +2001,13 @@ namespace onceandfuture
 
             if (String.IsNullOrWhiteSpace(src)) { return null; }
             if (!Uri.TryCreate(src, UriKind.RelativeOrAbsolute, out thumbnail)) { return null; }
-            if (!thumbnail.IsAbsoluteUri)
-            {
-                Uri relativeUrl = thumbnail;
-                if (!Uri.TryCreate(baseUrl, relativeUrl, out thumbnail)) { return null; }
-            }
+            return MakeThumbnailUrl(baseUrl, thumbnail);
+        }
+
+        static Uri MakeThumbnailUrl(Uri baseUrl, Uri thumbnail)
+        {
+            thumbnail = Util.Rebase(thumbnail, baseUrl);
+            if (!thumbnail.IsAbsoluteUri) { return null; }
             if (thumbnail.Scheme != "http" && thumbnail.Scheme != "https")
             {
                 return null;
@@ -1992,7 +2081,7 @@ namespace onceandfuture
             {
                 { XNames.RSS.Title,       (ri, xe) => ri.With(title: Util.ParseBody(xe)) },
                 { XNames.RSS.Link,        (ri, xe) => ri.With(link: Util.ParseLink(xe.Value, xe)) },
-                { XNames.RSS.Description, (ri, xe) => ri.With(body: Util.ParseBody(xe)) },
+                { XNames.RSS.Description, (ri, xe) => ri.With(description: xe) },
                 { XNames.RSS.Comments,    (ri, xe) => ri.With(comments: xe.Value) },
                 { XNames.RSS.PubDate,     (ri, xe) => HandlePubDate(ri, xe) },
                 { XNames.RSS.Guid,        (ri, xe) => HandleGuid(ri, xe) },
@@ -2000,20 +2089,22 @@ namespace onceandfuture
 
                 { XNames.RSS10.Title,       (ri, xe) => ri.With(title: Util.ParseBody(xe)) },
                 { XNames.RSS10.Link,        (ri, xe) => ri.With(link: Util.ParseLink(xe.Value, xe)) },
-                { XNames.RSS10.Description, (ri, xe) => ri.With(body: Util.ParseBody(xe)) },
+                { XNames.RSS10.Description, (ri, xe) => ri.With(description: xe) },
                 { XNames.RSS10.Comments,    (ri, xe) => ri.With(comments: xe.Value) },
                 { XNames.RSS10.PubDate,     (ri, xe) => HandlePubDate(ri, xe) },
                 { XNames.RSS10.Guid,        (ri, xe) => HandleGuid(ri, xe) },
 
-                { XNames.Content.Encoded,  (ri, xe) => ri.With(body: Util.ParseBody(xe)) },
+                { XNames.Content.Encoded,  (ri, xe) => ri.With(content: xe) },
 
                 { XNames.Atom.Title,       (ri, xe) => ri.With(title: Util.ParseBody(xe)) },
-                { XNames.Atom.Content,     (ri, xe) => ri.With(body: Util.ParseBody(xe)) },
-                { XNames.Atom.Summary,     (ri, xe) => ri.With(body: Util.ParseBody(xe)) },
+                { XNames.Atom.Content,     (ri, xe) => ri.With(content: xe) },
+                { XNames.Atom.Summary,     (ri, xe) => ri.With(summary: xe) },
                 { XNames.Atom.Link,        (ri, xe) => HandleAtomLink(ri, xe) },
                 { XNames.Atom.Id,          (ri, xe) => ri.With(id: xe.Value) },
                 { XNames.Atom.Published,   (ri, xe) => HandlePubDate(ri, xe) },
                 { XNames.Atom.Updated,     (ri, xe) => HandlePubDate(ri, xe) },
+
+                { XNames.Media.Content, (ri, xe) => HandleThumbnail(ri, xe) },
         };
 
         static RiverFeedParser()
@@ -2389,6 +2480,23 @@ namespace onceandfuture
             return item;
         }
 
+        static RiverItem HandleThumbnail(RiverItem item, XElement element)
+        {
+            if (element.Name == XNames.Media.Content && element.Attribute(XNames.Media.Medium)?.Value == "image")
+            {
+                Uri url;
+                int width, height;
+                if (Uri.TryCreate(element.Attribute(XNames.Media.Url)?.Value, UriKind.RelativeOrAbsolute, out url) &&
+                    Int32.TryParse(element.Attribute(XNames.Media.Width)?.Value, out width) &&
+                    Int32.TryParse(element.Attribute(XNames.Media.Height)?.Value, out height))
+                {
+                    item = item.With(thumbnail: new RiverItemThumbnail(url, width, height));
+                }
+            }
+
+            return item;
+        }
+
         static RiverFeed LoadFeed(Uri feedUrl, XElement item)
         {
             var rf = new RiverFeed(feedUrl: feedUrl);
@@ -2417,6 +2525,12 @@ namespace onceandfuture
                 Func<RiverItem, XElement, RiverItem> func;
                 if (ItemElements.TryGetValue(xe.Name, out func)) { ri = func(ri, xe); }
             }
+
+            // Load the body; prefer explicit summaries to "description", which is ambiguous, to "content", which is 
+            // explicitly intended to be the full entry content.
+            if (ri.Summary != null) { ri = ri.With(body: Util.ParseBody(ri.Summary)); }
+            else if (ri.Description != null) { ri = ri.With(body: Util.ParseBody(ri.Description)); }
+            else if (ri.Content != null) { ri = ri.With(body: Util.ParseBody(ri.Content)); }
 
             if (ri.PermaLink == null) { ri = ri.With(permaLink: ri.Link); }
             if (ri.Id == null) { ri = ri.With(id: CreateItemId(ri)); }
@@ -2610,7 +2724,7 @@ namespace onceandfuture
                     string href = element.GetAttribute("href");
                     if (href != null && Uri.TryCreate(href, UriKind.RelativeOrAbsolute, out hrefUrl))
                     {
-                        if (!hrefUrl.IsAbsoluteUri) { hrefUrl = new Uri(baseUri, hrefUrl); }
+                        hrefUrl = Util.Rebase(hrefUrl, baseUri);
                         linkUrls.Add(hrefUrl);
                     }
                 }
@@ -2635,8 +2749,7 @@ namespace onceandfuture
                 string href = element.GetAttribute("href");
                 if (href != null && Uri.TryCreate(href, UriKind.RelativeOrAbsolute, out hrefUrl))
                 {
-                    if (!hrefUrl.IsAbsoluteUri) { hrefUrl = new Uri(baseUri, hrefUrl); }
-
+                    hrefUrl = Util.Rebase(hrefUrl, baseUri);
                     if ((hrefUrl.Host == baseUri.Host) && IsFeedUrl(hrefUrl))
                     {
                         localGuesses.Add(hrefUrl);
