@@ -31,11 +31,6 @@ using Newtonsoft.Json;
 using Polly;
 using Serilog;
 
-// TODO: Post titles can still be way too long. (cap to say 64?)
-// TODO: Codemod: constructors with required arguments and then a With() method.
-// TODO: Codemod: Inline Log static methods?
-// TODO: Codemod: take stores as constructor params
-
 namespace onceandfuture
 {
     static class Log
@@ -478,21 +473,54 @@ namespace onceandfuture
 
         public static Uri ParseLink(string value, XElement xe)
         {
-            if (value == null) { return null; }
+            return TryParseUrl(value, null, xe);
+        }
+
+        public static Uri TryParseUrl(string url, Uri baseUri = null, XElement xe = null)
+        {
+            // Create a fully-resolved URI as best as you know how to do it.
+            if (String.IsNullOrWhiteSpace(url)) { return null; }
 
             Uri result;
-            if (!Uri.TryCreate(value, UriKind.RelativeOrAbsolute, out result)) { return null; }
-            if (!result.IsAbsoluteUri)
+            if (url[0] == '/')
             {
-                Uri baseUri;
-                if (!String.IsNullOrWhiteSpace(xe.BaseUri) && Uri.TryCreate(xe.BaseUri, UriKind.Absolute, out baseUri))
-                {
-                    Uri absUri;
-                    if (Uri.TryCreate(baseUri, result, out absUri)) { result = absUri; }
-                }
+                // If we send this to Uri.TryCreate, it will make an absolute
+                // file:// Uri which... is not useful. We need to force it to
+                // be a relative URL, which means we're gonna need some kind
+                // of base.
+                if (!Uri.TryCreate(url, UriKind.Relative, out result)) { return null; }
             }
+            else
+            {
+                if (!Uri.TryCreate(url, UriKind.RelativeOrAbsolute, out result)) { return null; }
+            }
+
+            if (result.IsAbsoluteUri) { return result; }
+
+            // If we are reading this URL from an XElement then respect the
+            // base URL that might be set on the document.
+            if (xe != null)
+            {
+                Uri xeBase = TryParseAbsoluteUrl(xe.BaseUri, baseUri);
+                if (xeBase != null) { baseUri = xeBase; }
+            }
+
+            // No base, can't refine further.
+            if (baseUri == null) { return result; }
+
+            Uri absoluteUri;
+            if (!Uri.TryCreate(baseUri, result, out absoluteUri)) { return result; }
+            return absoluteUri;
+        }
+
+        public static Uri TryParseAbsoluteUrl(string url, Uri baseUri = null, XElement xe = null)
+        {
+            Uri result = TryParseUrl(url, baseUri, xe);
+            if (result == null) { return null; }
+            if (!result.IsAbsoluteUri) { return null; }
             return result;
         }
+
 
         public static Uri Rebase(Uri link, Uri baseUri)
         {
@@ -547,7 +575,7 @@ namespace onceandfuture
                 parts.Add("0000");
             }
 
-            // If there's a day name at the front, remove it.            
+            // If there's a day name at the front, remove it.
             if (DayNames.Contains(ThreeChar(parts[0]))) { parts.RemoveAt(0); }
 
             // If we don't have at least 5 parts now there's not enough information to interpret.
@@ -586,7 +614,7 @@ namespace onceandfuture
             if (parts[4].StartsWith("etc/")) { parts[4] = parts[4].Substring(4); }
             if (parts[4].StartsWith("gmt"))
             {
-                // Normalize timezones that start with GMT: 
+                // Normalize timezones that start with GMT:
                 // GMT-05:00 => -0500
                 // GMT => GMT
                 parts[4] = String.Join("", parts[4].Substring(3).Split(':'));
@@ -1572,12 +1600,6 @@ namespace onceandfuture
         }
     }
 
-    // TODO: 
-    // http://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml
-    // xmlns:media="http://search.yahoo.com/mrss/"
-    // <media:content url="https://static01.nyt.com/images/2016/12/04/world/CHINATRUMP/CHINATRUMP-moth.jpg" medium="image" height="151" width="151"/>
-
-
     class ThumbnailExtractor
     {
         readonly RiverThumbnailStore thumbnailStore = new RiverThumbnailStore();
@@ -1666,17 +1688,7 @@ namespace onceandfuture
                 XElement xe = soups[i];
                 if (xe != null)
                 {
-                    Uri soupBase = null;
-                    if (!String.IsNullOrWhiteSpace(xe.BaseUri) &&
-                        Uri.TryCreate(xe.BaseUri, UriKind.RelativeOrAbsolute, out soupBase))
-                    {
-                        soupBase = Util.Rebase(soupBase, baseUri);
-                    }
-                    if (soupBase == null)
-                    {
-                        soupBase = itemLink ?? baseUri;
-                    }
-
+                    Uri soupBase = Util.TryParseAbsoluteUrl(xe.BaseUri, baseUri) ?? itemLink ?? baseUri;
                     sourceImage = await FindThumbnailInSoupAsync(soupBase, SoupFromElement(soups[i]), token);
                 }
             }
@@ -1997,10 +2009,8 @@ namespace onceandfuture
 
         static Uri MakeThumbnailUrl(Uri baseUrl, string src)
         {
-            Uri thumbnail;
-
-            if (String.IsNullOrWhiteSpace(src)) { return null; }
-            if (!Uri.TryCreate(src, UriKind.RelativeOrAbsolute, out thumbnail)) { return null; }
+            Uri thumbnail = Util.TryParseAbsoluteUrl(src, baseUrl);
+            if (thumbnail == null) { return null; }
             return MakeThumbnailUrl(baseUrl, thumbnail);
         }
 
@@ -2219,12 +2229,7 @@ namespace onceandfuture
                 RiverItem[] newItems = feed.Items.Where(item => !existingItems.Contains(item.Id)).ToArray();
                 if (newItems.Length > 0)
                 {
-                    Uri baseUri;
-                    if (String.IsNullOrWhiteSpace(feed.WebsiteUrl) ||
-                        !Uri.TryCreate(feed.WebsiteUrl, UriKind.Absolute, out baseUri))
-                    {
-                        baseUri = feed.FeedUrl;
-                    }
+                    Uri baseUri = Util.TryParseAbsoluteUrl(feed.WebsiteUrl) ?? feed.FeedUrl;
                     for (int i = 0; i < newItems.Length; i++)
                     {
                         newItems[i] = Rebase(newItems[i], baseUri);
@@ -2484,9 +2489,10 @@ namespace onceandfuture
         {
             if (element.Name == XNames.Media.Content && element.Attribute(XNames.Media.Medium)?.Value == "image")
             {
-                Uri url;
+                Uri url = Util.TryParseUrl(element.Attribute(XNames.Media.Url)?.Value, null, element);
+
                 int width, height;
-                if (Uri.TryCreate(element.Attribute(XNames.Media.Url)?.Value, UriKind.RelativeOrAbsolute, out url) &&
+                if (url != null &&
                     Int32.TryParse(element.Attribute(XNames.Media.Width)?.Value, out width) &&
                     Int32.TryParse(element.Attribute(XNames.Media.Height)?.Value, out height))
                 {
@@ -2526,7 +2532,7 @@ namespace onceandfuture
                 if (ItemElements.TryGetValue(xe.Name, out func)) { ri = func(ri, xe); }
             }
 
-            // Load the body; prefer explicit summaries to "description", which is ambiguous, to "content", which is 
+            // Load the body; prefer explicit summaries to "description", which is ambiguous, to "content", which is
             // explicitly intended to be the full entry content.
             if (ri.Summary != null) { ri = ri.With(body: Util.ParseBody(ri.Summary)); }
             else if (ri.Description != null) { ri = ri.With(body: Util.ParseBody(ri.Description)); }
@@ -2720,11 +2726,9 @@ namespace onceandfuture
                 string linkType = element.GetAttribute("type");
                 if (linkType != null && FeedMimeTypes.Contains(linkType))
                 {
-                    Uri hrefUrl;
-                    string href = element.GetAttribute("href");
-                    if (href != null && Uri.TryCreate(href, UriKind.RelativeOrAbsolute, out hrefUrl))
+                    Uri hrefUrl = Util.TryParseAbsoluteUrl(element.GetAttribute("href"), baseUri);
+                    if (hrefUrl != null)
                     {
-                        hrefUrl = Util.Rebase(hrefUrl, baseUri);
                         linkUrls.Add(hrefUrl);
                     }
                 }
@@ -2745,11 +2749,9 @@ namespace onceandfuture
             List<Uri> remoteGuesses = new List<Uri>();
             foreach (IElement element in document.GetElementsByTagName("a"))
             {
-                Uri hrefUrl;
-                string href = element.GetAttribute("href");
-                if (href != null && Uri.TryCreate(href, UriKind.RelativeOrAbsolute, out hrefUrl))
+                Uri hrefUrl = Util.TryParseAbsoluteUrl(element.GetAttribute("href"), baseUri);
+                if (hrefUrl != null)
                 {
-                    hrefUrl = Util.Rebase(hrefUrl, baseUri);
                     if ((hrefUrl.Host == baseUri.Host) && IsFeedUrl(hrefUrl))
                     {
                         localGuesses.Add(hrefUrl);

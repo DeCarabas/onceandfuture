@@ -2,7 +2,7 @@ Todo:
 =======
 
 Bugs:
-- ADDING FEEDS IS EFFED, FIX IT.
+- REFRESHING FEEDS IS EFFED, FIX IT.
 
 UI:
 - Account creation flow
@@ -26,6 +26,10 @@ Back-end Stuff:
 - Max request size
 - Limit on HTTP response sizes, strong timeouts
   - Remember that attackers dictate URLs.
+
+Tests:
+- Some known feed snapshots, check to make sure rivers match. (Make sure
+  to mock the web and return fake images, &c.)
 
 Shipping:
 - Re-pack font awesome fonts
