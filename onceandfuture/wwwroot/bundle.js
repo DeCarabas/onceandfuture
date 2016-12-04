@@ -25070,7 +25070,7 @@
 	        } },
 	      React.createElement(
 	        _tooltip2.default,
-	        { tip: tooltip },
+	        { tip: tooltip, position: 'left' },
 	        React.createElement('i', { className: 'fa fa-remove', 'aria-hidden': 'true' })
 	      )
 	    )
@@ -25198,7 +25198,7 @@
 	    border: '1px solid ' + _style.COLOR_VERY_DARK,
 	
 	    maxHeight: '100%',
-	    overflowX: 'hidden',
+	    //    overflowX: 'hidden',
 	    overflowY: 'auto'
 	  };
 	
@@ -25398,21 +25398,22 @@
 	
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 	
-	var TIP_STYLE = {
-	  backgroundColor: _style.COLOR_VERY_DARK,
-	  color: _style.COLOR_VERY_LIGHT,
-	  textAlign: 'center',
-	  padding: '5px 10px',
-	  borderRadius: '6px',
+	var DIV_STYLE = {
 	  display: 'inline-block',
-	  position: 'absolute',
-	  zIndex: 1,
-	  top: -5,
-	  left: '105%'
+	  position: 'relative'
 	};
 	
-	var DIV_STYLE = {
-	  position: 'relative'
+	var TIP_STYLE_BASE = {
+	  backgroundColor: _style.COLOR_VERY_DARK,
+	  borderRadius: '6px',
+	  color: _style.COLOR_VERY_LIGHT,
+	  display: 'inline-block',
+	  padding: '5px 10px',
+	  position: 'absolute',
+	  textAlign: 'center',
+	  zIndex: 5,
+	  fontSize: _style.TEXT_FONT_SIZE,
+	  fontWeight: 'normal'
 	};
 	
 	var Tooltip = function (_React$Component) {
@@ -25424,6 +25425,8 @@
 	    var _this = _possibleConstructorReturn(this, (Tooltip.__proto__ || Object.getPrototypeOf(Tooltip)).call(this, props));
 	
 	    _this.state = { inside: false };
+	    _this.position = props.position || 'left';
+	    _this.width = props.width || 120;
 	
 	    _this.handleMouseEnter = _this.handleMouseEnter.bind(_this);
 	    _this.handleMouseLeave = _this.handleMouseLeave.bind(_this);
@@ -25433,6 +25436,36 @@
 	  _createClass(Tooltip, [{
 	    key: 'render',
 	    value: function render() {
+	      var TIP_STYLE;
+	      if (this.position === 'right') {
+	        TIP_STYLE = Object.assign({}, TIP_STYLE_BASE, {
+	          top: -5,
+	          left: '105%',
+	          width: this.width
+	        });
+	      } else if (this.position === 'top') {
+	        TIP_STYLE = Object.assign({}, TIP_STYLE_BASE, {
+	          bottom: '100%',
+	          left: '50%',
+	          width: this.width,
+	          marginLeft: -60
+	        });
+	      } else if (this.position === 'bottom') {
+	        TIP_STYLE = Object.assign({}, TIP_STYLE_BASE, {
+	          top: '100%',
+	          left: '50%',
+	          width: this.width,
+	          marginLeft: -60
+	        });
+	      } else {
+	        // Default to left.
+	        TIP_STYLE = Object.assign({}, TIP_STYLE_BASE, {
+	          top: -5,
+	          right: '105%',
+	          width: this.width
+	        });
+	      }
+	
 	      var tip = _react2.default.createElement('span', null);
 	      if (this.state.inside) {
 	        tip = _react2.default.createElement(
@@ -25548,6 +25581,12 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
+	var _tooltip = __webpack_require__(/*! ./tooltip */ 205);
+	
+	var _tooltip2 = _interopRequireDefault(_tooltip);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
 	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
 	
 	
@@ -25560,9 +25599,27 @@
 	    paddingTop: 6
 	  });
 	  var is_settings = (river.modal || {}).kind === 'settings';
-	  var icon = is_settings ? 'fa-chevron-up' : 'fa-gear';
-	  var onClick = is_settings ? onHideSettings : onShowSettings;
-	  return React.createElement('i', { className: 'fa ' + icon, style: style, onClick: onClick });
+	
+	  var icon, onClick, tip;
+	  if (is_settings) {
+	    icon = 'fa-chevron-up';
+	    onClick = onHideSettings;
+	    tip = 'Close the settings panel.';
+	  } else {
+	    icon = 'fa-gear';
+	    onClick = onShowSettings;
+	    tip = 'Show the settings panel for this feed.';
+	  }
+	
+	  return React.createElement(
+	    'span',
+	    { style: style },
+	    React.createElement(
+	      _tooltip2.default,
+	      { tip: tip, position: 'right' },
+	      React.createElement('i', { className: 'fa ' + icon, onClick: onClick })
+	    )
+	  );
 	};
 	
 	var RiverDragHandle = function RiverDragHandle(_ref2) {
@@ -25580,7 +25637,15 @@
 	    ev.dataTransfer.setDragImage(draggo, 0, 0);
 	  };
 	
-	  return React.createElement('i', { className: 'fa fa-bars', draggable: 'true', style: style, onDragStart: onDrag });
+	  return React.createElement(
+	    'span',
+	    { style: style, draggable: 'true', onDragStart: onDrag },
+	    React.createElement(
+	      _tooltip2.default,
+	      { tip: 'Drag this onto another column to re-order it.', position: 'right' },
+	      React.createElement('i', { className: 'fa fa-bars' })
+	    )
+	  );
 	};
 	
 	var RiverTitle = function RiverTitle(_ref3) {
@@ -25665,18 +25730,14 @@
 	    right: SIDE_PADDING
 	  };
 	
-	  var updates = river.updates || [];
+	  var update_nodes = (river.updates || []).map(function (u) {
+	    return _react2.default.createElement(_riverfeedupdate2.default, { update: u, mode: river.mode, river_index: index, key: (0, _util.update_key)(u) });
+	  });
+	
 	  return _react2.default.createElement(
 	    'div',
 	    { style: style },
-	    updates.map(function (u) {
-	      return _react2.default.createElement(_riverfeedupdate2.default, {
-	        update: u,
-	        mode: river.mode,
-	        river_index: index,
-	        key: (0, _util.update_key)(u)
-	      });
-	    })
+	    update_nodes
 	  );
 	};
 	

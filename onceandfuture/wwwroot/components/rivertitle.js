@@ -5,16 +5,31 @@ import {
   RIVER_TITLE_FONT_SIZE,
   BUTTON_STYLE,
 } from './style';
+import Tooltip from './tooltip';
 
 const RiverSettingsButton = ({river, onShowSettings, onHideSettings}) => {
   const style = Object.assign({}, BUTTON_STYLE, {
     paddingTop: 6,
   });
   const is_settings = (river.modal || {}).kind === 'settings';
-  const icon = is_settings ? 'fa-chevron-up' : 'fa-gear';
-  const onClick = is_settings ? onHideSettings : onShowSettings;
-  return <i className={'fa ' + icon} style={style} onClick={onClick} />;
-}
+
+  var icon, onClick, tip;
+  if (is_settings) {
+    icon = 'fa-chevron-up';
+    onClick = onHideSettings;
+    tip = 'Close the settings panel.';
+  } else {
+    icon = 'fa-gear';
+    onClick = onShowSettings;
+    tip = 'Show the settings panel for this feed.';
+  }
+
+  return <span style={style}>
+    <Tooltip tip={tip} position='right'>
+      <i className={'fa ' + icon} onClick={onClick} />
+    </Tooltip>
+  </span>;
+};
 
 const RiverDragHandle = ({river}) => {
   const style = Object.assign({}, BUTTON_STYLE, {
@@ -29,8 +44,12 @@ const RiverDragHandle = ({river}) => {
     ev.dataTransfer.setDragImage(draggo, 0, 0);
   };
 
-  return <i className='fa fa-bars' draggable="true" style={style} onDragStart={onDrag} />;
-}
+  return <span style={style} draggable="true" onDragStart={onDrag}>
+    <Tooltip tip='Drag this onto another column to re-order it.' position='right'>
+      <i className='fa fa-bars' />
+    </Tooltip>
+  </span>;
+};
 
 const RiverTitle = ({river, onShowSettings, onHideSettings}) => {
   const divStyle = {

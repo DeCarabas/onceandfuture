@@ -185,7 +185,7 @@ const RiverSource = ({source, deleteSource}) => {
     <td><RiverLink href={source.webUrl}>{source.name}</RiverLink></td>
     <td style={timeStyle}><RelTime time={source.lastUpdated} /></td>
     <td style={unsubscribeStyle} onClick={() => deleteSource(source.id, source.feedUrl)}>
-      <Tooltip tip={tooltip}>
+      <Tooltip tip={tooltip} position='left'>
         <i className="fa fa-remove" aria-hidden="true" />
       </Tooltip>
     </td>
@@ -270,7 +270,7 @@ const RiverSettingsBase = ({
     border: '1px solid ' + COLOR_VERY_DARK,
 
     maxHeight: '100%',
-    overflowX: 'hidden',
+//    overflowX: 'hidden',
     overflowY: 'auto',
   };
 

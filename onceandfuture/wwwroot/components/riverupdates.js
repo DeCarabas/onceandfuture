@@ -17,18 +17,11 @@ const RiverUpdates = ({river, index}) => {
     right: SIDE_PADDING,
   };
 
-  let updates = river.updates || [];
-  return <div style={style}>
-    {
-      updates.map(u =>
-        <RiverFeedUpdate
-          update={u}
-          mode={river.mode}
-          river_index={index}
-          key={update_key(u)}
-          />)
-      }
-  </div>;
-}
+  let update_nodes = (river.updates || []).map(
+    u => <RiverFeedUpdate update={u} mode={river.mode} river_index={index} key={update_key(u)} />
+  );
+
+  return <div style={style}>{update_nodes}</div>;
+};
 
 export default RiverUpdates;
