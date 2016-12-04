@@ -73,15 +73,6 @@ export function riverAddFeedFailed(index, message) {
   };
 }
 
-export const RIVER_ADD_FEED_URL_CHANGED = 'RIVER_ADD_FEED_URL_CHANGED';
-export function riverAddFeedUrlChanged(index, new_value) {
-  return {
-    type: RIVER_ADD_FEED_URL_CHANGED,
-    river_index: index,
-    new_value: new_value,
-  };
-}
-
 export const RIVER_LIST_UPDATE_START = 'RIVER_LIST_UPDATE_START';
 export function riverListUpdateStart() {
   return {

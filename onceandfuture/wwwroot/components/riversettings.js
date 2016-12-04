@@ -50,26 +50,45 @@ const SettingsButton = ({onClick, text}) => {
   );
 };
 
-const AddFeedBoxUrl = ({onChange}) => {
-  const style = {
-    width: '100%',
-  };
-  return <div style={style}>
-    <input
-      style={style}
-      type="text"
-      onChange={ (e) => onChange(e.target.value) }
-    />
-  </div>;
-};
+// This one is a class-based component because it maintains the internal
+// state of the edit box.
+class SettingInputBox extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {value: props.value || ''};
+    this.setValue = props.setValue;
 
-const AddFeedBox = ({feedUrlChanged, addFeedToRiver}) => {
+    this.handleChange = this.handleChange.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
+  }
+
+  handleChange(event) {
+    this.setState({value: event.target.value});
+  }
+
+  handleSubmit(event) {
+    this.setValue(this.state.value);
+    event.preventDefault();
+  }
+
+  render() {
+    const input_style = {
+      width: '100%',
+    };
+
+    return <div>
+      <input style={input_style} type="text" value={this.state.value} onChange={this.handleChange} />
+      <SettingsButton onClick={this.handleSubmit} text={this.props.buttonLabel} />
+   </div>;
+  }
+}
+
+const AddFeedBox = ({addFeedToRiver}) => {
   return (
     <div>
       <SettingsSectionTitle text="Add A New Site or Feed" />
       <p>Enter the site name or the URL of a feed to subscribe to:</p>
-      <AddFeedBoxUrl onChange={feedUrlChanged} />
-      <SettingsButton onClick={addFeedToRiver} text="Add Feed" />
+      <SettingInputBox value='' setValue={addFeedToRiver} buttonLabel='Add Feed' />
     </div>
   );
 };
@@ -127,40 +146,15 @@ const FeedDisplayModeBox = ({mode, setFeedMode}) => {
   );
 };
 
-// This one is a class-based component because it maintains the internal
-// state of the edit box.
-class RenameRiverBox extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {name: props.name};
-    this.setName = props.setName;
-
-    this.handleChange = this.handleChange.bind(this);
-    this.handleSubmit = this.handleSubmit.bind(this);
-  }
-
-  handleChange(event) {
-    this.setState({name: event.target.value});
-  }
-
-  handleSubmit(event) {
-    this.setName(this.state.name);
-    event.preventDefault();
-  }
-
-  render() {
-    const input_style = {
-      width: '100%',
-    };
-
-    return <div>
+const RenameRiverBox = ({name, setName}) => {
+  return (
+    <div>
       <SettingsSectionTitle text="Rename This River" />
       <p>Choose a new name for this river.</p>
-      <input style={input_style} type="text" value={this.state.name} onChange={this.handleChange} />
-      <SettingsButton onClick={this.handleSubmit} text="Rename" />
-   </div>;
-  }
-}
+      <SettingInputBox value={name} setValue={setName} buttonLabel='Rename' />
+    </div>
+  );
+};
 
 const DeleteRiverBox = ({deleteRiver}) => {
   return <div>
@@ -274,7 +268,7 @@ const RiverSettingsBase = ({
     overflowY: 'auto',
   };
 
-  const addFeed = () => addFeedToRiver(index, river);
+  const addFeed = (url) => addFeedToRiver(index, river, url);
   const urlChanged = (text) => feedUrlChanged(index, text);
   const setFeedMode = (mode) => riverSetFeedMode(index, river, mode);
   const delRiver = () => deleteRiver(user, river);
@@ -302,7 +296,7 @@ const mapStateToProps = (state) => {
 const mapDispatchToProps = (dispatch) => {
   return {
     feedUrlChanged: (index, new_value) => dispatch(riverAddFeedUrlChanged(index, new_value)),
-    addFeedToRiver: (index, river) => dispatch(riverAddFeed(index, river, river.modal.value)),
+    addFeedToRiver: (index, river, url) => dispatch(riverAddFeed(index, river, url)),
     riverSetFeedMode: (index, river, mode) => dispatch(riverSetFeedMode(index, river, mode)),
     deleteRiver: (user, river) => dispatch(removeRiver(user, river)),
     removeSource: (index, river, source_id, source_url) =>

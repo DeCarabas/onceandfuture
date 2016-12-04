@@ -218,14 +218,6 @@
 	        sources: null
 	      });
 	
-	    case _actions.RIVER_ADD_FEED_URL_CHANGED:
-	      if (!state.modal || state.modal.kind !== 'settings') {
-	        return state;
-	      }
-	      return Object.assign({}, state, {
-	        modal: { kind: 'settings', value: action.new_value }
-	      });
-	
 	    case _actions.SHOW_RIVER_SETTINGS:
 	      return Object.assign({}, state, {
 	        modal: { kind: 'settings', value: '' }
@@ -23564,7 +23556,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.RIVER_SET_FEED_MODE = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_URL_CHANGED = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
+	exports.RIVER_SET_FEED_MODE = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
 	exports.dropRiver = dropRiver;
 	exports.expandFeedUpdate = expandFeedUpdate;
 	exports.collapseFeedUpdate = collapseFeedUpdate;
@@ -23573,7 +23565,6 @@
 	exports.riverAddFeedStart = riverAddFeedStart;
 	exports.riverAddFeedSuccess = riverAddFeedSuccess;
 	exports.riverAddFeedFailed = riverAddFeedFailed;
-	exports.riverAddFeedUrlChanged = riverAddFeedUrlChanged;
 	exports.riverListUpdateStart = riverListUpdateStart;
 	exports.riverListUpdateSuccess = riverListUpdateSuccess;
 	exports.riverListUpdateFailed = riverListUpdateFailed;
@@ -23685,15 +23676,6 @@
 	    type: RIVER_ADD_FEED_FAILED,
 	    error: message,
 	    river_index: index
-	  };
-	}
-	
-	var RIVER_ADD_FEED_URL_CHANGED = exports.RIVER_ADD_FEED_URL_CHANGED = 'RIVER_ADD_FEED_URL_CHANGED';
-	function riverAddFeedUrlChanged(index, new_value) {
-	  return {
-	    type: RIVER_ADD_FEED_URL_CHANGED,
-	    river_index: index,
-	    new_value: new_value
 	  };
 	}
 	
@@ -24845,28 +24827,57 @@
 	  );
 	};
 	
-	var AddFeedBoxUrl = function AddFeedBoxUrl(_ref3) {
-	  var _onChange = _ref3.onChange;
+	// This one is a class-based component because it maintains the internal
+	// state of the edit box.
 	
-	  var style = {
-	    width: '100%'
-	  };
-	  return React.createElement(
-	    'div',
-	    { style: style },
-	    React.createElement('input', {
-	      style: style,
-	      type: 'text',
-	      onChange: function onChange(e) {
-	        return _onChange(e.target.value);
-	      }
-	    })
-	  );
-	};
+	var SettingInputBox = function (_React$Component) {
+	  _inherits(SettingInputBox, _React$Component);
 	
-	var AddFeedBox = function AddFeedBox(_ref4) {
-	  var feedUrlChanged = _ref4.feedUrlChanged,
-	      addFeedToRiver = _ref4.addFeedToRiver;
+	  function SettingInputBox(props) {
+	    _classCallCheck(this, SettingInputBox);
+	
+	    var _this = _possibleConstructorReturn(this, (SettingInputBox.__proto__ || Object.getPrototypeOf(SettingInputBox)).call(this, props));
+	
+	    _this.state = { value: props.value || '' };
+	    _this.setValue = props.setValue;
+	
+	    _this.handleChange = _this.handleChange.bind(_this);
+	    _this.handleSubmit = _this.handleSubmit.bind(_this);
+	    return _this;
+	  }
+	
+	  _createClass(SettingInputBox, [{
+	    key: 'handleChange',
+	    value: function handleChange(event) {
+	      this.setState({ value: event.target.value });
+	    }
+	  }, {
+	    key: 'handleSubmit',
+	    value: function handleSubmit(event) {
+	      this.setValue(this.state.value);
+	      event.preventDefault();
+	    }
+	  }, {
+	    key: 'render',
+	    value: function render() {
+	      var input_style = {
+	        width: '100%'
+	      };
+	
+	      return React.createElement(
+	        'div',
+	        null,
+	        React.createElement('input', { style: input_style, type: 'text', value: this.state.value, onChange: this.handleChange }),
+	        React.createElement(SettingsButton, { onClick: this.handleSubmit, text: this.props.buttonLabel })
+	      );
+	    }
+	  }]);
+	
+	  return SettingInputBox;
+	}(React.Component);
+	
+	var AddFeedBox = function AddFeedBox(_ref3) {
+	  var addFeedToRiver = _ref3.addFeedToRiver;
 	
 	  return React.createElement(
 	    'div',
@@ -24877,15 +24888,14 @@
 	      null,
 	      'Enter the site name or the URL of a feed to subscribe to:'
 	    ),
-	    React.createElement(AddFeedBoxUrl, { onChange: feedUrlChanged }),
-	    React.createElement(SettingsButton, { onClick: addFeedToRiver, text: 'Add Feed' })
+	    React.createElement(SettingInputBox, { value: '', setValue: addFeedToRiver, buttonLabel: 'Add Feed' })
 	  );
 	};
 	
-	var DisplayModeButton = function DisplayModeButton(_ref5) {
-	  var text = _ref5.text,
-	      enabled = _ref5.enabled,
-	      click = _ref5.click;
+	var DisplayModeButton = function DisplayModeButton(_ref4) {
+	  var text = _ref4.text,
+	      enabled = _ref4.enabled,
+	      click = _ref4.click;
 	
 	  var butt = {
 	    width: 100,
@@ -24903,9 +24913,9 @@
 	  );
 	};
 	
-	var FeedDisplayModeBox = function FeedDisplayModeBox(_ref6) {
-	  var mode = _ref6.mode,
-	      setFeedMode = _ref6.setFeedMode;
+	var FeedDisplayModeBox = function FeedDisplayModeBox(_ref5) {
+	  var mode = _ref5.mode,
+	      setFeedMode = _ref5.setFeedMode;
 	
 	  var end_space = {
 	    width: 10,
@@ -24957,60 +24967,22 @@
 	  );
 	};
 	
-	// This one is a class-based component because it maintains the internal
-	// state of the edit box.
+	var RenameRiverBox = function RenameRiverBox(_ref6) {
+	  var name = _ref6.name,
+	      setName = _ref6.setName;
 	
-	var RenameRiverBox = function (_React$Component) {
-	  _inherits(RenameRiverBox, _React$Component);
-	
-	  function RenameRiverBox(props) {
-	    _classCallCheck(this, RenameRiverBox);
-	
-	    var _this = _possibleConstructorReturn(this, (RenameRiverBox.__proto__ || Object.getPrototypeOf(RenameRiverBox)).call(this, props));
-	
-	    _this.state = { name: props.name };
-	    _this.setName = props.setName;
-	
-	    _this.handleChange = _this.handleChange.bind(_this);
-	    _this.handleSubmit = _this.handleSubmit.bind(_this);
-	    return _this;
-	  }
-	
-	  _createClass(RenameRiverBox, [{
-	    key: 'handleChange',
-	    value: function handleChange(event) {
-	      this.setState({ name: event.target.value });
-	    }
-	  }, {
-	    key: 'handleSubmit',
-	    value: function handleSubmit(event) {
-	      this.setName(this.state.name);
-	      event.preventDefault();
-	    }
-	  }, {
-	    key: 'render',
-	    value: function render() {
-	      var input_style = {
-	        width: '100%'
-	      };
-	
-	      return React.createElement(
-	        'div',
-	        null,
-	        React.createElement(SettingsSectionTitle, { text: 'Rename This River' }),
-	        React.createElement(
-	          'p',
-	          null,
-	          'Choose a new name for this river.'
-	        ),
-	        React.createElement('input', { style: input_style, type: 'text', value: this.state.name, onChange: this.handleChange }),
-	        React.createElement(SettingsButton, { onClick: this.handleSubmit, text: 'Rename' })
-	      );
-	    }
-	  }]);
-	
-	  return RenameRiverBox;
-	}(React.Component);
+	  return React.createElement(
+	    'div',
+	    null,
+	    React.createElement(SettingsSectionTitle, { text: 'Rename This River' }),
+	    React.createElement(
+	      'p',
+	      null,
+	      'Choose a new name for this river.'
+	    ),
+	    React.createElement(SettingInputBox, { value: name, setValue: setName, buttonLabel: 'Rename' })
+	  );
+	};
 	
 	var DeleteRiverBox = function DeleteRiverBox(_ref7) {
 	  var deleteRiver = _ref7.deleteRiver;
@@ -25202,8 +25174,8 @@
 	    overflowY: 'auto'
 	  };
 	
-	  var addFeed = function addFeed() {
-	    return addFeedToRiver(index, river);
+	  var addFeed = function addFeed(url) {
+	    return addFeedToRiver(index, river, url);
 	  };
 	  var urlChanged = function urlChanged(text) {
 	    return feedUrlChanged(index, text);
@@ -25246,8 +25218,8 @@
 	    feedUrlChanged: function feedUrlChanged(index, new_value) {
 	      return dispatch((0, _actions.riverAddFeedUrlChanged)(index, new_value));
 	    },
-	    addFeedToRiver: function addFeedToRiver(index, river) {
-	      return dispatch((0, _actions.riverAddFeed)(index, river, river.modal.value));
+	    addFeedToRiver: function addFeedToRiver(index, river, url) {
+	      return dispatch((0, _actions.riverAddFeed)(index, river, url));
 	    },
 	    riverSetFeedMode: function riverSetFeedMode(index, river, mode) {
 	      return dispatch((0, _actions.riverSetFeedMode)(index, river, mode));

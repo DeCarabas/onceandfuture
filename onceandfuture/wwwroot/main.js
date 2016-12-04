@@ -22,7 +22,6 @@ import {
   REMOVE_RIVER_ERROR,
   REMOVE_RIVER_START,
   REMOVE_RIVER_SUCCESS,
-  RIVER_ADD_FEED_URL_CHANGED,
   RIVER_ADD_FEED_START,
   RIVER_ADD_FEED_FAILED,
   RIVER_ADD_FEED_SUCCESS,
@@ -183,12 +182,6 @@ function state_river(state = def_river, action) {
         id: action.id,
         mode: action.response.metadata.mode || state.mode,
         sources: null,
-      });
-
-    case RIVER_ADD_FEED_URL_CHANGED:
-      if (!state.modal || state.modal.kind !== 'settings') { return state; }
-      return Object.assign({}, state, {
-        modal: { kind: 'settings', value: action.new_value },
       });
 
     case SHOW_RIVER_SETTINGS:
