@@ -1,5 +1,4 @@
 import { make_full_url } from './util';
-//import { sendLoadRiver, sendLoadRiverList, sendSetRiverMode } from './ipchandler';
 
 export const RIVER_MODE_AUTO = 'auto';
 export const RIVER_MODE_IMAGE = 'image';
@@ -12,7 +11,7 @@ export function dropRiver(target_index, target_river, dragged_river_id) {
     target_index: target_index,
     target_river: target_river,
     dragged_river_id: dragged_river_id,
-  }
+  };
 }
 
 export const EXPAND_FEED_UPDATE = 'EXPAND_FEED_UPDATE';
@@ -21,7 +20,7 @@ export function expandFeedUpdate(river_index, update_key) {
     type: EXPAND_FEED_UPDATE,
     river_index: river_index,
     update_key: update_key,
-  }
+  };
 }
 
 export const COLLAPSE_FEED_UPDATE = 'COLLAPSE_FEED_UPDATE';
@@ -30,7 +29,7 @@ export function collapseFeedUpdate(river_index, update_key) {
     type: COLLAPSE_FEED_UPDATE,
     river_index: river_index,
     update_key: update_key,
-  }
+  };
 }
 
 export const SHOW_RIVER_SETTINGS = 'SHOW_RIVER_SETTINGS';
@@ -38,7 +37,7 @@ export function showRiverSettings(river_index) {
   return {
     type: SHOW_RIVER_SETTINGS,
     river_index: river_index,
-  }
+  };
 }
 
 export const HIDE_RIVER_SETTINGS = 'HIDE_RIVER_SETTINGS';
@@ -46,7 +45,7 @@ export function hideRiverSettings(river_index) {
   return {
     type: HIDE_RIVER_SETTINGS,
     river_index: river_index,
-  }
+  };
 }
 
 export const RIVER_ADD_FEED_START = 'RIVER_ADD_FEED_START';
@@ -54,7 +53,7 @@ export function riverAddFeedStart(index) {
   return {
     type: RIVER_ADD_FEED_START,
     river_index: index,
-  }
+  };
 }
 
 export const RIVER_ADD_FEED_SUCCESS = 'RIVER_ADD_FEED_SUCCESS';
@@ -62,7 +61,7 @@ export function riverAddFeedSuccess(index) {
   return {
     type: RIVER_ADD_FEED_SUCCESS,
     river_index: index,
-  }
+  };
 }
 
 export const RIVER_ADD_FEED_FAILED = 'RIVER_ADD_FEED_FAILED';
@@ -71,7 +70,7 @@ export function riverAddFeedFailed(index, message) {
     type: RIVER_ADD_FEED_FAILED,
     error: message,
     river_index: index,
-  }
+  };
 }
 
 export const RIVER_ADD_FEED_URL_CHANGED = 'RIVER_ADD_FEED_URL_CHANGED';
@@ -354,7 +353,7 @@ function xhrAction(options) {
     } else {
       xhr.send();
     }
-  }
+  };
 }
 
 export const RIVER_SET_FEED_MODE = 'RIVER_SET_FEED_MODE';
@@ -377,7 +376,7 @@ export function riverAddFeed(index, river, url) {
     verb: 'POST', url: river.url + '/sources',
     msg: { 'url': url },
     start: (dispatch) => dispatch(riverAddFeedStart(index)),
-    loaded: (dispatch, xhr) => {
+    loaded: (dispatch) => {
       dispatch(riverAddFeedSuccess(index));
       dispatch(refreshRiver(index, river.name, river.url, river.id));
     },
@@ -464,7 +463,7 @@ export function refreshAllFeeds(user) {
       }, 100);
       dispatch(refreshAllFeedsStart());
     },
-    loaded: (dispatch, xhr) => {
+    loaded: (dispatch) => {
       if (pollTimer) {
         clearInterval(pollTimer);
       }
@@ -477,13 +476,13 @@ export function refreshAllFeeds(user) {
       }
       dispatch(refreshAllFeedsError(message));
     },
-  })
+  });
 }
 
 export function riverGetFeedSources(index, river) {
   return xhrAction({
     url: river.url + '/sources',
-    start: (dispatch, xhr) => {
+    start: (dispatch) => {
       dispatch(riverGetFeedSourcesStart(index, river));
     },
     loaded_json: (dispatch, result) => {
@@ -498,7 +497,7 @@ export function riverGetFeedSources(index, river) {
 export function riverRemoveSource(index, river, source_id, source_url) {
   return xhrAction({
     verb: 'DELETE', url: river.url + '/sources/' + source_id,
-    start: (dispatch, xhr) => {
+    start: (dispatch) => {
       dispatch(riverRemoveSourceStart(index, river, source_id, source_url));
     },
     loaded_json: (dispatch, result) => {

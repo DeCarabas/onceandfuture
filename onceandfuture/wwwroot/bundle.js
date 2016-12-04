@@ -352,7 +352,6 @@
 	  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 	  var action = arguments[1];
 	
-	  var errorDetail = action.error ? "  The error was " + action.error : "";
 	  switch (action.type) {
 	    case _actions.DISMISS_BALLOON:
 	      return {};
@@ -23608,8 +23607,6 @@
 	
 	var _util = __webpack_require__(/*! ./util */ 195);
 	
-	//import { sendLoadRiver, sendLoadRiverList, sendSetRiverMode } from './ipchandler';
-	
 	var RIVER_MODE_AUTO = exports.RIVER_MODE_AUTO = 'auto';
 	var RIVER_MODE_IMAGE = exports.RIVER_MODE_IMAGE = 'image';
 	var RIVER_MODE_TEXT = exports.RIVER_MODE_TEXT = 'text';
@@ -23992,7 +23989,7 @@
 	    start: function start(dispatch) {
 	      return dispatch(riverAddFeedStart(index));
 	    },
-	    loaded: function loaded(dispatch, xhr) {
+	    loaded: function loaded(dispatch) {
 	      dispatch(riverAddFeedSuccess(index));
 	      dispatch(refreshRiver(index, river.name, river.url, river.id));
 	    },
@@ -24093,7 +24090,7 @@
 	      }, 100);
 	      dispatch(refreshAllFeedsStart());
 	    },
-	    loaded: function loaded(dispatch, xhr) {
+	    loaded: function loaded(dispatch) {
 	      if (pollTimer) {
 	        clearInterval(pollTimer);
 	      }
@@ -24112,7 +24109,7 @@
 	function riverGetFeedSources(index, river) {
 	  return xhrAction({
 	    url: river.url + '/sources',
-	    start: function start(dispatch, xhr) {
+	    start: function start(dispatch) {
 	      dispatch(riverGetFeedSourcesStart(index, river));
 	    },
 	    loaded_json: function loaded_json(dispatch, result) {
@@ -24127,7 +24124,7 @@
 	function riverRemoveSource(index, river, source_id, source_url) {
 	  return xhrAction({
 	    verb: 'DELETE', url: river.url + '/sources/' + source_id,
-	    start: function start(dispatch, xhr) {
+	    start: function start(dispatch) {
 	      dispatch(riverRemoveSourceStart(index, river, source_id, source_url));
 	    },
 	    loaded_json: function loaded_json(dispatch, result) {
@@ -24221,7 +24218,7 @@
 	
 	var _rivercolumn2 = _interopRequireDefault(_rivercolumn);
 	
-	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 205);
+	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 206);
 	
 	var _riverprogress2 = _interopRequireDefault(_riverprogress);
 	
@@ -24231,11 +24228,10 @@
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
+	var React = __webpack_require__(/*! react */ 4);
 	
 	
 	var TITLE_HEIGHT = 33; // <div>"Rivers"..."refresh"</div>
-	var TOP_BAR_HEIGHT = TITLE_HEIGHT + _style.PROGRESS_HEIGHT;
 	
 	var RiverSetBar = function RiverSetBar(_ref) {
 	  var title = _ref.title,
@@ -24300,7 +24296,6 @@
 	    cursor: 'pointer'
 	  };
 	
-	  //what
 	  return React.createElement(
 	    'div',
 	    { style: add_button_style, onClick: onAddRiver },
@@ -24499,15 +24494,15 @@
 	
 	var _riversettings2 = _interopRequireDefault(_riversettings);
 	
-	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 205);
+	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 206);
 	
 	var _riverprogress2 = _interopRequireDefault(_riverprogress);
 	
-	var _rivertitle = __webpack_require__(/*! ./rivertitle */ 206);
+	var _rivertitle = __webpack_require__(/*! ./rivertitle */ 207);
 	
 	var _rivertitle2 = _interopRequireDefault(_rivertitle);
 	
-	var _riverupdates = __webpack_require__(/*! ./riverupdates */ 207);
+	var _riverupdates = __webpack_require__(/*! ./riverupdates */ 208);
 	
 	var _riverupdates2 = _interopRequireDefault(_riverupdates);
 	
@@ -24530,7 +24525,7 @@
 	    default:
 	      return React.createElement('span', null);
 	  }
-	}
+	};
 	
 	var RiverColumnBase = function RiverColumnBase(_ref) {
 	  var rivers = _ref.rivers,
@@ -24570,8 +24565,8 @@
 	    { style: style, onDragOver: onDragOver, onDrop: onDrop },
 	    React.createElement(_rivertitle2.default, {
 	      river: river,
-	      onShowSettings: onShowSettings(index, river),
-	      onHideSettings: onHideSettings(index, river)
+	      onShowSettings: onShowSettings(index),
+	      onHideSettings: onHideSettings(index)
 	    }),
 	    modal,
 	    React.createElement(_riverupdates2.default, { river: river, index: index })
@@ -24595,12 +24590,12 @@
 	        }
 	      };
 	    },
-	    onHideSettings: function onHideSettings(i, r) {
+	    onHideSettings: function onHideSettings(i) {
 	      return function () {
 	        return dispatch((0, _actions.hideRiverSettings)(i));
 	      };
 	    },
-	    onDismissBalloon: function onDismissBalloon(i, r) {
+	    onDismissBalloon: function onDismissBalloon(i) {
 	      return function () {
 	        return dispatch((0, _actions.dismissRiverBalloon)(i));
 	      };
@@ -24628,8 +24623,6 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	
-	var _actions = __webpack_require__(/*! ../actions */ 196);
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
@@ -24730,11 +24723,11 @@
 	
 	var _reltime2 = _interopRequireDefault(_reltime);
 	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 210);
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 204);
 	
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	
-	var _tooltip = __webpack_require__(/*! ./tooltip */ 204);
+	var _tooltip = __webpack_require__(/*! ./tooltip */ 205);
 	
 	var _tooltip2 = _interopRequireDefault(_tooltip);
 	
@@ -25163,6 +25156,37 @@
 
 /***/ },
 /* 204 */
+/*!*****************************************!*\
+  !*** ./wwwroot/components/riverlink.js ***!
+  \*****************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _style = __webpack_require__(/*! ./style */ 199);
+	
+	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
+	
+	
+	var RiverLink = function RiverLink(_ref) {
+	  var href = _ref.href,
+	      children = _ref.children;
+	
+	  return React.createElement(
+	    'a',
+	    { style: _style.DEFAULT_LINK_STYLE, href: href, target: '_blank' },
+	    children
+	  );
+	};
+	
+	exports.default = RiverLink;
+
+/***/ },
+/* 205 */
 /*!***************************************!*\
   !*** ./wwwroot/components/tooltip.js ***!
   \***************************************/
@@ -25241,14 +25265,14 @@
 	  }, {
 	    key: 'handleMouseEnter',
 	    value: function handleMouseEnter() {
-	      this.setState(function (prevState) {
+	      this.setState(function () {
 	        return { inside: true };
 	      });
 	    }
 	  }, {
 	    key: 'handleMouseLeave',
 	    value: function handleMouseLeave() {
-	      this.setState(function (prevState) {
+	      this.setState(function () {
 	        return { inside: false };
 	      });
 	    }
@@ -25260,7 +25284,7 @@
 	exports.default = Tooltip;
 
 /***/ },
-/* 205 */
+/* 206 */
 /*!*********************************************!*\
   !*** ./wwwroot/components/riverprogress.js ***!
   \*********************************************/
@@ -25323,7 +25347,7 @@
 	exports.default = RiverProgress;
 
 /***/ },
-/* 206 */
+/* 207 */
 /*!******************************************!*\
   !*** ./wwwroot/components/rivertitle.js ***!
   \******************************************/
@@ -25412,7 +25436,7 @@
 	exports.default = RiverTitle;
 
 /***/ },
-/* 207 */
+/* 208 */
 /*!********************************************!*\
   !*** ./wwwroot/components/riverupdates.js ***!
   \********************************************/
@@ -25424,7 +25448,7 @@
 	  value: true
 	});
 	
-	var _riverfeedupdate = __webpack_require__(/*! ./riverfeedupdate */ 208);
+	var _riverfeedupdate = __webpack_require__(/*! ./riverfeedupdate */ 209);
 	
 	var _riverfeedupdate2 = _interopRequireDefault(_riverfeedupdate);
 	
@@ -25471,7 +25495,7 @@
 	exports.default = RiverUpdates;
 
 /***/ },
-/* 208 */
+/* 209 */
 /*!***********************************************!*\
   !*** ./wwwroot/components/riverfeedupdate.js ***!
   \***********************************************/
@@ -25489,7 +25513,7 @@
 	
 	var _util = __webpack_require__(/*! ../util */ 195);
 	
-	var _riverfeedupdatetitle = __webpack_require__(/*! ./riverfeedupdatetitle */ 209);
+	var _riverfeedupdatetitle = __webpack_require__(/*! ./riverfeedupdatetitle */ 210);
 	
 	var _riverfeedupdatetitle2 = _interopRequireDefault(_riverfeedupdatetitle);
 	
@@ -25571,7 +25595,7 @@
 	  );
 	};
 	
-	var mapStateToProps = function mapStateToProps(state) {
+	var mapStateToProps = function mapStateToProps() {
 	  return {};
 	};
 	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
@@ -25594,7 +25618,7 @@
 	exports.default = RiverFeedUpdate;
 
 /***/ },
-/* 209 */
+/* 210 */
 /*!****************************************************!*\
   !*** ./wwwroot/components/riverfeedupdatetitle.js ***!
   \****************************************************/
@@ -25608,7 +25632,7 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 210);
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 204);
 	
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	
@@ -25647,56 +25671,6 @@
 	};
 	
 	exports.default = RiverFeedUpdateTitle;
-
-/***/ },
-/* 210 */
-/*!*****************************************!*\
-  !*** ./wwwroot/components/riverlink.js ***!
-  \*****************************************/
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-	
-	var _style = __webpack_require__(/*! ./style */ 199);
-	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
-	// import { shell } from 'electron';
-	
-	function handleLinkClick(evt, link) {
-	  // let open_background = false;
-	  // if (evt.metaKey || evt.ctrlKey) {
-	  //   open_background = true;
-	  // }
-	
-	  // shell.openExternal(link, {activate: !open_background});
-	  // evt.preventDefault();
-	  // return true;
-	}
-	
-	var RiverLink = function RiverLink(_ref) {
-	  var href = _ref.href,
-	      children = _ref.children;
-	
-	  return React.createElement(
-	    'a',
-	    {
-	      style: _style.DEFAULT_LINK_STYLE,
-	      href: href,
-	      onClick: function onClick(evt) {
-	        return handleLinkClick(evt, href);
-	      },
-	      target: '_blank'
-	    },
-	    children
-	  );
-	};
-	
-	exports.default = RiverLink;
 
 /***/ },
 /* 211 */
@@ -25766,7 +25740,7 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 210);
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 204);
 	
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	
@@ -25812,7 +25786,7 @@
 	
 	var _util = __webpack_require__(/*! ../util */ 195);
 	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 210);
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 204);
 	
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	
@@ -25874,16 +25848,14 @@
 	
 	var _actions = __webpack_require__(/*! ../actions */ 196);
 	
-	var _style = __webpack_require__(/*! ./style */ 199);
-	
 	var _riverballoon = __webpack_require__(/*! ./riverballoon */ 201);
 	
 	var _riverballoon2 = _interopRequireDefault(_riverballoon);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
+	// The Balloon is a standard component; this component is one of those bound
+	// to the global state.
 	
 	var mapStateToProps = function mapStateToProps(state) {
 	  return {

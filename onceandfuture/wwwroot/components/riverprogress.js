@@ -1,5 +1,5 @@
 var React = require('react'); // N.B. Still need this because JSX.
-import { COLOR_LIGHT, COLOR_BASE, PROGRESS_HEIGHT } from './style'
+import { COLOR_LIGHT, PROGRESS_HEIGHT } from './style';
 
 const RiverProgress = ({progress, backgroundColor}) => {
   backgroundColor = backgroundColor || COLOR_LIGHT;
@@ -44,7 +44,7 @@ const RiverProgress = ({progress, backgroundColor}) => {
   return <div style={div_style} >
     <span style={span_style} />
     <div style={candy_style} />
-  </div>
+  </div>;
 };
 
 export default RiverProgress;

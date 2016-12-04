@@ -1,24 +1,20 @@
-var React = require('react'); // N.B. Still need this because JSX.
-import { connect } from 'react-redux'
-import { addRiver, refreshAllFeeds } from '../actions'
+var React = require('react');
+import { connect } from 'react-redux';
+import { addRiver, refreshAllFeeds } from '../actions';
 import {
   APP_BACKGROUND_COLOR,
   APP_TEXT_COLOR,
   BUTTON_STYLE,
-  COLOR_VERY_DARK,
   COLUMNSPACER,
   COLUMNWIDTH,
-  PROGRESS_HEIGHT,
-  RIVER_COLUMN_BACKGROUND_COLOR,
   RIVER_TITLE_FONT_SIZE,
   RIVER_TITLE_BACKGROUND_COLOR,
-} from './style'
-import RiverColumn from './rivercolumn'
-import RiverProgress from './riverprogress'
-import RiverSetBalloon from './riversetballoon'
+} from './style';
+import RiverColumn from './rivercolumn';
+import RiverProgress from './riverprogress';
+import RiverSetBalloon from './riversetballoon';
 
 const TITLE_HEIGHT = 33; // <div>"Rivers"..."refresh"</div>
-const TOP_BAR_HEIGHT = TITLE_HEIGHT + PROGRESS_HEIGHT; 
 
 const RiverSetBar = ({title, loading, load_progress, onRefresh}) => {
   const div_style = {
@@ -43,7 +39,7 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh}) => {
     verticalAlign: 'middle',
   };
 
-  return <div> 
+  return <div>
     <div style={div_style}>
       <div style={head_style}>{title}</div>
       <div style={refresh_style} onClick={onClick} >
@@ -51,12 +47,12 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh}) => {
       </div>
     </div>
     <RiverProgress
-      progress={load_progress / 100} 
+      progress={load_progress / 100}
       backgroundColor={APP_BACKGROUND_COLOR}
       />
     <RiverSetBalloon />
-  </div>
-}
+  </div>;
+};
 
 export const AddRiverButton = ({onAddRiver}) => {
   const add_button_style = {
@@ -64,13 +60,12 @@ export const AddRiverButton = ({onAddRiver}) => {
     fontSize: 'xx-large',
     marginTop: 13,
     cursor: 'pointer',
-  };  
+  };
 
-//what
   return <div style={add_button_style} onClick={onAddRiver}>
       <i className="fa fa-plus-square" />
-  </div>
-}
+  </div>;
+};
 
 export const RiverSetBase = ({user, rivers, loading, load_progress, onRefresh, onAddRiver}) => {
   const TOTAL_SPACING = COLUMNSPACER * rivers.length;
@@ -114,7 +109,7 @@ export const RiverSetBase = ({user, rivers, loading, load_progress, onRefresh, o
           });
           return <div style={c_style} key={r.name}>
             <RiverColumn index={index} />
-          </div>
+          </div>;
         })
       }
       <div style={add_river_style}>
@@ -141,7 +136,7 @@ const vrs_mapStateToProps = (state) => {
     rivers: state.rivers,
     loading: state.loading,
     load_progress: state.load_progress,
-  }
+  };
 };
 const vrs_mapDispatchToProps = (dispatch) => {
   return {

@@ -1,12 +1,10 @@
 var React = require('react'); // N.B. Still need this because JSX.
 import {
-  COLUMNWIDTH,
   COLUMNSPACER,
-  ICON_FONT_SIZE,
   RIVER_TITLE_BACKGROUND_COLOR,
   RIVER_TITLE_FONT_SIZE,
   BUTTON_STYLE,
-} from './style'
+} from './style';
 
 const RiverSettingsButton = ({river, onShowSettings, onHideSettings}) => {
   const style = Object.assign({}, BUTTON_STYLE, {
@@ -15,7 +13,7 @@ const RiverSettingsButton = ({river, onShowSettings, onHideSettings}) => {
   const is_settings = (river.modal || {}).kind === 'settings';
   const icon = is_settings ? 'fa-chevron-up' : 'fa-gear';
   const onClick = is_settings ? onHideSettings : onShowSettings;
-  return <i className={'fa ' + icon} style={style} onClick={onClick} />
+  return <i className={'fa ' + icon} style={style} onClick={onClick} />;
 }
 
 const RiverDragHandle = ({river}) => {
@@ -31,7 +29,7 @@ const RiverDragHandle = ({river}) => {
     ev.dataTransfer.setDragImage(draggo, 0, 0);
   };
 
-  return <i className='fa fa-bars' draggable="true" style={style} onDragStart={onDrag}  />
+  return <i className='fa fa-bars' draggable="true" style={style} onDragStart={onDrag} />;
 }
 
 const RiverTitle = ({river, onShowSettings, onHideSettings}) => {
@@ -40,15 +38,14 @@ const RiverTitle = ({river, onShowSettings, onHideSettings}) => {
     verticalAlign: 'middle',
     userSelect: 'none',
     draggable: 'true',
-  }
+  };
   const style = {
     paddingLeft: COLUMNSPACER,
     fontSize: RIVER_TITLE_FONT_SIZE,
     marginBottom: 0,
     userSelect: 'none',
     draggable: 'true',
-  }
-
+  };
 
   return <div style={divStyle}>
     <RiverSettingsButton

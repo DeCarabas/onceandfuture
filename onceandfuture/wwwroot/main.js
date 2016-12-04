@@ -1,15 +1,13 @@
 var React = require('react');
 var ReactDOM = require('react-dom');
-import { connect, Provider } from 'react-redux'
-import { createStore, applyMiddleware } from 'redux'
-import thunkMiddleware from 'redux-thunk'
-import createLogger from 'redux-logger'
-import { update_key } from './util'
+import { Provider } from 'react-redux';
+import { createStore, applyMiddleware } from 'redux';
+import thunkMiddleware from 'redux-thunk';
+import createLogger from 'redux-logger';
+import { update_key } from './util';
 
 import {
   RIVER_MODE_AUTO,
-  RIVER_MODE_TEXT,
-  RIVER_MODE_IMAGE,
 
   ADD_RIVER_ERROR,
   ADD_RIVER_START,
@@ -304,7 +302,6 @@ function state_load_progress(state = 0, action) {
 }
 
 function state_top_info(state = {}, action) {
-  let errorDetail = action.error ? "  The error was " + action.error : "";
   switch(action.type) {
     case DISMISS_BALLOON:
       return {};

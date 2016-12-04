@@ -1,12 +1,11 @@
 var React = require('react'); // N.B. Still need this because JSX.
-import { connect } from 'react-redux'
+import { connect } from 'react-redux';
 import {
   COLUMNSPACER,
-  COLUMNWIDTH,
   COLOR_DARK,
   COLOR_VERY_LIGHT,
   COLOR_VERY_DARK,
-} from './style'
+} from './style';
 import {
   RIVER_MODE_AUTO,
   RIVER_MODE_TEXT,
@@ -15,13 +14,12 @@ import {
   removeRiver,
   riverAddFeed,
   riverAddFeedUrlChanged,
-  riverGetFeedSources,
   riverRemoveSource,
   riverSetFeedMode,
-} from '../actions'
-import RelTime from './reltime'
-import RiverLink from './riverlink'
-import Tooltip from './tooltip'
+} from '../actions';
+import RelTime from './reltime';
+import RiverLink from './riverlink';
+import Tooltip from './tooltip';
 
 const SettingsSectionTitle = ({text}) => {
   const style = {
@@ -35,26 +33,26 @@ const SettingsButton = ({onClick, text}) => {
   const divStyle = {
     textAlign: 'right',
     marginTop: COLUMNSPACER,
-  }
+  };
   const style = {
     color: 'white',
     backgroundColor: COLOR_DARK,
     padding: 3,
     border: '2px solid ' + COLOR_VERY_DARK,
     cursor: 'pointer',
-  }
+  };
 
   return (
     <div style={divStyle}>
       <span style={style} onClick={onClick}>{text}</span>
     </div>
   );
-}
+};
 
 const AddFeedBoxUrl = ({onChange}) => {
   const style = {
     width: '100%',
-  }
+  };
   return <div style={style}>
     <input
       style={style}
@@ -62,7 +60,7 @@ const AddFeedBoxUrl = ({onChange}) => {
       onChange={ (e) => onChange(e.target.value) }
     />
   </div>;
-}
+};
 
 const AddFeedBox = ({feedUrlChanged, addFeedToRiver}) => {
   return (
@@ -72,7 +70,7 @@ const AddFeedBox = ({feedUrlChanged, addFeedToRiver}) => {
       <SettingsButton onClick={addFeedToRiver} text="Add Feed" />
     </div>
   );
-}
+};
 
 const DisplayModeButton = ({text, enabled, click}) => {
   const butt = {
@@ -85,7 +83,7 @@ const DisplayModeButton = ({text, enabled, click}) => {
   };
 
   return <div style={butt} onClick={click}>{text}</div>;
-}
+};
 
 const FeedDisplayModeBox = ({mode, setFeedMode}) => {
   const end_space = {
@@ -123,7 +121,7 @@ const FeedDisplayModeBox = ({mode, setFeedMode}) => {
       </div>
     </div>
   );
-}
+};
 
 const DeleteRiverBox = ({deleteRiver}) => {
   return <div>
@@ -131,7 +129,7 @@ const DeleteRiverBox = ({deleteRiver}) => {
     <p>Do you want to remove this river? Don't worry, you can undo this later if you change your mind.</p>
     <SettingsButton onClick={deleteRiver} text="Remove" />
   </div>;
-}
+};
 
 const RiverSource = ({source, deleteSource}) => {
   const timeStyle = {
@@ -152,8 +150,8 @@ const RiverSource = ({source, deleteSource}) => {
         <i className="fa fa-remove" aria-hidden="true" />
       </Tooltip>
     </td>
-  </tr>
-}
+  </tr>;
+};
 
 const RiverSourcesBox = ({sources, deleteSource}) => {
   var tbl;
@@ -192,7 +190,7 @@ const RiverSourcesBox = ({sources, deleteSource}) => {
     <p>This river is subscribed to these feeds:</p>
     {tbl}
   </div>;
-}
+};
 
 const RiverSettingsBase = ({
   index,
@@ -229,7 +227,7 @@ const RiverSettingsBase = ({
     <hr />
     <RiverSourcesBox sources={river.sources} deleteSource={delSource} />
   </div>;
-}
+};
 
 const mapStateToProps = (state) => {
   return {

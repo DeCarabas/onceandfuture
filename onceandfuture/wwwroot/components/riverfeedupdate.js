@@ -1,9 +1,9 @@
 var React = require('react'); // N.B. Still need this because JSX.
-import { connect } from 'react-redux'
-import { expandFeedUpdate, collapseFeedUpdate } from '../actions'
-import { update_key, assert } from '../util'
-import RiverFeedUpdateTitle from './riverfeedupdatetitle'
-import RiverItem from './riveritem'
+import { connect } from 'react-redux';
+import { expandFeedUpdate, collapseFeedUpdate } from '../actions';
+import { update_key } from '../util';
+import RiverFeedUpdateTitle from './riverfeedupdatetitle';
+import RiverItem from './riveritem';
 
 const MoreBox = ({update, river_index, expand, collapse}) => {
   if (update.item.length > 3) {
@@ -51,7 +51,7 @@ const RiverFeedUpdateBase = ({update, mode, river_index, expand, collapse}) => {
   );
 };
 
-const mapStateToProps = (state) => { return {}; };
+const mapStateToProps = () => { return {}; };
 const mapDispatchToProps = (dispatch) => {
   return {
     expand: (river_index, update_key) =>

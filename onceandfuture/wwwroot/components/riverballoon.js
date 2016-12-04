@@ -1,11 +1,10 @@
 var React = require('react'); // N.B. Still need this because JSX.
-import { dismissBalloon } from '../actions'
 import {
   COLUMNWIDTH,
   RIVER_COLUMN_BACKGROUND_COLOR,
 } from './style'
 
-const RiverBalloon = ({info, dispatchAction, dismiss}) => {    
+const RiverBalloon = ({info, dispatchAction, dismiss}) => {
   const style = {
     margin: '0 auto',
     zIndex: 1000,
@@ -37,12 +36,12 @@ const RiverBalloon = ({info, dispatchAction, dismiss}) => {
   };
 
   if (!info.text) { return <div />; }
-  
+
   var action_span = <span />;
   if (info.action) {
     action_span = <span style={link_span_style} onClick={() => dispatchAction(info.action)}>
       {info.action_label}
-    </span>;    
+    </span>;
   }
 
   return <div style={style}>

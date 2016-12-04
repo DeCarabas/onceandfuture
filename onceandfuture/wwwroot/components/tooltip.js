@@ -1,11 +1,8 @@
 var React = require('react');
 import {
-  COLUMNSPACER,
-  COLUMNWIDTH,
-  COLOR_DARK,
   COLOR_VERY_LIGHT,
   COLOR_VERY_DARK,
-} from './style'
+} from './style';
 
 const TIP_STYLE = {
   backgroundColor: COLOR_VERY_DARK,
@@ -17,7 +14,7 @@ const TIP_STYLE = {
   position: 'absolute',
   zIndex: 1,
   top: -5,
-  left: '105%', 
+  left: '105%',
 };
 
 const DIV_STYLE = {
@@ -38,21 +35,21 @@ class Tooltip extends React.Component {
     if (this.state.inside) {
       tip = <span style={TIP_STYLE}>
         {this.props.tip}
-      </span>; 
+      </span>;
     }
 
     return <div style={DIV_STYLE} onMouseEnter={this.handleMouseEnter} onMouseLeave={this.handleMouseLeave}>
       {tip}
       {this.props.children}
-    </div>
+    </div>;
   }
 
   handleMouseEnter() {
-    this.setState(prevState => ({ inside: true }));
+    this.setState(() => ({ inside: true }));
   }
 
   handleMouseLeave() {
-    this.setState(prevState => ({ inside: false }));
+    this.setState(() => ({ inside: false }));
   }
 }
 
