@@ -36,6 +36,8 @@ import {
   RIVER_REMOVE_SOURCE_START,
   RIVER_REMOVE_SOURCE_SUCCESS,
   RIVER_SET_FEED_MODE,
+  RIVER_SET_NAME_ERROR,
+  RIVER_SET_NAME_SUCCESS,
   RIVER_UPDATE_START,
   RIVER_UPDATE_FAILED,
   RIVER_UPDATE_SUCCESS,
@@ -50,8 +52,7 @@ import {
   setRiverOrder,
 } from './actions';
 
-// import { data } from './data'
-import AppRoot from './components/approot'
+import AppRoot from './components/approot';
 
 // User doesn't channge, based on host URL.
 const user = window.location.pathname.split('/')[2];
@@ -167,6 +168,7 @@ function state_river(state = def_river, action) {
     case RIVER_ADD_FEED_FAILED:
     case RIVER_UPDATE_FAILED:
     case RIVER_REMOVE_SOURCE_ERROR:
+    case RIVER_SET_NAME_ERROR:
       return Object.assign({}, state, {
         modal: { kind: 'bubble', info: get_river_info(action), },
       });
@@ -218,6 +220,11 @@ function state_river(state = def_river, action) {
     case RIVER_GET_FEED_SOURCES_START:
       return Object.assign({}, state, {
         sources: 'PENDING',
+      });
+
+    case RIVER_SET_NAME_SUCCESS:
+      return Object.assign({}, state, {
+        name: action.new_name,
       });
 
     case RIVER_REMOVE_SOURCE_SUCCESS:

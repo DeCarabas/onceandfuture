@@ -6,11 +6,10 @@ UI:
 - Account settings view
 - Change email address option
 - Add/remove river sets
-- Rename river
-- Import/export OPML
 - Sign Out
 - Update Progress
 - More/less UX is jarring.
+- Import/export OPML
 
 Back-end Stuff:
 - Cache health check results; currently pinging the QA instance very hard.

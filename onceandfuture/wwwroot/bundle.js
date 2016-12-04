@@ -74,8 +74,6 @@
 	var React = __webpack_require__(/*! react */ 4);
 	var ReactDOM = __webpack_require__(/*! react-dom */ 215);
 	
-	// import { data } from './data'
-	
 	
 	// User doesn't channge, based on host URL.
 	var user = window.location.pathname.split('/')[2];
@@ -203,6 +201,7 @@
 	    case _actions.RIVER_ADD_FEED_FAILED:
 	    case _actions.RIVER_UPDATE_FAILED:
 	    case _actions.RIVER_REMOVE_SOURCE_ERROR:
+	    case _actions.RIVER_SET_NAME_ERROR:
 	      return Object.assign({}, state, {
 	        modal: { kind: 'bubble', info: get_river_info(action) }
 	      });
@@ -256,6 +255,11 @@
 	    case _actions.RIVER_GET_FEED_SOURCES_START:
 	      return Object.assign({}, state, {
 	        sources: 'PENDING'
+	      });
+	
+	    case _actions.RIVER_SET_NAME_SUCCESS:
+	      return Object.assign({}, state, {
+	        name: action.new_name
 	      });
 	
 	    case _actions.RIVER_REMOVE_SOURCE_SUCCESS:
@@ -23560,7 +23564,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.RIVER_SET_FEED_MODE = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_URL_CHANGED = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
+	exports.RIVER_SET_FEED_MODE = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_URL_CHANGED = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
 	exports.dropRiver = dropRiver;
 	exports.expandFeedUpdate = expandFeedUpdate;
 	exports.collapseFeedUpdate = collapseFeedUpdate;
@@ -23594,6 +23598,9 @@
 	exports.riverRemoveSourceStart = riverRemoveSourceStart;
 	exports.riverRemoveSourceSuccess = riverRemoveSourceSuccess;
 	exports.riverRemoveSourceError = riverRemoveSourceError;
+	exports.riverSetNameStart = riverSetNameStart;
+	exports.riverSetNameSuccess = riverSetNameSuccess;
+	exports.riverSetNameError = riverSetNameError;
 	exports.riverSetFeedMode = riverSetFeedMode;
 	exports.riverAddFeed = riverAddFeed;
 	exports.addRiver = addRiver;
@@ -23603,6 +23610,7 @@
 	exports.refreshAllFeeds = refreshAllFeeds;
 	exports.riverGetFeedSources = riverGetFeedSources;
 	exports.riverRemoveSource = riverRemoveSource;
+	exports.riverSetName = riverSetName;
 	exports.setRiverOrder = setRiverOrder;
 	
 	var _util = __webpack_require__(/*! ./util */ 195);
@@ -23895,6 +23903,37 @@
 	  };
 	}
 	
+	var RIVER_SET_NAME_START = exports.RIVER_SET_NAME_START = 'RIVER_SET_NAME_START';
+	function riverSetNameStart(index, river, new_name) {
+	  return {
+	    type: RIVER_SET_NAME_START,
+	    river_index: index,
+	    river: river,
+	    new_name: new_name
+	  };
+	}
+	
+	var RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_SUCCESS = 'RIVER_SET_NAME_SUCCESS';
+	function riverSetNameSuccess(index, river, new_name) {
+	  return {
+	    type: RIVER_SET_NAME_SUCCESS,
+	    river_index: index,
+	    river: river,
+	    new_name: new_name
+	  };
+	}
+	
+	var RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_ERROR = 'RIVER_SET_NAME_ERROR';
+	function riverSetNameError(index, river, new_name, error) {
+	  return {
+	    type: RIVER_SET_NAME_ERROR,
+	    river_index: index,
+	    river: river,
+	    new_name: new_name,
+	    error: error
+	  };
+	}
+	
 	function decodeError(xhr) {
 	  var errorMessage = xhr.statusText;
 	  try {
@@ -24132,6 +24171,22 @@
 	    },
 	    error: function error(dispatch, message) {
 	      dispatch(riverRemoveSourceError(index, river, message));
+	    }
+	  });
+	}
+	
+	function riverSetName(index, river, new_name) {
+	  return xhrAction({
+	    verb: 'PUT', url: river.url + '/name',
+	    msg: { name: new_name },
+	    start: function start(dispatch) {
+	      dispatch(riverSetNameStart(index, river, new_name));
+	    },
+	    loaded: function loaded(dispatch) {
+	      dispatch(riverSetNameSuccess(index, river, new_name));
+	    },
+	    error: function error(dispatch, message) {
+	      dispatch(riverSetNameError(index, river, new_name, message));
 	    }
 	  });
 	}
@@ -24718,6 +24773,8 @@
 	  value: true
 	});
 	
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+	
 	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
@@ -24737,6 +24794,12 @@
 	var _tooltip2 = _interopRequireDefault(_tooltip);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+	
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+	
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 	
 	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
 	
@@ -24809,6 +24872,11 @@
 	    'div',
 	    null,
 	    React.createElement(SettingsSectionTitle, { text: 'Add A New Site or Feed' }),
+	    React.createElement(
+	      'p',
+	      null,
+	      'Enter the site name or the URL of a feed to subscribe to:'
+	    ),
 	    React.createElement(AddFeedBoxUrl, { onChange: feedUrlChanged }),
 	    React.createElement(SettingsButton, { onClick: addFeedToRiver, text: 'Add Feed' })
 	  );
@@ -24853,6 +24921,11 @@
 	    null,
 	    React.createElement(SettingsSectionTitle, { text: 'River Display Mode' }),
 	    React.createElement(
+	      'p',
+	      null,
+	      'You can choose if you\'d rather have this river favor images or text, or automatically decide based on the particular entry. '
+	    ),
+	    React.createElement(
 	      'div',
 	      { style: { paddingTop: _style.COLUMNSPACER } },
 	      React.createElement('div', { style: end_space }),
@@ -24883,6 +24956,61 @@
 	    )
 	  );
 	};
+	
+	// This one is a class-based component because it maintains the internal
+	// state of the edit box.
+	
+	var RenameRiverBox = function (_React$Component) {
+	  _inherits(RenameRiverBox, _React$Component);
+	
+	  function RenameRiverBox(props) {
+	    _classCallCheck(this, RenameRiverBox);
+	
+	    var _this = _possibleConstructorReturn(this, (RenameRiverBox.__proto__ || Object.getPrototypeOf(RenameRiverBox)).call(this, props));
+	
+	    _this.state = { name: props.name };
+	    _this.setName = props.setName;
+	
+	    _this.handleChange = _this.handleChange.bind(_this);
+	    _this.handleSubmit = _this.handleSubmit.bind(_this);
+	    return _this;
+	  }
+	
+	  _createClass(RenameRiverBox, [{
+	    key: 'handleChange',
+	    value: function handleChange(event) {
+	      this.setState({ name: event.target.value });
+	    }
+	  }, {
+	    key: 'handleSubmit',
+	    value: function handleSubmit(event) {
+	      this.setName(this.state.name);
+	      event.preventDefault();
+	    }
+	  }, {
+	    key: 'render',
+	    value: function render() {
+	      var input_style = {
+	        width: '100%'
+	      };
+	
+	      return React.createElement(
+	        'div',
+	        null,
+	        React.createElement(SettingsSectionTitle, { text: 'Rename This River' }),
+	        React.createElement(
+	          'p',
+	          null,
+	          'Choose a new name for this river.'
+	        ),
+	        React.createElement('input', { style: input_style, type: 'text', value: this.state.name, onChange: this.handleChange }),
+	        React.createElement(SettingsButton, { onClick: this.handleSubmit, text: 'Rename' })
+	      );
+	    }
+	  }]);
+	
+	  return RenameRiverBox;
+	}(React.Component);
 	
 	var DeleteRiverBox = function DeleteRiverBox(_ref7) {
 	  var deleteRiver = _ref7.deleteRiver;
@@ -24953,22 +25081,67 @@
 	  var sources = _ref9.sources,
 	      deleteSource = _ref9.deleteSource;
 	
-	  var tbl;
+	  var pending_style = {
+	    textAlign: 'center'
+	  };
+	  var error_style = pending_style;
+	
+	  var tbl_body;
 	  if (sources === 'PENDING') {
-	    tbl = React.createElement('div', null); // TODO: Progress bar.
+	    tbl_body = React.createElement(
+	      'tr',
+	      null,
+	      React.createElement(
+	        'td',
+	        { style: pending_style, colSpan: '3' },
+	        'Loading sources, please wait...'
+	      )
+	    );
 	  } else if (sources === 'ERROR') {
-	    tbl = React.createElement('div', null); // TODO: Message!
+	    tbl_body = React.createElement(
+	      'tr',
+	      null,
+	      React.createElement(
+	        'td',
+	        { style: error_style, colSpan: '3' },
+	        'An unexpected error occurred.'
+	      )
+	    );
 	  } else if (sources) {
-	    var tableStyle = {
-	      width: '100%',
-	      borderSpacing: '0px 4px'
-	    };
+	    tbl_body = sources.map(function (s) {
+	      return React.createElement(RiverSource, { source: s, key: s.feedUrl, deleteSource: deleteSource });
+	    });
+	  } else {
+	    tbl_body = React.createElement(
+	      'tr',
+	      null,
+	      React.createElement(
+	        'td',
+	        { style: error_style, colSpan: '3' },
+	        'An unexpected error occurred.'
+	      )
+	    );
+	  }
 	
-	    var headItemStyle = {
-	      borderBottom: '1px solid'
-	    };
+	  var tableStyle = {
+	    width: '100%',
+	    borderSpacing: '0px 4px'
+	  };
 	
-	    tbl = React.createElement(
+	  var headItemStyle = {
+	    borderBottom: '1px solid'
+	  };
+	
+	  return React.createElement(
+	    'div',
+	    null,
+	    React.createElement(SettingsSectionTitle, { text: 'Feeds' }),
+	    React.createElement(
+	      'p',
+	      null,
+	      'This river is subscribed to these feeds:'
+	    ),
+	    React.createElement(
 	      'table',
 	      { style: tableStyle },
 	      React.createElement(
@@ -24993,25 +25166,9 @@
 	      React.createElement(
 	        'tbody',
 	        null,
-	        sources.map(function (s) {
-	          return React.createElement(RiverSource, { source: s, key: s.feedUrl, deleteSource: deleteSource });
-	        })
+	        tbl_body
 	      )
-	    );
-	  } else {
-	    tbl = React.createElement('div', null); // TODO: Huh?
-	  }
-	
-	  return React.createElement(
-	    'div',
-	    null,
-	    React.createElement(SettingsSectionTitle, { text: 'Feeds' }),
-	    React.createElement(
-	      'p',
-	      null,
-	      'This river is subscribed to these feeds:'
-	    ),
-	    tbl
+	    )
 	  );
 	};
 	
@@ -25023,16 +25180,26 @@
 	      addFeedToRiver = _ref10.addFeedToRiver,
 	      riverSetFeedMode = _ref10.riverSetFeedMode,
 	      deleteRiver = _ref10.deleteRiver,
-	      removeSource = _ref10.removeSource;
+	      removeSource = _ref10.removeSource,
+	      setRiverName = _ref10.setRiverName;
+	
+	  var TOP_SPACE = 50;
+	  var SIDE_PADDING = 0;
 	
 	  var style = {
 	    backgroundColor: _style.COLOR_VERY_LIGHT,
 	    zIndex: 3,
 	    position: 'absolute',
-	    left: 0,
-	    right: 0,
+	    top: TOP_SPACE,
+	    bottom: SIDE_PADDING,
+	    left: SIDE_PADDING,
+	    right: SIDE_PADDING,
 	    padding: _style.COLUMNSPACER,
-	    border: '1px solid ' + _style.COLOR_VERY_DARK
+	    border: '1px solid ' + _style.COLOR_VERY_DARK,
+	
+	    maxHeight: '100%',
+	    overflowX: 'hidden',
+	    overflowY: 'auto'
 	  };
 	
 	  var addFeed = function addFeed() {
@@ -25050,6 +25217,9 @@
 	  var delSource = function delSource(source_id, source_url) {
 	    return removeSource(index, river, source_id, source_url);
 	  };
+	  var setName = function setName(name) {
+	    return setRiverName(index, river, name);
+	  };
 	
 	  return React.createElement(
 	    'div',
@@ -25058,9 +25228,11 @@
 	    React.createElement('hr', null),
 	    React.createElement(FeedDisplayModeBox, { mode: river.mode, setFeedMode: setFeedMode }),
 	    React.createElement('hr', null),
-	    React.createElement(DeleteRiverBox, { deleteRiver: delRiver }),
+	    React.createElement(RiverSourcesBox, { sources: river.sources, deleteSource: delSource }),
 	    React.createElement('hr', null),
-	    React.createElement(RiverSourcesBox, { sources: river.sources, deleteSource: delSource })
+	    React.createElement(RenameRiverBox, { name: river.name, setName: setName }),
+	    React.createElement('hr', null),
+	    React.createElement(DeleteRiverBox, { deleteRiver: delRiver })
 	  );
 	};
 	
@@ -25071,20 +25243,23 @@
 	};
 	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
 	  return {
-	    'feedUrlChanged': function feedUrlChanged(index, new_value) {
+	    feedUrlChanged: function feedUrlChanged(index, new_value) {
 	      return dispatch((0, _actions.riverAddFeedUrlChanged)(index, new_value));
 	    },
-	    'addFeedToRiver': function addFeedToRiver(index, river) {
+	    addFeedToRiver: function addFeedToRiver(index, river) {
 	      return dispatch((0, _actions.riverAddFeed)(index, river, river.modal.value));
 	    },
-	    'riverSetFeedMode': function riverSetFeedMode(index, river, mode) {
+	    riverSetFeedMode: function riverSetFeedMode(index, river, mode) {
 	      return dispatch((0, _actions.riverSetFeedMode)(index, river, mode));
 	    },
-	    'deleteRiver': function deleteRiver(user, river) {
+	    deleteRiver: function deleteRiver(user, river) {
 	      return dispatch((0, _actions.removeRiver)(user, river));
 	    },
-	    'removeSource': function removeSource(index, river, source_id, source_url) {
+	    removeSource: function removeSource(index, river, source_id, source_url) {
 	      return dispatch((0, _actions.riverRemoveSource)(index, river, source_id, source_url));
+	    },
+	    setRiverName: function setRiverName(index, river, new_name) {
+	      return dispatch((0, _actions.riverSetName)(index, river, new_name));
 	    }
 	  };
 	};
@@ -25460,6 +25635,10 @@
 	  value: true
 	});
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _riverfeedupdate = __webpack_require__(/*! ./riverfeedupdate */ 209);
 	
 	var _riverfeedupdate2 = _interopRequireDefault(_riverfeedupdate);
@@ -25467,9 +25646,6 @@
 	var _util = __webpack_require__(/*! ../util */ 195);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
 	
 	var RiverUpdates = function RiverUpdates(_ref) {
 	  var river = _ref.river,
@@ -25490,11 +25666,11 @@
 	  };
 	
 	  var updates = river.updates || [];
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: style },
 	    updates.map(function (u) {
-	      return React.createElement(_riverfeedupdate2.default, {
+	      return _react2.default.createElement(_riverfeedupdate2.default, {
 	        update: u,
 	        mode: river.mode,
 	        river_index: index,

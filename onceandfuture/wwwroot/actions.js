@@ -288,6 +288,37 @@ export function riverRemoveSourceError(index, river, error) {
   };
 }
 
+export const RIVER_SET_NAME_START = 'RIVER_SET_NAME_START';
+export function riverSetNameStart(index, river, new_name) {
+  return {
+    type: RIVER_SET_NAME_START,
+    river_index: index,
+    river: river,
+    new_name: new_name,
+  };
+}
+
+export const RIVER_SET_NAME_SUCCESS = 'RIVER_SET_NAME_SUCCESS';
+export function riverSetNameSuccess(index, river, new_name) {
+  return {
+    type: RIVER_SET_NAME_SUCCESS,
+    river_index: index,
+    river: river,
+    new_name: new_name,
+  };
+}
+
+export const RIVER_SET_NAME_ERROR = 'RIVER_SET_NAME_ERROR';
+export function riverSetNameError(index, river, new_name, error) {
+  return {
+    type: RIVER_SET_NAME_ERROR,
+    river_index: index,
+    river: river,
+    new_name: new_name,
+    error: error,
+  };
+}
+
 function decodeError(xhr) {
   let  errorMessage = xhr.statusText;
   try
@@ -505,6 +536,22 @@ export function riverRemoveSource(index, river, source_id, source_url) {
     },
     error: (dispatch, message) => {
       dispatch(riverRemoveSourceError(index, river, message));
+    },
+  });
+}
+
+export function riverSetName(index, river, new_name) {
+  return xhrAction({
+    verb: 'PUT', url: river.url + '/name',
+    msg: { name: new_name },
+    start: (dispatch) => {
+      dispatch(riverSetNameStart(index, river, new_name));
+    },
+    loaded: (dispatch) => {
+      dispatch(riverSetNameSuccess(index, river, new_name));
+    },
+    error: (dispatch, message) => {
+      dispatch(riverSetNameError(index, river, new_name, message));
     },
   });
 }

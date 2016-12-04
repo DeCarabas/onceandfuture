@@ -87,6 +87,14 @@ namespace onceandfuture
                 Code = "noriver",
                 Details = "No river found @ " + id
             });
+
+        public static Exception DuplicateName(string name) =>
+            new FaultException(HttpStatusCode.BadRequest, new Fault
+            {
+                Status = "error",
+                Code = "duplicatename",
+                Details = "You already have a river named " + name,
+            });
     }
 
     public static class FaultHandlerExtensions
@@ -187,7 +195,7 @@ namespace onceandfuture
             existingCache = existingCache ?? Array.Empty<LoginCookieCache>();
 
             // Very silly, but these things are always in a predictable order so scanning to rebuild should be quick.
-            // (Trying to keep from throwing away the scrypt work every time we get a new login; the scrypt work is 
+            // (Trying to keep from throwing away the scrypt work every time we get a new login; the scrypt work is
             // relatively slow.)
             LoginCookieCache[] newCache = new LoginCookieCache[validLogins.Count];
             for (int i = 0; i < validLogins.Count; i++)
@@ -254,7 +262,7 @@ namespace onceandfuture
             //
             // TODO: Possible abuse: I can send requests at a node with a valid user name and a garbage token and
             //       cause that node to hit the profile store over and over and over and over. Maybe we should rate-
-            //       limit this stuff?           
+            //       limit this stuff?
             if (profile.Logins.Count > 0)
             {
                 cachedCookies = RebuildCache(cachedCookies, profile.Logins);
@@ -282,7 +290,7 @@ namespace onceandfuture
             Guid token = Guid.NewGuid();
             var newLogin = new LoginCookie(EncryptToken(token), DateTimeOffset.UtcNow + TimeSpan.FromMinutes(30));
 
-            // Insert the new session at the front (because it's most likely to be tried first), and try to keep the 
+            // Insert the new session at the front (because it's most likely to be tried first), and try to keep the
             // number of sessions bounded.
             List<LoginCookie> validLogins = profile.Logins.Where(c => c.ExpireAt >= DateTimeOffset.UtcNow).ToList();
             validLogins.Insert(0, newLogin);
@@ -528,6 +536,25 @@ namespace onceandfuture
             return Json(river);
         }
 
+        [HttpPut("/api/v1/user/{user}/river/{id}/name")]
+        public async Task<IActionResult> PutRiverName(string user, string id)
+        {
+            var requestBody = await ReadRequest<SetNameRequest>();
+            UserProfile profile = await this.profileStore.GetProfileFor(user);
+            RiverDefinition river = profile.Rivers.FirstOrDefault(rd => String.CompareOrdinal(rd.Id, id) == 0);
+            if (river == null) { throw FaultException.NoRiver(id); }
+            if (profile.Rivers.Any(rd => String.CompareOrdinal(rd.Name, requestBody.Name) == 0))
+            {
+                throw FaultException.DuplicateName(requestBody.Name);
+            }
+
+            var newRiver = river.With(name: requestBody.Name);
+            var newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
+            await this.profileStore.SaveProfileFor(user, newProfile);
+
+            return Ok();
+        }
+
         [HttpGet("/api/v1/user/{user}/river/{id}/sources")]
         public async Task<IActionResult> GetRiverSources(string user, string id)
         {
@@ -591,7 +618,7 @@ namespace onceandfuture
             RiverFeedMeta newMeta = river.Metadata.With(mode: requestBody.Mode);
             River newRiver = river.With(metadata: newMeta);
             await this.aggregateStore.WriteAggregate(id, newRiver);
-            return Ok();            
+            return Ok();
         }
 
         [HttpPost("/api/v1/user/{user}/set_order")]
@@ -696,6 +723,17 @@ namespace onceandfuture
 
             [JsonProperty("id")]
             public string Id { get; }
+        }
+
+        public class SetNameRequest
+        {
+            public SetNameRequest(string name)
+            {
+                Name = name;
+            }
+
+            [JsonProperty("name", Required = Required.Always)]
+            public string Name { get; }
         }
 
         public class SetOrderRequest
@@ -1230,7 +1268,7 @@ namespace onceandfuture
                 var feedStore = new RiverFeedStore();
                 river = feedStore.LoadRiverForFeed(feedUrl).Result;
             }
-           
+
             if (river.UpdatedFeeds.Feeds.Count > 0)
             {
                 foreach (RiverFeed feed in river.UpdatedFeeds.Feeds)

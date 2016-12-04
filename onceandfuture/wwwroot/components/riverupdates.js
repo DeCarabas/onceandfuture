@@ -1,6 +1,6 @@
-var React = require('react'); // N.B. Still need this because JSX.
-import RiverFeedUpdate from './riverfeedupdate'
-import { update_key } from '../util'
+import React from 'react';
+import RiverFeedUpdate from './riverfeedupdate';
+import { update_key } from '../util';
 
 const RiverUpdates = ({river, index}) => {
   const TOP_SPACE = 65;

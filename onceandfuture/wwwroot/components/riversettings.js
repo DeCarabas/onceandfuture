@@ -16,6 +16,7 @@ import {
   riverAddFeedUrlChanged,
   riverRemoveSource,
   riverSetFeedMode,
+  riverSetName,
 } from '../actions';
 import RelTime from './reltime';
 import RiverLink from './riverlink';
@@ -66,6 +67,7 @@ const AddFeedBox = ({feedUrlChanged, addFeedToRiver}) => {
   return (
     <div>
       <SettingsSectionTitle text="Add A New Site or Feed" />
+      <p>Enter the site name or the URL of a feed to subscribe to:</p>
       <AddFeedBoxUrl onChange={feedUrlChanged} />
       <SettingsButton onClick={addFeedToRiver} text="Add Feed" />
     </div>
@@ -98,6 +100,8 @@ const FeedDisplayModeBox = ({mode, setFeedMode}) => {
   return (
     <div>
       <SettingsSectionTitle text="River Display Mode" />
+      <p>You can choose if you'd rather have this river favor images or text, or automatically decide based
+      on the particular entry. </p>
       <div style={{paddingTop: COLUMNSPACER}}>
         <div style={end_space} />
         <DisplayModeButton
@@ -122,6 +126,41 @@ const FeedDisplayModeBox = ({mode, setFeedMode}) => {
     </div>
   );
 };
+
+// This one is a class-based component because it maintains the internal
+// state of the edit box.
+class RenameRiverBox extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {name: props.name};
+    this.setName = props.setName;
+
+    this.handleChange = this.handleChange.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
+  }
+
+  handleChange(event) {
+    this.setState({name: event.target.value});
+  }
+
+  handleSubmit(event) {
+    this.setName(this.state.name);
+    event.preventDefault();
+  }
+
+  render() {
+    const input_style = {
+      width: '100%',
+    };
+
+    return <div>
+      <SettingsSectionTitle text="Rename This River" />
+      <p>Choose a new name for this river.</p>
+      <input style={input_style} type="text" value={this.state.name} onChange={this.handleChange} />
+      <SettingsButton onClick={this.handleSubmit} text="Rename" />
+   </div>;
+  }
+}
 
 const DeleteRiverBox = ({deleteRiver}) => {
   return <div>
@@ -154,22 +193,43 @@ const RiverSource = ({source, deleteSource}) => {
 };
 
 const RiverSourcesBox = ({sources, deleteSource}) => {
-  var tbl;
+  const pending_style = {
+    textAlign: 'center',
+  };
+  const error_style = pending_style;
+
+  var tbl_body;
   if (sources === 'PENDING') {
-    tbl = <div />; // TODO: Progress bar.
+    tbl_body = <tr>
+      <td style={pending_style} colSpan='3'>Loading sources, please wait...</td>
+    </tr>;
   } else if (sources === 'ERROR') {
-    tbl = <div />; // TODO: Message!
+    tbl_body = <tr>
+      <td style={error_style} colSpan='3'>An unexpected error occurred.</td>
+    </tr>;
   } else if (sources) {
-    const tableStyle = {
-      width: '100%',
-      borderSpacing: '0px 4px',
-    };
+    tbl_body = sources.map(
+      s => <RiverSource source={s} key={s.feedUrl} deleteSource={deleteSource} />
+    );
+  } else {
+    tbl_body = <tr>
+      <td style={error_style} colSpan='3'>An unexpected error occurred.</td>
+    </tr>;
+  }
 
-    const headItemStyle = {
-      borderBottom: '1px solid',
-    };
+  const tableStyle = {
+    width: '100%',
+    borderSpacing: '0px 4px',
+  };
 
-    tbl = <table style={tableStyle}>
+  const headItemStyle = {
+    borderBottom: '1px solid',
+  };
+
+  return <div>
+    <SettingsSectionTitle text="Feeds" />
+    <p>This river is subscribed to these feeds:</p>
+    <table style={tableStyle}>
       <thead>
         <tr>
           <th style={headItemStyle}>Feed Name</th>
@@ -178,17 +238,9 @@ const RiverSourcesBox = ({sources, deleteSource}) => {
         </tr>
       </thead>
       <tbody>
-        { sources.map(s => <RiverSource source={s} key={s.feedUrl} deleteSource={deleteSource} />) }
+        { tbl_body }
       </tbody>
-    </table>;
-  } else {
-    tbl = <div />; // TODO: Huh?
-  }
-
-  return <div>
-    <SettingsSectionTitle text="Feeds" />
-    <p>This river is subscribed to these feeds:</p>
-    {tbl}
+    </table>
   </div>;
 };
 
@@ -201,15 +253,25 @@ const RiverSettingsBase = ({
   riverSetFeedMode,
   deleteRiver,
   removeSource,
+  setRiverName,
 }) => {
+  const TOP_SPACE = 50;
+  const SIDE_PADDING = 0;
+
   const style = {
     backgroundColor: COLOR_VERY_LIGHT,
     zIndex: 3,
     position: 'absolute',
-    left: 0,
-    right: 0,
+    top: TOP_SPACE,
+    bottom: SIDE_PADDING,
+    left: SIDE_PADDING,
+    right: SIDE_PADDING,
     padding: COLUMNSPACER,
     border: '1px solid ' + COLOR_VERY_DARK,
+
+    maxHeight: '100%',
+    overflowX: 'hidden',
+    overflowY: 'auto',
   };
 
   const addFeed = () => addFeedToRiver(index, river);
@@ -217,15 +279,18 @@ const RiverSettingsBase = ({
   const setFeedMode = (mode) => riverSetFeedMode(index, river, mode);
   const delRiver = () => deleteRiver(user, river);
   const delSource = (source_id, source_url) => removeSource(index, river, source_id, source_url);
+  const setName = (name) => setRiverName(index, river, name);
 
   return <div style={style}>
     <AddFeedBox feedUrlChanged={urlChanged} addFeedToRiver={addFeed} />
     <hr />
     <FeedDisplayModeBox mode={river.mode} setFeedMode={setFeedMode} />
     <hr />
-    <DeleteRiverBox deleteRiver={delRiver} />
-    <hr />
     <RiverSourcesBox sources={river.sources} deleteSource={delSource} />
+    <hr />
+    <RenameRiverBox name={river.name} setName={setName}/>
+    <hr />
+    <DeleteRiverBox deleteRiver={delRiver} />
   </div>;
 };
 
@@ -236,12 +301,13 @@ const mapStateToProps = (state) => {
 };
 const mapDispatchToProps = (dispatch) => {
   return {
-    'feedUrlChanged': (index, new_value) => dispatch(riverAddFeedUrlChanged(index, new_value)),
-    'addFeedToRiver': (index, river) => dispatch(riverAddFeed(index, river, river.modal.value)),
-    'riverSetFeedMode': (index, river, mode) => dispatch(riverSetFeedMode(index, river, mode)),
-    'deleteRiver': (user, river) => dispatch(removeRiver(user, river)),
-    'removeSource': (index, river, source_id, source_url) =>
+    feedUrlChanged: (index, new_value) => dispatch(riverAddFeedUrlChanged(index, new_value)),
+    addFeedToRiver: (index, river) => dispatch(riverAddFeed(index, river, river.modal.value)),
+    riverSetFeedMode: (index, river, mode) => dispatch(riverSetFeedMode(index, river, mode)),
+    deleteRiver: (user, river) => dispatch(removeRiver(user, river)),
+    removeSource: (index, river, source_id, source_url) =>
       dispatch(riverRemoveSource(index, river, source_id, source_url)),
+    setRiverName: (index, river, new_name) => dispatch(riverSetName(index, river, new_name)),
   };
 };
 
