@@ -1,5 +1,4 @@
-var React = require('react'); // N.B. Still need this because JSX.
-//import moment from 'moment'
+import React from 'react';
 
 const MsPerSecond = 1000;
 const SecondsPerMinute = 60;
@@ -16,14 +15,14 @@ const MsPerWeek = MsPerDay * DaysPerWeek;
 const RelTime = ({time}) => {
     const parsed = Date.parse(time);
     const delta = Date.now() - parsed;
-    
+
     var unit, value;
     if (delta > MsPerWeek) {
         value = Math.round(delta / MsPerWeek);
         unit = 'week';
     } else if (delta > MsPerDay) {
         value = Math.round(delta / MsPerDay);
-        unit = 'day';        
+        unit = 'day';
     } else if (delta > MsPerHour) {
         value = Math.round(delta / MsPerHour);
         unit = 'hour';

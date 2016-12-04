@@ -1,8 +1,8 @@
-var React = require('react'); // N.B. Still need this because JSX.
+import React from 'react';
 import {
   COLUMNWIDTH,
   RIVER_COLUMN_BACKGROUND_COLOR,
-} from './style'
+} from './style';
 
 const RiverBalloon = ({info, dispatchAction, dismiss}) => {
   const style = {

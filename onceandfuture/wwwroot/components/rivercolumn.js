@@ -1,4 +1,4 @@
-var React = require('react'); // N.B. Still need this because JSX.
+import React from 'react';
 import { connect } from 'react-redux';
 import {
   RIVER_COLUMN_BACKGROUND_COLOR,
@@ -64,7 +64,7 @@ const RiverColumnBase = ({
     <div style={style} onDragOver={onDragOver} onDrop={onDrop}>
       <RiverTitle
         river={river}
-        onShowSettings={onShowSettings(index)}
+        onShowSettings={onShowSettings(index, river)}
         onHideSettings={onHideSettings(index)}
       />
       {modal}

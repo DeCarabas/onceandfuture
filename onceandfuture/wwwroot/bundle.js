@@ -24156,6 +24156,10 @@
 	  value: true
 	});
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _riverset = __webpack_require__(/*! ./riverset */ 198);
 	
 	var _riverset2 = _interopRequireDefault(_riverset);
@@ -24163,9 +24167,6 @@
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
 	
 	// AppRoot
 	//
@@ -24184,11 +24185,11 @@
 	    width: '100%',
 	    height: '100%'
 	  };
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: appstyle },
-	    React.createElement('div', { style: bgstyle }),
-	    React.createElement(_riverset2.default, null)
+	    _react2.default.createElement('div', { style: bgstyle }),
+	    _react2.default.createElement(_riverset2.default, null)
 	  );
 	};
 	
@@ -24482,6 +24483,10 @@
 	  value: true
 	});
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
@@ -24510,20 +24515,17 @@
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
-	
 	function modalForRiver(river, index, dismiss, dispatch) {
 	  var modal = river.modal || {};
 	  switch (modal.kind) {
 	    case 'loading':
-	      return React.createElement(_riverprogress2.default, { percent: modal.percent });
+	      return _react2.default.createElement(_riverprogress2.default, { percent: modal.percent });
 	    case 'settings':
-	      return React.createElement(_riversettings2.default, { river: river, index: index });
+	      return _react2.default.createElement(_riversettings2.default, { river: river, index: index });
 	    case 'bubble':
-	      return React.createElement(_riverballoon2.default, { info: modal.info, dismiss: dismiss, dispatchAction: dispatch });
+	      return _react2.default.createElement(_riverballoon2.default, { info: modal.info, dismiss: dismiss, dispatchAction: dispatch });
 	    default:
-	      return React.createElement('span', null);
+	      return _react2.default.createElement('span', null);
 	  }
 	};
 	
@@ -24560,16 +24562,16 @@
 	    }
 	  };
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: style, onDragOver: onDragOver, onDrop: onDrop },
-	    React.createElement(_rivertitle2.default, {
+	    _react2.default.createElement(_rivertitle2.default, {
 	      river: river,
-	      onShowSettings: onShowSettings(index),
+	      onShowSettings: onShowSettings(index, river),
 	      onHideSettings: onHideSettings(index)
 	    }),
 	    modal,
-	    React.createElement(_riverupdates2.default, { river: river, index: index })
+	    _react2.default.createElement(_riverupdates2.default, { river: river, index: index })
 	  );
 	};
 	
@@ -24624,10 +24626,13 @@
 	  value: true
 	});
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var RiverBalloon = function RiverBalloon(_ref) {
 	  var info = _ref.info,
@@ -24665,12 +24670,12 @@
 	  };
 	
 	  if (!info.text) {
-	    return React.createElement('div', null);
+	    return _react2.default.createElement('div', null);
 	  }
 	
-	  var action_span = React.createElement('span', null);
+	  var action_span = _react2.default.createElement('span', null);
 	  if (info.action) {
-	    action_span = React.createElement(
+	    action_span = _react2.default.createElement(
 	      'span',
 	      { style: link_span_style, onClick: function onClick() {
 	          return dispatchAction(info.action);
@@ -24679,13 +24684,13 @@
 	    );
 	  }
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: style },
-	    React.createElement(
+	    _react2.default.createElement(
 	      'span',
 	      { style: span_style },
-	      React.createElement(
+	      _react2.default.createElement(
 	        'span',
 	        { style: link_span_style, onClick: dismiss },
 	        'x'
@@ -25100,8 +25105,12 @@
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	//import moment from 'moment'
+	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var MsPerSecond = 1000;
 	var SecondsPerMinute = 60;
@@ -25145,7 +25154,7 @@
 	    }
 	    var sentence = value + " " + unit + " ago";
 	
-	    return React.createElement(
+	    return _react2.default.createElement(
 	        'span',
 	        null,
 	        sentence
@@ -25200,16 +25209,19 @@
 	
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _style = __webpack_require__(/*! ./style */ 199);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 	
 	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 	
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-	
-	var React = __webpack_require__(/*! react */ 4);
-	
 	
 	var TIP_STYLE = {
 	  backgroundColor: _style.COLOR_VERY_DARK,
@@ -25246,16 +25258,16 @@
 	  _createClass(Tooltip, [{
 	    key: 'render',
 	    value: function render() {
-	      var tip = React.createElement('span', null);
+	      var tip = _react2.default.createElement('span', null);
 	      if (this.state.inside) {
-	        tip = React.createElement(
+	        tip = _react2.default.createElement(
 	          'span',
 	          { style: TIP_STYLE },
 	          this.props.tip
 	        );
 	      }
 	
-	      return React.createElement(
+	      return _react2.default.createElement(
 	        'div',
 	        { style: DIV_STYLE, onMouseEnter: this.handleMouseEnter, onMouseLeave: this.handleMouseLeave },
 	        tip,
@@ -25279,7 +25291,7 @@
 	  }]);
 	
 	  return Tooltip;
-	}(React.Component);
+	}(_react2.default.Component);
 	
 	exports.default = Tooltip;
 

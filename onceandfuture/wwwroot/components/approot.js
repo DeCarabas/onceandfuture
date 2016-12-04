@@ -1,11 +1,11 @@
-var React = require('react'); // N.B. Still need this because JSX.
-import RiverSet from './riverset'
+import React from 'react';
+import RiverSet from './riverset';
 import {
   APP_TEXT_COLOR,
   SANS_FONTS,
   TEXT_FONT_SIZE,
   APP_BACKGROUND_COLOR,
-} from './style'
+} from './style';
 
 // AppRoot
 //

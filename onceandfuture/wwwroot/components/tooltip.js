@@ -1,4 +1,4 @@
-var React = require('react');
+import React from 'react';
 import {
   COLOR_VERY_LIGHT,
   COLOR_VERY_DARK,
