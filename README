@@ -2,7 +2,8 @@ Todo:
 =======
 
 Bugs:
-- REFRESHING FEEDS IS EFFED, FIX IT.
+- On Mac and Linux, cannot fetch Julia Evans' blog because of cert issues.
+  Don't know how to fix yet.
 
 UI:
 - Account creation flow

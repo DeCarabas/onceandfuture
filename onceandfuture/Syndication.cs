@@ -47,9 +47,9 @@ namespace onceandfuture
             Get().Warning("{url}: Unparsable date encountered: {date}", url, date);
         }
 
-        public static void NetworkError(Uri uri, HttpRequestException requestException, Stopwatch loadTimer)
+        public static void NetworkError(Uri uri, Exception e, Stopwatch loadTimer)
         {
-            Get().Error(requestException, "{uri}: {elapsed} ms: Network Error", uri, loadTimer.ElapsedMilliseconds);
+            Get().Error(e, "{uri}: {elapsed} ms: Network Error", uri, loadTimer.ElapsedMilliseconds);
         }
 
         public static void XmlError(Uri uri, XmlException xmlException, Stopwatch loadTimer)
@@ -141,9 +141,9 @@ namespace onceandfuture
             Get().Warning("{baseUrl}: {url} ({kind}): Is not a valid image", baseUrl, imageUri, kind);
         }
 
-        public static void ThumbnailNetworkError(Uri baseUrl, Uri imageUri, string kind, HttpRequestException hre)
+        public static void ThumbnailNetworkError(Uri baseUrl, Uri imageUri, string kind, Exception e)
         {
-            Get().Error(hre, "{baseUrl}: {url} ({kind}): Network Error", baseUrl, imageUri, kind);
+            Get().Error(e, "{baseUrl}: {url} ({kind}): Network Error", baseUrl, imageUri, kind);
         }
 
         public static void FoundThumbnail(Uri baseUrl, Uri uri, string kind)
@@ -212,9 +212,9 @@ namespace onceandfuture
             Get().Error("{baseUrl}: {url} ({kind}): Timeout", baseUrl, imageUri, kind);
         }
 
-        public static void FindThumbnailNetworkError(Uri uri, HttpRequestException hre)
+        public static void FindThumbnailNetworkError(Uri uri, Exception e)
         {
-            Get().Error(hre, "{url}: Network Error", uri);
+            Get().Error(e, "{url}: Network Error", uri);
         }
 
         public static void FindThumbnailTimeout(Uri uri)
@@ -1572,6 +1572,7 @@ namespace onceandfuture
         public static readonly ContextualPolicy HttpPolicy = Policy
             .Handle<HttpRequestException>(ValidateHttpRequestException)
             .Or<TaskCanceledException>()
+            .Or<WebException>(ValidateWebException)
             .WaitAndRetryAsync(
                 retryCount: 3,
                 sleepDurationProvider: ExponentialRetryTimeWithJitter,
@@ -1580,13 +1581,17 @@ namespace onceandfuture
         static bool ValidateHttpRequestException(HttpRequestException hre)
         {
             var iwe = hre.InnerException as WebException;
-            if (iwe != null)
-            {
-                if (iwe.Message.Contains("The remote name could not be resolved")) { return false; }
-                if (iwe.Message.Contains("The server committed a protocol violation")) { return false; }
-            }
+            if (iwe != null) { return ValidateWebException(iwe); }
 
             return true;
+        }
+
+        static bool ValidateWebException(WebException iwe)
+        {
+            if (iwe.Message.Contains("The remote name could not be resolved")) { return false; }
+            if (iwe.Message.Contains("The server committed a protocol violation")) { return false; }
+            if (iwe.Message.Contains("SecureChannelFailure")) { return false; }
+            return true;  
         }
 
         static TimeSpan ExponentialRetryTimeWithJitter(int retryAttempt)
@@ -1762,6 +1767,10 @@ namespace onceandfuture
             catch (HttpRequestException hre)
             {
                 Log.FindThumbnailNetworkError(uri, hre);
+            }
+            catch (WebException we)
+            {
+                Log.FindThumbnailNetworkError(uri, we);
             }
 
             return null;
@@ -1977,6 +1986,12 @@ namespace onceandfuture
             {
                 Log.ThumbnailNetworkError(referrer, imageUrl.Uri, imageUrl.Kind, hre);
                 CacheError(imageUrl, hre.Message);
+                return null;
+            }
+            catch (WebException we)
+            {
+                Log.ThumbnailNetworkError(referrer, imageUrl.Uri, imageUrl.Kind, we);
+                CacheError(imageUrl, we.Message);
                 return null;
             }
         }
@@ -2389,6 +2404,16 @@ namespace onceandfuture
                     lastModified: lastModified);
             }
             catch (HttpRequestException requestException)
+            {
+                Log.NetworkError(uri, requestException, loadTimer);
+                return new FetchResult(
+                    feed: null,
+                    status: 0,
+                    feedUrl: uri,
+                    etag: etag,
+                    lastModified: lastModified);
+            }
+            catch (WebException requestException)
             {
                 Log.NetworkError(uri, requestException, loadTimer);
                 return new FetchResult(
