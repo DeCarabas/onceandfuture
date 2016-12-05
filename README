@@ -2,8 +2,24 @@ Todo:
 =======
 
 Bugs:
-- On Mac and Linux, cannot fetch Julia Evans' blog because of cert issues.
-  Don't know how to fix yet.
+- On Mac and Linux, cannot fetch Julia Evans' blog because of cert
+  issues. The bug is that we need to support TLS 1.2, and the released
+  version of Mono does not. Here's the status of trying to get things to run:
+
+  Installing Mono on Docker from Alpha packages gets stuck because it doesn't
+  have any trusted root certs. The necessary btls-cert-sync program is not in
+  any available package, and I have not figured out how to get it into the
+  right place. (I guess I could try to build it from source?)
+
+  Installing Mono on Docker by building it from a source snapshot fails
+  because I can't change working directories, and the config script doesn't
+  work from another directory. (I can work around this with a custom build
+  script, but haven't.) I will probably also run into the GDI+ problem.
+
+  Installing Mono on the Mac by building it from git fails because I can't
+  get a working libgdiplus for it, and can't figure out how to build
+  one. (Cloning and attempting to build the libgdiplus repo on my mac fails
+  because something to do with X11 headers, I gave up trying to dig.)
 
 UI:
 - Account creation flow
