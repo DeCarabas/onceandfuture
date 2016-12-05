@@ -1,2 +1,3 @@
 #!/bin/bash
-MONO_ENV_OPTIONS=--arch=64 mono bin/Debug/onceandfuture.exe $*
+env MONO_ENV_OPTIONS=--arch=64 mono bin/Debug/onceandfuture.exe $*
+# env MONO_TLS_PROVIDER=btls MONO_ENV_OPTIONS=--arch=64 mono bin/Debug/onceandfuture.exe $*
