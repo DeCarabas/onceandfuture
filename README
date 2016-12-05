@@ -25,6 +25,7 @@ Bugs:
   period take FOREVER, and there's no understanding of why. A better refresh
   status or something would be useful.
 
+
 UI:
 - Account creation flow
 - Account settings view
@@ -34,6 +35,8 @@ UI:
 - Update Progress
 - More/less UX is jarring.
 - Import/export OPML
+- Font size for bubbles is wrong.
+- When removing a feed, remove from sources.
 
 Back-end Stuff:
 - Cache health check results; currently pinging the QA instance very hard.
