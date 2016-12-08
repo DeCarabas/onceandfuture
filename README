@@ -1,6 +1,8 @@
 Todo:
 =======
 
+** DUMB NOTE FROM WORK: ADD AND TEST http://rachelbythebay.com/w/
+
 Bugs:
 - On Mac and Linux, cannot fetch Julia Evans' blog because of cert
   issues. The bug is that we need to support TLS 1.2, and the released
