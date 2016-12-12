@@ -24,6 +24,7 @@ Todo:
   period take FOREVER, and there's no understanding of why. A better refresh
   status or something would be useful.
 
+- Refresh is super slow on the docker image.
 
 UI:
 - Account creation flow

@@ -560,7 +560,9 @@ namespace onceandfuture
         {
             UserProfile profile = await this.profileStore.GetProfileFor(user);
             RiverDefinition river = profile.Rivers.FirstOrDefault(rd => String.CompareOrdinal(rd.Id, id) == 0);
-            return await GetSourcesForRiver(river);
+            IList<Uri> feedUris = river.Feeds ?? (IList<Uri>)(Array.Empty<Uri>());
+            River[] feedrivers = await Task.WhenAll(feedUris.Select(f => this.feedStore.LoadRiverForFeed(f)));
+            return GetSourcesForRiver(feedrivers);
         }
 
         [HttpPost("/api/v1/user/{user}/river/{id}/sources")]
@@ -588,7 +590,9 @@ namespace onceandfuture
                 river = newRiver;
             }
 
-            return await GetSourcesForRiver(river);
+            IList<Uri> feedUris = river.Feeds ?? (IList<Uri>)(Array.Empty<Uri>());
+            River[] feedrivers = await Task.WhenAll(feedUris.Select(f => this.feedStore.LoadRiverForFeed(f)));
+            return GetSourcesForRiver(feedrivers);
         }
 
         [HttpDelete("/api/v1/user/{user}/river/{id}/sources/{sourceId}")]
@@ -598,16 +602,27 @@ namespace onceandfuture
             RiverDefinition river = profile.Rivers.FirstOrDefault(rd => String.CompareOrdinal(rd.Id, id) == 0);
             if (river == null) { throw FaultException.NoRiver(id); }
 
-            RiverDefinition newRiver = river.With(
-                feeds: river.Feeds.RemoveAll(f => Util.HashString(f.AbsoluteUri) == sourceId)
-            );
+            var feedrivers = new List<River>(
+                await Task.WhenAll(river.Feeds.Select(f => this.feedStore.LoadRiverForFeed(f))));
+
+            RiverDefinition newRiver = river;
+            for (int i = feedrivers.Count - 1; i >= 0; i--)
+            {
+                River r = feedrivers[i];
+                if (Util.HashString(r.Metadata.OriginUrl.AbsoluteUri) == sourceId)
+                {
+                    newRiver = newRiver.With(feeds: newRiver.Feeds.RemoveAt(i));
+                    feedrivers.RemoveAt(i);
+                }
+            }
+            
             if (newRiver.Feeds.Count != river.Feeds.Count)
             {
                 UserProfile newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
                 await this.profileStore.SaveProfileFor(user, newProfile);
             }
 
-            return await GetSourcesForRiver(newRiver);
+            return GetSourcesForRiver(feedrivers.ToArray());
         }
 
         [HttpPost("/api/v1/user/{user}/river/{id}/mode")]
@@ -654,11 +669,8 @@ namespace onceandfuture
             return Ok(); // TODO: Progress?
         }
 
-        async Task<IActionResult> GetSourcesForRiver(RiverDefinition river)
-        {
-            IList<Uri> feedUris = river.Feeds ?? (IList<Uri>)(Array.Empty<Uri>());
-            River[] feedrivers = await Task.WhenAll(feedUris.Select(f => this.feedStore.LoadRiverForFeed(f)));
-
+        IActionResult GetSourcesForRiver(River[] feedrivers)
+        {            
             return Json(new
             {
                 sources = feedrivers.Select(r => new
