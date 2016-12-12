@@ -1,4 +1,4 @@
-FROM debian:jessie
+FROM decarabas/monodev:latest
 RUN mkdir app
 WORKDIR app
 COPY ./onceandfuture .

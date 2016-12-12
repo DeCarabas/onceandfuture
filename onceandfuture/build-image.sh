@@ -10,33 +10,8 @@ set -e
 apt-get update -q
 apt-get dist-upgrade -y -q
 
-# Fetch, build, and install Mono 4.8 (from source, since the packages that exist are no good.)
-apt-get install -y -q git autoconf libtool automake build-essential mono-devel gettext cmake python
-
-mkdir /tmp/mono
-cd /tmp/mono
-
-export MONO_TLS_PROVIDER=btls
-
-MONO_PREFIX=/opt/mono
-MONO_VERSION=4.8.0
-
-curl https://download.mono-project.com/sources/mono/mono-4.8.0.374.tar.bz2 -o mono-$MONO_VERSION.tar.bz2
-tar xf mono-$MONO_VERSION.tar.bz2
-cd mono-$MONO_VERSION
-./autogen.sh --prefix=$MONO_PREFIX
-make
-make install
-
-curl -L -o /tmp/mono/certdata.txt https://hg.mozilla.org/releases/mozilla-release/raw-file/default/security/nss/lib/ckfw/builtins/certdata.txt
-/opt/mono/bin/mozroots --import --sync --file /tmp/mono/certdata.txt
-/opt/mono/bin/btls-cert-sync
-
-curl -o /tmp/mono/nuget.exe https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
-
-apt-get install libgdiplus --no-install-recommends -y
-
 # Go fetch dotnet 1.1.0, and extract the parts we need.
+apt-get install -y -q curl
 mkdir /tmp/dotnet
 cd /tmp/dotnet
 
@@ -50,7 +25,7 @@ cp ./shared/Microsoft.NETCore.App/1.1.0/libuv.so /usr/lib/libuv.so
 
 # Build the app
 cd /app
-/opt/mono/bin/mono /tmp/mono/nuget.exe restore -SolutionDirectory ..
+/opt/mono/bin/mono /opt/mono/nuget.exe restore -SolutionDirectory ..
 /opt/mono/bin/xbuild
 
 # Static? Need to work out how to bundle all mono dependencies too.
@@ -59,7 +34,6 @@ cd /app
 # CLEANUP
 cd /app
 rm -rf /packages
-rm -rf /tmp/mono
 rm -rf /tmp/dotnet
 rm -rf /root/.nuget
 
@@ -73,6 +47,6 @@ rm -rf /opt/mono/lib/mono/xbuild/
 rm -rf /opt/mono/lib/mono/xbuild-frameworks/
 rm -rf /opt/mono/lib/*.a
 
-apt-get remove -y -q git autoconf libtool automake build-essential mono-devel gettext cmake python
-apt-get autoremove -y -q
+apt-get remove -q -y curl
+apt-get autoremove -y
 rm -rf /var/lib/apt/lists/*
