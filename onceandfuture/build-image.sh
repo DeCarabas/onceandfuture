@@ -61,6 +61,18 @@ cd /app
 rm -rf /packages
 rm -rf /tmp/mono
 rm -rf /tmp/dotnet
+rm -rf /root/.nuget
+
+# I'd love to just drop the entire runtime after running mkbundle but mkbundle doesn't work for me yet.
+rm -rf /opt/mono/lib/mono/3.5-api/
+rm -rf /opt/mono/lib/mono/4.0/
+rm -rf /opt/mono/lib/mono/4.0-api/
+rm -rf /opt/mono/lib/mono/lldb/
+rm -rf /opt/mono/lib/mono/monodoc/
+rm -rf /opt/mono/lib/mono/xbuild/
+rm -rf /opt/mono/lib/mono/xbuild-frameworks/
+rm -rf /opt/mono/lib/*.a
+
 apt-get remove -y -q git autoconf libtool automake build-essential mono-devel gettext cmake python
 apt-get autoremove -y -q
 rm -rf /var/lib/apt/lists/*

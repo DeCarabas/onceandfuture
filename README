@@ -1,25 +1,24 @@
+Notes on Building:
+==================
+
+Right now our Dockerfile builds Mono from an alpha source snapshot, in order
+to get TLS 1.2 working properly. This is *S L O W*, and large, but it
+works. The alternatives are:
+
+1. Base everything on dotnet core. This makes for a smaller and lighter
+   Docker image and maybe a better runtime environment, but I need
+   System.Drawing, which is not part of .net core 1.1.
+
+2. Install from Alpha packages. This would be way faster and smaller than
+   building from source, but the problem with this is that I wind up without
+   the btls-cert-sync program, which I need in order to bring in the root
+   certificates for the new TLS stack.
+
+So we're doing what we can. Just set aside an hour for building the Docker
+image. At least it's 100% automated.
+
 Todo:
 =======
-
-Bugs:
-- On Mac and Linux, cannot fetch Julia Evans' blog because of cert
-  issues. The bug is that we need to support TLS 1.2, and the released
-  version of Mono does not. Here's the status of trying to get things to run:
-
-  Installing Mono on Docker from Alpha packages gets stuck because it doesn't
-  have any trusted root certs. The necessary btls-cert-sync program is not in
-  any available package, and I have not figured out how to get it into the
-  right place. (I guess I could try to build it from source?)
-
-  Installing Mono on Docker by building it from a source snapshot fails
-  because I can't change working directories, and the config script doesn't
-  work from another directory. (I can work around this with a custom build
-  script, but haven't.) I will probably also run into the GDI+ problem.
-
-  Installing Mono on the Mac by building it from git fails because I can't
-  get a working libgdiplus for it, and can't figure out how to build
-  one. (Cloning and attempting to build the libgdiplus repo on my mac fails
-  because something to do with X11 headers, I gave up trying to dig.)
 
 - When a site is unresponsive and timing out, it makes the entire refresh
   period take FOREVER, and there's no understanding of why. A better refresh
