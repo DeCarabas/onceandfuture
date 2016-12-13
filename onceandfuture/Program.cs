@@ -494,39 +494,78 @@
             Response.ContentType = "application/octet-stream";
             using (var writer = new StreamWriter(Response.Body, Encoding.UTF8))
             {
-                // TODO: Better progress, more detailed reports!
-                // TODO: Only one outstanding feed refresh at a time.
+                // Set up for the progress.
                 var syncRoot = new object();
                 int completed = 0;
-                int lastProgress = 0;
-                Task<River>[] tasks = new Task<River>[profile.Rivers.Count];
-                for (int i = 0; i < tasks.Length; i++)
+                Tuple<int, string> lastProgress = Tuple.Create(0, "");
+                Uri[] feeds = profile.Rivers.SelectMany(rd => rd.Feeds).Distinct().ToArray();
+                Task<River>[] feedTasks = new Task<River>[feeds.Length];
+                Task<River>[] riverTasks = new Task<River>[profile.Rivers.Count];
+                int total = feeds.Length + profile.Rivers.Count;
+                
+                Func<Task<River>, River> fetchCallback = t =>
                 {
-                    int riverIndex = i;
-                    RiverDefinition riverDef = profile.Rivers[i];
-                    Task<River> riverTask = parser.RefreshAggregateRiverWithFeeds(
-                        riverDef.Id, riverDef.Feeds, this.aggregateStore, this.feedStore, HttpContext.RequestAborted);
-                    tasks[i] = riverTask.ContinueWith(t =>
+                    lock (syncRoot)
                     {
-                        lock (syncRoot)
+                        completed++;
+                        int pct = (int)(100.0f * ((float)completed) / ((float)total));
+
+                        string waitingFor = null;
+                        for (int i = 0; i < feeds.Length && waitingFor == null; i++)
                         {
-                            completed++;
-                            int progress = (int)(100.0f * ((float)completed) / ((float)tasks.Length));
-                            if (progress != lastProgress)
+                            if (feedTasks[i] != null && !feedTasks[i].IsCompleted)
                             {
-                                writer.WriteLine(progress);
-                                writer.Flush();
-                                lastProgress = progress;
+                                waitingFor = "Fetching: " + feeds[i].AbsoluteUri;
                             }
                         }
-                        return t.Result;
-                    });
+                        for (int i = 0; i < profile.Rivers.Count && waitingFor == null; i++)
+                        {
+                            if (riverTasks[i] != null && !riverTasks[i].IsCompleted)
+                            {
+                                waitingFor = "Refreshing: " + profile.Rivers[i].Name;
+                            }
+                        }
+                        if (waitingFor == null) { waitingFor = "Done."; }
+
+                        Tuple<int, string> progress = Tuple.Create(pct, waitingFor);
+                        if (progress != lastProgress)
+                        {
+                            writer.WriteLine("{0}|{1}", progress.Item1, progress.Item2);
+                            writer.Flush();
+                            lastProgress = progress;
+                        }
+                    }
+                    return t.Result;
+                };
+
+                // Refresh all of the feeds...
+                for(int i = 0; i < feeds.Length; i++)
+                {
+                    feedTasks[i] = parser
+                        .FetchAndUpdateRiver(this.feedStore, feeds[i], HttpContext.RequestAborted)
+                        .ContinueWith(fetchCallback);
+                }
+                await Task.WhenAll(feedTasks);
+
+                // Then all of the rivers...
+                for(int i = 0; i < profile.Rivers.Count; i++)
+                {
+                    RiverDefinition riverDef = profile.Rivers[i];
+                    riverTasks[i] = parser
+                        .RefreshAggregateRiverWithFeeds(
+                            riverDef.Id, 
+                            riverDef.Feeds, 
+                            this.aggregateStore, 
+                            this.feedStore, 
+                            HttpContext.RequestAborted
+                        )
+                        .ContinueWith(fetchCallback);
                 }
 
-                rivers = await Task.WhenAll(tasks);
-                writer.WriteLine("100");
+                rivers = await Task.WhenAll(riverTasks);
+                writer.WriteLine("100|Done.");
                 writer.Flush();
-            }                       
+            }
 
             // Make sure owner is filled in for these rivers.
             List<Task> saveTasks = null;
@@ -543,11 +582,10 @@
             {
                 await Task.WhenAll(saveTasks);
             }
-            
+
             return new EmptyResult();
         }
 
-        
         [HttpDelete("/api/v1/user/{user}/river/{id}")]
         public async Task<IActionResult> DeleteRiver(string user, string id)
         {
@@ -652,7 +690,7 @@
                     feedrivers.RemoveAt(i);
                 }
             }
-            
+
             if (newRiver.Feeds.Count != river.Feeds.Count)
             {
                 UserProfile newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
@@ -707,7 +745,7 @@
         }
 
         IActionResult GetSourcesForRiver(River[] feedrivers)
-        {            
+        {
             return Json(new
             {
                 sources = feedrivers.Select(r => new

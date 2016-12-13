@@ -286,15 +286,16 @@ function state_loading(state = false, action) {
   }
 }
 
-function state_load_progress(state = 0, action) {
+const DEFAULT_PROGRESS={ percent: 0, message: '' };
+function state_load_progress(state = DEFAULT_PROGRESS, action) {
   switch(action.type) {
     case REFRESH_ALL_FEEDS_START:
     case REFRESH_ALL_FEEDS_SUCCESS:
     case REFRESH_ALL_FEEDS_ERROR:
-      return 0;
+      return { percent: 0, message: '' };
 
     case REFRESH_ALL_FEEDS_PROGRESS:
-      return action.percent;
+      return { percent: action.percent, message: action.message };
 
     default:
       return state;

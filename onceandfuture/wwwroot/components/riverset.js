@@ -39,17 +39,28 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh}) => {
     verticalAlign: 'middle',
   };
 
+  const announcer_style = {
+    display: 'inline-block',
+    textAlign: 'center',
+    width: '100%',
+    verticalAlign: 'middle',
+    height: 'auto',
+    position: 'relative',
+    top: -20,
+  };
+
   return <div>
     <div style={div_style}>
       <div style={head_style}>{title}</div>
       <div style={refresh_style} onClick={onClick} >
         <i style={BUTTON_STYLE} onClick={onClick} className="fa fa-refresh" />
       </div>
+      <div style={announcer_style}>{load_progress.message}</div>
     </div>
     <RiverProgress
-      progress={load_progress / 100}
+      progress={load_progress.percent / 100}
       backgroundColor={APP_BACKGROUND_COLOR}
-      />
+    />
     <RiverSetBalloon />
   </div>;
 };

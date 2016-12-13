@@ -326,18 +326,19 @@
 	  }
 	}
 	
+	var DEFAULT_PROGRESS = { percent: 0, message: '' };
 	function state_load_progress() {
-	  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+	  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : DEFAULT_PROGRESS;
 	  var action = arguments[1];
 	
 	  switch (action.type) {
 	    case _actions.REFRESH_ALL_FEEDS_START:
 	    case _actions.REFRESH_ALL_FEEDS_SUCCESS:
 	    case _actions.REFRESH_ALL_FEEDS_ERROR:
-	      return 0;
+	      return { percent: 0, message: '' };
 	
 	    case _actions.REFRESH_ALL_FEEDS_PROGRESS:
-	      return action.percent;
+	      return { percent: action.percent, message: action.message };
 	
 	    default:
 	      return state;
@@ -23739,10 +23740,11 @@
 	}
 	
 	var REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_PROGRESS = 'REFRESH_ALL_FEEDS_PROGRESS';
-	function refreshAllFeedsProgress(percent) {
+	function refreshAllFeedsProgress(percent, message) {
 	  return {
 	    type: REFRESH_ALL_FEEDS_PROGRESS,
-	    percent: percent
+	    percent: percent,
+	    message: message
 	  };
 	}
 	
@@ -24104,8 +24106,13 @@
 	            part = lines[lines.length - 2];
 	          }
 	          if (part.length > 0) {
-	            var percent = parseInt(part, '10');
-	            dispatch(refreshAllFeedsProgress(percent));
+	            var subParts = part.split('|');
+	            if (subParts.length > 1) {
+	              console.log(subParts[1]);
+	            }
+	            var percent = parseInt(subParts[0], '10');
+	            var message = subParts.length > 1 ? subParts[1] : '';
+	            dispatch(refreshAllFeedsProgress(percent, message));
 	          }
 	        }
 	      }, 100);
@@ -24299,6 +24306,16 @@
 	    verticalAlign: 'middle'
 	  };
 	
+	  var announcer_style = {
+	    display: 'inline-block',
+	    textAlign: 'center',
+	    width: '100%',
+	    verticalAlign: 'middle',
+	    height: 'auto',
+	    position: 'relative',
+	    top: -20
+	  };
+	
 	  return React.createElement(
 	    'div',
 	    null,
@@ -24314,10 +24331,15 @@
 	        'div',
 	        { style: refresh_style, onClick: onClick },
 	        React.createElement('i', { style: _style.BUTTON_STYLE, onClick: onClick, className: 'fa fa-refresh' })
+	      ),
+	      React.createElement(
+	        'div',
+	        { style: announcer_style },
+	        load_progress.message
 	      )
 	    ),
 	    React.createElement(_riverprogress2.default, {
-	      progress: load_progress / 100,
+	      progress: load_progress.percent / 100,
 	      backgroundColor: _style.APP_BACKGROUND_COLOR
 	    }),
 	    React.createElement(_riversetballoon2.default, null)

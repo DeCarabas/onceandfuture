@@ -133,10 +133,11 @@ export function refreshAllFeedsStart() {
 }
 
 export const REFRESH_ALL_FEEDS_PROGRESS = 'REFRESH_ALL_FEEDS_PROGRESS';
-export function refreshAllFeedsProgress(percent) {
+export function refreshAllFeedsProgress(percent, message) {
   return {
     type: REFRESH_ALL_FEEDS_PROGRESS,
     percent: percent,
+    message: message,
   };
 }
 
@@ -478,8 +479,11 @@ export function refreshAllFeeds(user) {
             part = lines[lines.length - 2];
           }
           if (part.length > 0) {
-            let percent = parseInt(part, '10');
-            dispatch(refreshAllFeedsProgress(percent));
+            const subParts = part.split('|');
+            if (subParts.length > 1) { console.log(subParts[1]); }
+            const percent = parseInt(subParts[0], '10');
+            const message = subParts.length > 1 ? subParts[1] : '';
+            dispatch(refreshAllFeedsProgress(percent, message));
           }
         }
       }, 100);
