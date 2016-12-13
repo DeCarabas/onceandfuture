@@ -56,6 +56,13 @@ class Tooltip extends React.Component {
         width: this.width,
         marginLeft: -60,
       });
+    } else if (this.position === 'bottomleft') {
+      TIP_STYLE = Object.assign({}, TIP_STYLE_BASE, {
+        top: '100%',
+        right: '105%',
+        width: this.width,
+        marginLeft: -60,
+      });
     } else {
       // Default to left.
       TIP_STYLE = Object.assign({}, TIP_STYLE_BASE, {

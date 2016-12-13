@@ -13,6 +13,7 @@ import {
 import RiverColumn from './rivercolumn';
 import RiverProgress from './riverprogress';
 import RiverSetBalloon from './riversetballoon';
+import Tooltip from './tooltip';
 
 const TITLE_HEIGHT = 33; // <div>"Rivers"..."refresh"</div>
 
@@ -26,7 +27,8 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh}) => {
     display: 'inline-block',
     paddingLeft: COLUMNSPACER,
     fontWeight: 'bold',
-    paddingTop: 2,
+    paddingTop: 3,
+    position: 'relative',
   };
 
   const refresh_color = loading ? RIVER_TITLE_BACKGROUND_COLOR : APP_TEXT_COLOR;
@@ -53,7 +55,14 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh}) => {
     <div style={div_style}>
       <div style={head_style}>{title}</div>
       <div style={refresh_style} onClick={onClick} >
-        <i style={BUTTON_STYLE} onClick={onClick} className="fa fa-refresh" />
+        <Tooltip position="bottomleft" tip="Refresh all feeds.">
+          <i style={BUTTON_STYLE} onClick={onClick} className="fa fa-refresh" />
+        </Tooltip>
+      </div>
+      <div style={refresh_style}>
+        <Tooltip position="bottomleft" tip="View account settings.">
+          <i style={BUTTON_STYLE} className="fa fa-user" />
+        </Tooltip>
       </div>
       <div style={announcer_style}><i>{load_progress.message}</i></div>
     </div>

@@ -24271,6 +24271,10 @@
 	
 	var _riversetballoon2 = _interopRequireDefault(_riversetballoon);
 	
+	var _tooltip = __webpack_require__(/*! ./tooltip */ 205);
+	
+	var _tooltip2 = _interopRequireDefault(_tooltip);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var React = __webpack_require__(/*! react */ 4);
@@ -24293,7 +24297,8 @@
 	    display: 'inline-block',
 	    paddingLeft: _style.COLUMNSPACER,
 	    fontWeight: 'bold',
-	    paddingTop: 2
+	    paddingTop: 3,
+	    position: 'relative'
 	  };
 	
 	  var refresh_color = loading ? _style.RIVER_TITLE_BACKGROUND_COLOR : _style.APP_TEXT_COLOR;
@@ -24330,7 +24335,20 @@
 	      React.createElement(
 	        'div',
 	        { style: refresh_style, onClick: onClick },
-	        React.createElement('i', { style: _style.BUTTON_STYLE, onClick: onClick, className: 'fa fa-refresh' })
+	        React.createElement(
+	          _tooltip2.default,
+	          { position: 'bottomleft', tip: 'Refresh all feeds.' },
+	          React.createElement('i', { style: _style.BUTTON_STYLE, onClick: onClick, className: 'fa fa-refresh' })
+	        )
+	      ),
+	      React.createElement(
+	        'div',
+	        { style: refresh_style },
+	        React.createElement(
+	          _tooltip2.default,
+	          { position: 'bottomleft', tip: 'View account settings.' },
+	          React.createElement('i', { style: _style.BUTTON_STYLE, className: 'fa fa-user' })
+	        )
 	      ),
 	      React.createElement(
 	        'div',
@@ -25452,6 +25470,13 @@
 	        TIP_STYLE = Object.assign({}, TIP_STYLE_BASE, {
 	          top: '100%',
 	          left: '50%',
+	          width: this.width,
+	          marginLeft: -60
+	        });
+	      } else if (this.position === 'bottomleft') {
+	        TIP_STYLE = Object.assign({}, TIP_STYLE_BASE, {
+	          top: '100%',
+	          right: '105%',
 	          width: this.width,
 	          marginLeft: -60
 	        });
