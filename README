@@ -1,17 +1,13 @@
 Notes on Building:
 ==================
 
-Right now our Dockerfile builds Mono from Doty's private base image that is 
-pre-staged with a built copy of Mono, from source, in /opt/mono. At some point 
-we'll want to convert to using packages or something, but for now it's what 
+Right now our Dockerfile builds Mono from Doty's private base image that is
+pre-staged with a built copy of Mono, from source, in /opt/mono. At some point
+we'll want to convert to using packages or something, but for now it's what
 we got.
 
 Todo:
 =======
-
-- When a site is unresponsive and timing out, it makes the entire refresh
-  period take FOREVER, and there's no understanding of why. A better refresh
-  status or something would be useful.
 
 - Refresh is super slow on the docker image.
 
@@ -21,7 +17,6 @@ UI:
 - Change email address option
 - Add/remove river sets
 - Sign Out
-- Update Progress
 - More/less UX is jarring.
 - Import/export OPML
 - Font size for bubbles is wrong.

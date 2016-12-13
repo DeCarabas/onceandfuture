@@ -24335,7 +24335,11 @@
 	      React.createElement(
 	        'div',
 	        { style: announcer_style },
-	        load_progress.message
+	        React.createElement(
+	          'i',
+	          null,
+	          load_progress.message
+	        )
 	      )
 	    ),
 	    React.createElement(_riverprogress2.default, {

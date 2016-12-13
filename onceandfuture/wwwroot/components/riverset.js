@@ -55,7 +55,7 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh}) => {
       <div style={refresh_style} onClick={onClick} >
         <i style={BUTTON_STYLE} onClick={onClick} className="fa fa-refresh" />
       </div>
-      <div style={announcer_style}>{load_progress.message}</div>
+      <div style={announcer_style}><i>{load_progress.message}</i></div>
     </div>
     <RiverProgress
       progress={load_progress.percent / 100}
