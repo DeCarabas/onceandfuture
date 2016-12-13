@@ -1,38 +1,38 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Collections.Specialized;
-using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Runtime.Caching;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Xml;
-using System.Xml.Linq;
-using Amazon;
-using Amazon.S3;
-using Amazon.S3.Model;
-using AngleSharp.Dom;
-using AngleSharp.Dom.Html;
-using AngleSharp.Parser.Html;
-using Newtonsoft.Json;
-using Polly;
-using Serilog;
-
-namespace onceandfuture
+﻿namespace onceandfuture
 {
+    using System;
+    using System.Collections.Concurrent;
+    using System.Collections.Generic;
+    using System.Collections.Immutable;
+    using System.Collections.Specialized;
+    using System.Diagnostics;
+    using System.Drawing;
+    using System.Drawing.Drawing2D;
+    using System.Drawing.Imaging;
+    using System.IO;
+    using System.Linq;
+    using System.Net;
+    using System.Net.Http;
+    using System.Net.Http.Headers;
+    using System.Runtime.Caching;
+    using System.Runtime.CompilerServices;
+    using System.Runtime.InteropServices;
+    using System.Security.Cryptography;
+    using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using System.Xml;
+    using System.Xml.Linq;
+    using Amazon;
+    using Amazon.S3;
+    using Amazon.S3.Model;
+    using AngleSharp.Dom;
+    using AngleSharp.Dom.Html;
+    using AngleSharp.Parser.Html;
+    using Newtonsoft.Json;
+    using Polly;
+    using Serilog;
+
     static class Log
     {
         readonly static ConcurrentDictionary<string, ILogger> TaggedLoggers =

@@ -1,21 +1,10 @@
 Notes on Building:
 ==================
 
-Right now our Dockerfile builds Mono from an alpha source snapshot, in order
-to get TLS 1.2 working properly. This is *S L O W*, and large, but it
-works. The alternatives are:
-
-1. Base everything on dotnet core. This makes for a smaller and lighter
-   Docker image and maybe a better runtime environment, but I need
-   System.Drawing, which is not part of .net core 1.1.
-
-2. Install from Alpha packages. This would be way faster and smaller than
-   building from source, but the problem with this is that I wind up without
-   the btls-cert-sync program, which I need in order to bring in the root
-   certificates for the new TLS stack.
-
-So we're doing what we can. Just set aside an hour for building the Docker
-image. At least it's 100% automated.
+Right now our Dockerfile builds Mono from Doty's private base image that is 
+pre-staged with a built copy of Mono, from source, in /opt/mono. At some point 
+we'll want to convert to using packages or something, but for now it's what 
+we got.
 
 Todo:
 =======

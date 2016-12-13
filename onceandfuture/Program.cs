@@ -1,32 +1,32 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using AngleSharp.Extensions;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Scrypt;
-using Serilog;
-using Serilog.Events;
-
-namespace onceandfuture
+﻿namespace onceandfuture
 {
+    using System;
+    using System.Collections.Concurrent;
+    using System.Collections.Generic;
+    using System.Collections.Immutable;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using System.Net;
+    using System.Runtime.InteropServices;
+    using System.Text;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using System.Xml.Linq;
+    using AngleSharp.Extensions;
+    using Microsoft.AspNetCore.Builder;
+    using Microsoft.AspNetCore.Hosting;
+    using Microsoft.AspNetCore.Http;
+    using Microsoft.AspNetCore.Mvc;
+    using Microsoft.AspNetCore.Mvc.Filters;
+    using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
+    using Newtonsoft.Json;
+    using Scrypt;
+    using Serilog;
+    using Serilog.Events;
+
     public class Fault
     {
         [JsonProperty("status")]
@@ -488,9 +488,45 @@ namespace onceandfuture
             var parser = new RiverFeedParser();
 
             UserProfile profile = await this.profileStore.GetProfileFor(user);
-            River[] rivers = await Task.WhenAll(
-                profile.Rivers.Select(r => parser.RefreshAggregateRiverWithFeeds(
-                    r.Id, r.Feeds, this.aggregateStore, this.feedStore, HttpContext.RequestAborted)));
+
+            River[] rivers;
+            Response.StatusCode = (int)HttpStatusCode.OK;
+            Response.ContentType = "application/octet-stream";
+            using (var writer = new StreamWriter(Response.Body, Encoding.UTF8))
+            {
+                // TODO: Better progress, more detailed reports!
+                // TODO: Only one outstanding feed refresh at a time.
+                var syncRoot = new object();
+                int completed = 0;
+                int lastProgress = 0;
+                Task<River>[] tasks = new Task<River>[profile.Rivers.Count];
+                for (int i = 0; i < tasks.Length; i++)
+                {
+                    int riverIndex = i;
+                    RiverDefinition riverDef = profile.Rivers[i];
+                    Task<River> riverTask = parser.RefreshAggregateRiverWithFeeds(
+                        riverDef.Id, riverDef.Feeds, this.aggregateStore, this.feedStore, HttpContext.RequestAborted);
+                    tasks[i] = riverTask.ContinueWith(t =>
+                    {
+                        lock (syncRoot)
+                        {
+                            completed++;
+                            int progress = (int)(100.0f * ((float)completed) / ((float)tasks.Length));
+                            if (progress != lastProgress)
+                            {
+                                writer.WriteLine(progress);
+                                writer.Flush();
+                                lastProgress = progress;
+                            }
+                        }
+                        return t.Result;
+                    });
+                }
+
+                rivers = await Task.WhenAll(tasks);
+                writer.WriteLine("100");
+                writer.Flush();
+            }                       
 
             // Make sure owner is filled in for these rivers.
             List<Task> saveTasks = null;
@@ -507,10 +543,11 @@ namespace onceandfuture
             {
                 await Task.WhenAll(saveTasks);
             }
-
-            return Ok(); // TODO: Progress?
+            
+            return new EmptyResult();
         }
 
+        
         [HttpDelete("/api/v1/user/{user}/river/{id}")]
         public async Task<IActionResult> DeleteRiver(string user, string id)
         {
