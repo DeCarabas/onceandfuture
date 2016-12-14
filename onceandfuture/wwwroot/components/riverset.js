@@ -1,6 +1,6 @@
 var React = require('react');
 import { connect } from 'react-redux';
-import { addRiver, refreshAllFeeds } from '../actions';
+import { addRiver, refreshAllFeeds, showAccountSettings } from '../actions';
 import {
   APP_BACKGROUND_COLOR,
   APP_TEXT_COLOR,
@@ -10,6 +10,7 @@ import {
   RIVER_TITLE_FONT_SIZE,
   RIVER_TITLE_BACKGROUND_COLOR,
 } from './style';
+import AccountSettings from './accountsettings';
 import RiverColumn from './rivercolumn';
 import RiverProgress from './riverprogress';
 import RiverSetBalloon from './riversetballoon';
@@ -17,7 +18,7 @@ import Tooltip from './tooltip';
 
 const TITLE_HEIGHT = 33; // <div>"Rivers"..."refresh"</div>
 
-const RiverSetBar = ({title, loading, load_progress, onRefresh}) => {
+const RiverSetBar = ({title, loading, load_progress, onRefresh, onShowSettings}) => {
   const div_style = {
     backgroundColor: RIVER_TITLE_BACKGROUND_COLOR,
     height: TITLE_HEIGHT,
@@ -59,7 +60,7 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh}) => {
           <i style={BUTTON_STYLE} onClick={onClick} className="fa fa-refresh" />
         </Tooltip>
       </div>
-      <div style={refresh_style}>
+      <div style={refresh_style} onClick={onShowSettings}>
         <Tooltip position="bottomleft" tip="View account settings.">
           <i style={BUTTON_STYLE} className="fa fa-user" />
         </Tooltip>
@@ -87,7 +88,16 @@ export const AddRiverButton = ({onAddRiver}) => {
   </div>;
 };
 
-export const RiverSetBase = ({user, rivers, loading, load_progress, onRefresh, onAddRiver}) => {
+export const RiverSetBase = ({
+  user,
+  rivers,
+  loading,
+  load_progress,
+  show_settings,
+  onRefresh,
+  onAddRiver,
+  onShowSettings,
+}) => {
   const TOTAL_SPACING = COLUMNSPACER * rivers.length;
   const TOTAL_COLUMNS = COLUMNWIDTH * rivers.length;
   const TOP_BAR_HEIGHT = 43;
@@ -119,6 +129,9 @@ export const RiverSetBase = ({user, rivers, loading, load_progress, onRefresh, o
     left: rivers.length * (COLUMNWIDTH + COLUMNSPACER),
     width: COLUMNWIDTH / 6,
   });
+
+  const accountSettings = show_settings ? <AccountSettings /> : <span />;
+
   return (
     <div style={style}>
       <div key='river_set' style={column_set_style}>
@@ -142,8 +155,10 @@ export const RiverSetBase = ({user, rivers, loading, load_progress, onRefresh, o
           loading={loading}
           load_progress={load_progress}
           onRefresh={() => onRefresh(user)}
+          onShowSettings={onShowSettings}
           />
       </div>
+      {accountSettings}
     </div>
   );
 };
@@ -156,12 +171,14 @@ const vrs_mapStateToProps = (state) => {
     rivers: state.rivers,
     loading: state.loading,
     load_progress: state.load_progress,
+    show_settings: state.account_settings.visible,
   };
 };
 const vrs_mapDispatchToProps = (dispatch) => {
   return {
     onRefresh: function refreshIt (user) { dispatch(refreshAllFeeds(user)); },
     onAddRiver: function addIt (user) { dispatch(addRiver(user)); },
+    onShowSettings: function() { dispatch(showAccountSettings()); },
   };
 };
 const RiverSet = connect(

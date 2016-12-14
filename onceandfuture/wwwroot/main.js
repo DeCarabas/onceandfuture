@@ -44,6 +44,7 @@ import {
   REFRESH_ALL_FEEDS_SUCCESS,
   REFRESH_ALL_FEEDS_ERROR,
   REFRESH_ALL_FEEDS_PROGRESS,
+  SHOW_ACCOUNT_SETTINGS,
 
   addRiver,
   refreshRiverList,
@@ -354,6 +355,18 @@ function state_top_info(state = {}, action) {
   }
 }
 
+function state_account_settings(state = {visible: false}, action) {
+  switch(action.type)
+  {
+    case SHOW_ACCOUNT_SETTINGS:
+      return Object.assign({}, state, {
+        visible: true,
+      });
+    default:
+      return state;
+  }
+}
+
 function sociallistsApp(state = {}, action) {
   return {
     user: user,
@@ -361,6 +374,7 @@ function sociallistsApp(state = {}, action) {
     loading: state_loading(state.loading, action),
     load_progress: state_load_progress(state.load_progress, action),
     top_info: state_top_info(state.top_info, action),
+    account_settings: state_account_settings(state.account_settings, action),
   };
 }
 

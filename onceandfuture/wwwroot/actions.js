@@ -311,6 +311,13 @@ export function riverSetNameError(index, river, new_name, error) {
   };
 }
 
+export const SHOW_ACCOUNT_SETTINGS = 'SHOW_ACCOUNT_SETTINGS';
+export function showAccountSettings() {
+  return {
+    type: SHOW_ACCOUNT_SETTINGS,
+  }
+}
+
 function decodeError(xhr) {
   let  errorMessage = xhr.statusText;
   try

@@ -400,6 +400,20 @@
 	  }
 	}
 	
+	function state_account_settings() {
+	  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : { visible: false };
+	  var action = arguments[1];
+	
+	  switch (action.type) {
+	    case _actions.SHOW_ACCOUNT_SETTINGS:
+	      return Object.assign({}, state, {
+	        visible: true
+	      });
+	    default:
+	      return state;
+	  }
+	}
+	
 	function sociallistsApp() {
 	  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 	  var action = arguments[1];
@@ -409,7 +423,8 @@
 	    rivers: state_rivers(state.rivers, action),
 	    loading: state_loading(state.loading, action),
 	    load_progress: state_load_progress(state.load_progress, action),
-	    top_info: state_top_info(state.top_info, action)
+	    top_info: state_top_info(state.top_info, action),
+	    account_settings: state_account_settings(state.account_settings, action)
 	  };
 	}
 	
@@ -23557,7 +23572,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.RIVER_SET_FEED_MODE = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
+	exports.RIVER_SET_FEED_MODE = exports.SHOW_ACCOUNT_SETTINGS = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
 	exports.dropRiver = dropRiver;
 	exports.expandFeedUpdate = expandFeedUpdate;
 	exports.collapseFeedUpdate = collapseFeedUpdate;
@@ -23593,6 +23608,7 @@
 	exports.riverSetNameStart = riverSetNameStart;
 	exports.riverSetNameSuccess = riverSetNameSuccess;
 	exports.riverSetNameError = riverSetNameError;
+	exports.showAccountSettings = showAccountSettings;
 	exports.riverSetFeedMode = riverSetFeedMode;
 	exports.riverAddFeed = riverAddFeed;
 	exports.addRiver = addRiver;
@@ -23915,6 +23931,13 @@
 	    river: river,
 	    new_name: new_name,
 	    error: error
+	  };
+	}
+	
+	var SHOW_ACCOUNT_SETTINGS = exports.SHOW_ACCOUNT_SETTINGS = 'SHOW_ACCOUNT_SETTINGS';
+	function showAccountSettings() {
+	  return {
+	    type: SHOW_ACCOUNT_SETTINGS
 	  };
 	}
 	
@@ -24259,6 +24282,10 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
+	var _accountsettings = __webpack_require__(/*! ./accountsettings */ 218);
+	
+	var _accountsettings2 = _interopRequireDefault(_accountsettings);
+	
 	var _rivercolumn = __webpack_require__(/*! ./rivercolumn */ 200);
 	
 	var _rivercolumn2 = _interopRequireDefault(_rivercolumn);
@@ -24286,7 +24313,8 @@
 	  var title = _ref.title,
 	      loading = _ref.loading,
 	      load_progress = _ref.load_progress,
-	      onRefresh = _ref.onRefresh;
+	      onRefresh = _ref.onRefresh,
+	      onShowSettings = _ref.onShowSettings;
 	
 	  var div_style = {
 	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR,
@@ -24343,7 +24371,7 @@
 	      ),
 	      React.createElement(
 	        'div',
-	        { style: refresh_style },
+	        { style: refresh_style, onClick: onShowSettings },
 	        React.createElement(
 	          _tooltip2.default,
 	          { position: 'bottomleft', tip: 'View account settings.' },
@@ -24390,8 +24418,10 @@
 	      rivers = _ref3.rivers,
 	      loading = _ref3.loading,
 	      load_progress = _ref3.load_progress,
+	      show_settings = _ref3.show_settings,
 	      _onRefresh = _ref3.onRefresh,
-	      _onAddRiver = _ref3.onAddRiver;
+	      _onAddRiver = _ref3.onAddRiver,
+	      onShowSettings = _ref3.onShowSettings;
 	
 	  var TOTAL_SPACING = _style.COLUMNSPACER * rivers.length;
 	  var TOTAL_COLUMNS = _style.COLUMNWIDTH * rivers.length;
@@ -24424,6 +24454,9 @@
 	    left: rivers.length * (_style.COLUMNWIDTH + _style.COLUMNSPACER),
 	    width: _style.COLUMNWIDTH / 6
 	  });
+	
+	  var accountSettings = show_settings ? React.createElement(_accountsettings2.default, null) : React.createElement('span', null);
+	
 	  return React.createElement(
 	    'div',
 	    { style: style },
@@ -24457,9 +24490,11 @@
 	        load_progress: load_progress,
 	        onRefresh: function onRefresh() {
 	          return _onRefresh(user);
-	        }
+	        },
+	        onShowSettings: onShowSettings
 	      })
-	    )
+	    ),
+	    accountSettings
 	  );
 	};
 	
@@ -24470,7 +24505,8 @@
 	    user: state.user,
 	    rivers: state.rivers,
 	    loading: state.loading,
-	    load_progress: state.load_progress
+	    load_progress: state.load_progress,
+	    show_settings: state.account_settings.visible
 	  };
 	};
 	var vrs_mapDispatchToProps = function vrs_mapDispatchToProps(dispatch) {
@@ -24480,6 +24516,9 @@
 	    },
 	    onAddRiver: function addIt(user) {
 	      dispatch((0, _actions.addRiver)(user));
+	    },
+	    onShowSettings: function onShowSettings() {
+	      dispatch((0, _actions.showAccountSettings)());
 	    }
 	  };
 	};
@@ -24799,8 +24838,6 @@
 	  value: true
 	});
 	
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-	
 	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
@@ -24815,17 +24852,13 @@
 	
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	
+	var _settingscontrols = __webpack_require__(/*! ./settingscontrols */ 217);
+	
 	var _tooltip = __webpack_require__(/*! ./tooltip */ 205);
 	
 	var _tooltip2 = _interopRequireDefault(_tooltip);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-	
-	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-	
-	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 	
 	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
 	
@@ -24844,84 +24877,8 @@
 	  );
 	};
 	
-	var SettingsButton = function SettingsButton(_ref2) {
-	  var onClick = _ref2.onClick,
-	      text = _ref2.text;
-	
-	  var divStyle = {
-	    textAlign: 'right',
-	    marginTop: _style.COLUMNSPACER
-	  };
-	  var style = {
-	    color: 'white',
-	    backgroundColor: _style.COLOR_DARK,
-	    padding: 3,
-	    border: '2px solid ' + _style.COLOR_VERY_DARK,
-	    cursor: 'pointer'
-	  };
-	
-	  return React.createElement(
-	    'div',
-	    { style: divStyle },
-	    React.createElement(
-	      'span',
-	      { style: style, onClick: onClick },
-	      text
-	    )
-	  );
-	};
-	
-	// This one is a class-based component because it maintains the internal
-	// state of the edit box.
-	
-	var SettingInputBox = function (_React$Component) {
-	  _inherits(SettingInputBox, _React$Component);
-	
-	  function SettingInputBox(props) {
-	    _classCallCheck(this, SettingInputBox);
-	
-	    var _this = _possibleConstructorReturn(this, (SettingInputBox.__proto__ || Object.getPrototypeOf(SettingInputBox)).call(this, props));
-	
-	    _this.state = { value: props.value || '' };
-	    _this.setValue = props.setValue;
-	
-	    _this.handleChange = _this.handleChange.bind(_this);
-	    _this.handleSubmit = _this.handleSubmit.bind(_this);
-	    return _this;
-	  }
-	
-	  _createClass(SettingInputBox, [{
-	    key: 'handleChange',
-	    value: function handleChange(event) {
-	      this.setState({ value: event.target.value });
-	    }
-	  }, {
-	    key: 'handleSubmit',
-	    value: function handleSubmit(event) {
-	      this.setValue(this.state.value);
-	      event.preventDefault();
-	    }
-	  }, {
-	    key: 'render',
-	    value: function render() {
-	      var input_style = {
-	        width: '100%'
-	      };
-	
-	      return React.createElement(
-	        'div',
-	        null,
-	        React.createElement('input', { style: input_style, type: 'text', value: this.state.value, onChange: this.handleChange }),
-	        React.createElement(SettingsButton, { onClick: this.handleSubmit, text: this.props.buttonLabel })
-	      );
-	    }
-	  }]);
-	
-	  return SettingInputBox;
-	}(React.Component);
-	
-	var AddFeedBox = function AddFeedBox(_ref3) {
-	  var addFeedToRiver = _ref3.addFeedToRiver;
+	var AddFeedBox = function AddFeedBox(_ref2) {
+	  var addFeedToRiver = _ref2.addFeedToRiver;
 	
 	  return React.createElement(
 	    'div',
@@ -24932,14 +24889,14 @@
 	      null,
 	      'Enter the site name or the URL of a feed to subscribe to:'
 	    ),
-	    React.createElement(SettingInputBox, { value: '', setValue: addFeedToRiver, buttonLabel: 'Add Feed' })
+	    React.createElement(_settingscontrols.SettingInputBox, { value: '', setValue: addFeedToRiver, buttonLabel: 'Add Feed' })
 	  );
 	};
 	
-	var DisplayModeButton = function DisplayModeButton(_ref4) {
-	  var text = _ref4.text,
-	      enabled = _ref4.enabled,
-	      click = _ref4.click;
+	var DisplayModeButton = function DisplayModeButton(_ref3) {
+	  var text = _ref3.text,
+	      enabled = _ref3.enabled,
+	      click = _ref3.click;
 	
 	  var butt = {
 	    width: 100,
@@ -24957,9 +24914,9 @@
 	  );
 	};
 	
-	var FeedDisplayModeBox = function FeedDisplayModeBox(_ref5) {
-	  var mode = _ref5.mode,
-	      setFeedMode = _ref5.setFeedMode;
+	var FeedDisplayModeBox = function FeedDisplayModeBox(_ref4) {
+	  var mode = _ref4.mode,
+	      setFeedMode = _ref4.setFeedMode;
 	
 	  var end_space = {
 	    width: 10,
@@ -25011,9 +24968,9 @@
 	  );
 	};
 	
-	var RenameRiverBox = function RenameRiverBox(_ref6) {
-	  var name = _ref6.name,
-	      setName = _ref6.setName;
+	var RenameRiverBox = function RenameRiverBox(_ref5) {
+	  var name = _ref5.name,
+	      setName = _ref5.setName;
 	
 	  return React.createElement(
 	    'div',
@@ -25024,12 +24981,12 @@
 	      null,
 	      'Choose a new name for this river.'
 	    ),
-	    React.createElement(SettingInputBox, { value: name, setValue: setName, buttonLabel: 'Rename' })
+	    React.createElement(_settingscontrols.SettingInputBox, { value: name, setValue: setName, buttonLabel: 'Rename' })
 	  );
 	};
 	
-	var DeleteRiverBox = function DeleteRiverBox(_ref7) {
-	  var deleteRiver = _ref7.deleteRiver;
+	var DeleteRiverBox = function DeleteRiverBox(_ref6) {
+	  var deleteRiver = _ref6.deleteRiver;
 	
 	  return React.createElement(
 	    'div',
@@ -25040,13 +24997,13 @@
 	      null,
 	      'Do you want to remove this river? Don\'t worry, you can undo this later if you change your mind.'
 	    ),
-	    React.createElement(SettingsButton, { onClick: deleteRiver, text: 'Remove' })
+	    React.createElement(_settingscontrols.SettingsButton, { onClick: deleteRiver, text: 'Remove' })
 	  );
 	};
 	
-	var RiverSource = function RiverSource(_ref8) {
-	  var source = _ref8.source,
-	      deleteSource = _ref8.deleteSource;
+	var RiverSource = function RiverSource(_ref7) {
+	  var source = _ref7.source,
+	      deleteSource = _ref7.deleteSource;
 	
 	  var timeStyle = {
 	    textAlign: 'right'
@@ -25093,9 +25050,9 @@
 	  );
 	};
 	
-	var RiverSourcesBox = function RiverSourcesBox(_ref9) {
-	  var sources = _ref9.sources,
-	      deleteSource = _ref9.deleteSource;
+	var RiverSourcesBox = function RiverSourcesBox(_ref8) {
+	  var sources = _ref8.sources,
+	      deleteSource = _ref8.deleteSource;
 	
 	  var pending_style = {
 	    textAlign: 'center'
@@ -25188,16 +25145,16 @@
 	  );
 	};
 	
-	var RiverSettingsBase = function RiverSettingsBase(_ref10) {
-	  var index = _ref10.index,
-	      river = _ref10.river,
-	      user = _ref10.user,
-	      feedUrlChanged = _ref10.feedUrlChanged,
-	      addFeedToRiver = _ref10.addFeedToRiver,
-	      riverSetFeedMode = _ref10.riverSetFeedMode,
-	      deleteRiver = _ref10.deleteRiver,
-	      removeSource = _ref10.removeSource,
-	      setRiverName = _ref10.setRiverName;
+	var RiverSettingsBase = function RiverSettingsBase(_ref9) {
+	  var index = _ref9.index,
+	      river = _ref9.river,
+	      user = _ref9.user,
+	      feedUrlChanged = _ref9.feedUrlChanged,
+	      addFeedToRiver = _ref9.addFeedToRiver,
+	      riverSetFeedMode = _ref9.riverSetFeedMode,
+	      deleteRiver = _ref9.deleteRiver,
+	      removeSource = _ref9.removeSource,
+	      setRiverName = _ref9.setRiverName;
 	
 	  var TOP_SPACE = 50;
 	  var SIDE_PADDING = 0;
@@ -26156,6 +26113,251 @@
 	'use strict';
 	
 	module.exports = __webpack_require__(/*! react/lib/ReactDOM */ 6);
+
+/***/ },
+/* 216 */,
+/* 217 */
+/*!************************************************!*\
+  !*** ./wwwroot/components/settingscontrols.js ***!
+  \************************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	exports.SettingInputBox = exports.SettingsButton = undefined;
+	
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+	
+	var _style = __webpack_require__(/*! ./style */ 199);
+	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+	
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+	
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+	
+	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
+	var SettingsButton = exports.SettingsButton = function SettingsButton(_ref) {
+	  var onClick = _ref.onClick,
+	      text = _ref.text;
+	
+	  var divStyle = {
+	    textAlign: 'right',
+	    marginTop: _style.COLUMNSPACER
+	  };
+	  var style = {
+	    color: 'white',
+	    backgroundColor: _style.COLOR_DARK,
+	    padding: 3,
+	    border: '2px solid ' + _style.COLOR_VERY_DARK,
+	    cursor: 'pointer'
+	  };
+	
+	  return React.createElement(
+	    'div',
+	    { style: divStyle },
+	    React.createElement(
+	      'span',
+	      { style: style, onClick: onClick },
+	      text
+	    )
+	  );
+	};
+	
+	// This one is a class-based component because it maintains the internal
+	// state of the edit box.
+	
+	var SettingInputBox = exports.SettingInputBox = function (_React$Component) {
+	  _inherits(SettingInputBox, _React$Component);
+	
+	  function SettingInputBox(props) {
+	    _classCallCheck(this, SettingInputBox);
+	
+	    var _this = _possibleConstructorReturn(this, (SettingInputBox.__proto__ || Object.getPrototypeOf(SettingInputBox)).call(this, props));
+	
+	    _this.state = { value: props.value || '' };
+	    _this.setValue = props.setValue;
+	
+	    _this.handleChange = _this.handleChange.bind(_this);
+	    _this.handleSubmit = _this.handleSubmit.bind(_this);
+	    return _this;
+	  }
+	
+	  _createClass(SettingInputBox, [{
+	    key: 'handleChange',
+	    value: function handleChange(event) {
+	      this.setState({ value: event.target.value });
+	    }
+	  }, {
+	    key: 'handleSubmit',
+	    value: function handleSubmit(event) {
+	      this.setValue(this.state.value);
+	      event.preventDefault();
+	    }
+	  }, {
+	    key: 'render',
+	    value: function render() {
+	      var input_style = {
+	        width: '100%'
+	      };
+	
+	      return React.createElement(
+	        'div',
+	        null,
+	        React.createElement('input', { style: input_style, type: 'text', value: this.state.value, onChange: this.handleChange }),
+	        React.createElement(SettingsButton, { onClick: this.handleSubmit, text: this.props.buttonLabel })
+	      );
+	    }
+	  }]);
+	
+	  return SettingInputBox;
+	}(React.Component);
+
+/***/ },
+/* 218 */
+/*!***********************************************!*\
+  !*** ./wwwroot/components/accountsettings.js ***!
+  \***********************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _style = __webpack_require__(/*! ./style */ 199);
+	
+	var _settingscontrols = __webpack_require__(/*! ./settingscontrols */ 217);
+	
+	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
+	
+	
+	var AccountSettings = function AccountSettings() {
+	  var outer_style = {
+	    position: 'absolute',
+	    top: 0,
+	    left: 0,
+	
+	    width: '100%',
+	    height: '100%'
+	  };
+	
+	  var fontSize = '18px';
+	
+	  var inner_style = {
+	    marginLeft: 'auto',
+	    marginRight: 'auto',
+	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR,
+	    width: 460,
+	    height: 300,
+	    marginTop: 33 + _style.COLUMNSPACER,
+	    paddingLeft: 5,
+	    paddingRight: 5,
+	    border: "2px solid black",
+	    fontSize: fontSize
+	  };
+	
+	  var in_style = {
+	    width: 215,
+	    fontSize: fontSize
+	  };
+	
+	  var p_style = {
+	    width: 215,
+	    display: 'inline-block'
+	  };
+	
+	  var p_l_style = Object.assign({}, p_style, {
+	    textAlign: 'right',
+	    paddingRight: 10
+	  });
+	  var p_r_style = Object.assign({}, p_style, {
+	    paddingLeft: 10
+	  });
+	
+	  var r_style = {
+	    marginTop: 10
+	  };
+	
+	  var r_b_style = {
+	    marginTop: 15,
+	    marginBottom: 25,
+	    paddingRight: 5
+	  };
+	
+	  return React.createElement(
+	    'div',
+	    { style: outer_style },
+	    React.createElement(
+	      'div',
+	      { style: inner_style },
+	      React.createElement(
+	        'h2',
+	        null,
+	        'Account Settings'
+	      ),
+	      React.createElement('hr', null),
+	      React.createElement(
+	        'div',
+	        { style: r_style },
+	        React.createElement(
+	          'div',
+	          { style: p_l_style },
+	          'Email Address:'
+	        ),
+	        React.createElement(
+	          'div',
+	          { style: p_r_style },
+	          React.createElement('input', { style: in_style, type: 'text', id: 'email', name: 'email', placeholder: 'Email Address' })
+	        )
+	      ),
+	      React.createElement(
+	        'div',
+	        { style: r_b_style },
+	        React.createElement(_settingscontrols.SettingsButton, { text: 'Change Email Address' })
+	      ),
+	      React.createElement(
+	        'div',
+	        { style: r_style },
+	        React.createElement(
+	          'div',
+	          { style: p_l_style },
+	          'Password:'
+	        ),
+	        React.createElement(
+	          'div',
+	          { style: p_r_style },
+	          React.createElement('input', { style: in_style, type: 'password', id: 'pw1', name: 'pw1', placeholder: 'Password' })
+	        )
+	      ),
+	      React.createElement(
+	        'div',
+	        { style: r_style },
+	        React.createElement(
+	          'div',
+	          { style: p_l_style },
+	          'Repeat Password:'
+	        ),
+	        React.createElement(
+	          'div',
+	          { style: p_r_style },
+	          React.createElement('input', { style: in_style, type: 'password', id: 'pw2', name: 'pw2', placeholder: 'Password' })
+	        )
+	      ),
+	      React.createElement(
+	        'div',
+	        { style: r_b_style },
+	        React.createElement(_settingscontrols.SettingsButton, { text: 'Change Password' })
+	      )
+	    )
+	  );
+	};
+	
+	exports.default = AccountSettings;
 
 /***/ }
 /******/ ]);
