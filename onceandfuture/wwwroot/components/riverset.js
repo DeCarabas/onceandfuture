@@ -15,6 +15,7 @@ import RiverColumn from './rivercolumn';
 import RiverProgress from './riverprogress';
 import RiverSetBalloon from './riversetballoon';
 import Tooltip from './tooltip';
+import UserMenu from './usermenu';
 
 const TITLE_HEIGHT = 33; // <div>"Rivers"..."refresh"</div>
 
@@ -35,12 +36,15 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh, onSettingsClick}
   const refresh_color = loading ? RIVER_TITLE_BACKGROUND_COLOR : APP_TEXT_COLOR;
   const onClick = loading ? () => { } : onRefresh;
 
-  const refresh_style = {
+  const title_button_style = {
     display: 'inline-block',
     float: 'right',
-    color: refresh_color,
     verticalAlign: 'middle',
+    textAlign: 'center',
   };
+  const refresh_style = Object.assign({}, title_button_style, {
+    color: refresh_color,
+  });
 
   const announcer_style = {
     display: 'inline-block',
@@ -55,14 +59,12 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh, onSettingsClick}
   return <div>
     <div style={div_style}>
       <div style={head_style}>{title}</div>
+      <div style={title_button_style}>
+        <UserMenu />
+      </div>
       <div style={refresh_style} onClick={onClick} >
         <Tooltip position="bottomleft" tip="Refresh all feeds.">
           <i style={BUTTON_STYLE} onClick={onClick} className="fa fa-refresh" />
-        </Tooltip>
-      </div>
-      <div style={refresh_style} onClick={onSettingsClick}>
-        <Tooltip position="bottomleft" tip="View account settings.">
-          <i style={BUTTON_STYLE} className="fa fa-user" />
         </Tooltip>
       </div>
       <div style={announcer_style}><i>{load_progress.message}</i></div>

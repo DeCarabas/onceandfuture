@@ -10,6 +10,12 @@ Todo:
 =======
 
 - Refresh is super slow on the docker image.
+- Settings tool tips are BUSTED (and the whole window looks wrong). Probably
+  I need some UI reform; maybe the hackery has just gotten out of hand.
+
+  - FIX BANNER HEIGHT TO 33PX AND LOCK IT IN STYLES
+  - REFORM Z INDICES TO A SET OF DEFINED LAYERS
+  - FIGURE OUT WHY SETTINGS BOX FILLS COLUMN
 
 UI:
 - Account creation flow

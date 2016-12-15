@@ -9,8 +9,7 @@ import { update_key } from './util';
 import {
   RIVER_MODE_AUTO,
 
-  ACCOUNT_SETTINGS_HIDE,
-  ACCOUNT_SETTINGS_SHOW,
+  ACCOUNT_SETTINGS_TOGGLE,
 
   ADD_RIVER_ERROR,
   ADD_RIVER_START,
@@ -47,6 +46,7 @@ import {
   REFRESH_ALL_FEEDS_SUCCESS,
   REFRESH_ALL_FEEDS_ERROR,
   REFRESH_ALL_FEEDS_PROGRESS,
+  USER_MENU_TOGGLE,
 
   addRiver,
   refreshRiverList,
@@ -360,13 +360,21 @@ function state_top_info(state = {}, action) {
 function state_account_settings(state = {visible: false}, action) {
   switch(action.type)
   {
-    case ACCOUNT_SETTINGS_HIDE:
+    case ACCOUNT_SETTINGS_TOGGLE:
       return Object.assign({}, state, {
-        visible: false,
+        visible: !state.visible,
       });
-    case ACCOUNT_SETTINGS_SHOW:
+    default:
+      return state;
+  }
+}
+
+function state_user_menu(state = {visible: false}, action) {
+  switch(action.type)
+  {
+    case USER_MENU_TOGGLE:
       return Object.assign({}, state, {
-        visible: true,
+        visible: !state.visible,
       });
     default:
       return state;
@@ -381,6 +389,7 @@ function sociallistsApp(state = {}, action) {
     load_progress: state_load_progress(state.load_progress, action),
     top_info: state_top_info(state.top_info, action),
     account_settings: state_account_settings(state.account_settings, action),
+    user_menu: state_user_menu(state.user_menu, action),
   };
 }
 

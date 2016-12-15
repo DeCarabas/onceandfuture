@@ -72,7 +72,7 @@
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var React = __webpack_require__(/*! react */ 4);
-	var ReactDOM = __webpack_require__(/*! react-dom */ 215);
+	var ReactDOM = __webpack_require__(/*! react-dom */ 217);
 	
 	
 	// User doesn't channge, based on host URL.
@@ -405,13 +405,23 @@
 	  var action = arguments[1];
 	
 	  switch (action.type) {
-	    case _actions.ACCOUNT_SETTINGS_HIDE:
+	    case _actions.ACCOUNT_SETTINGS_TOGGLE:
 	      return Object.assign({}, state, {
-	        visible: false
+	        visible: !state.visible
 	      });
-	    case _actions.ACCOUNT_SETTINGS_SHOW:
+	    default:
+	      return state;
+	  }
+	}
+	
+	function state_user_menu() {
+	  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : { visible: false };
+	  var action = arguments[1];
+	
+	  switch (action.type) {
+	    case _actions.USER_MENU_TOGGLE:
 	      return Object.assign({}, state, {
-	        visible: true
+	        visible: !state.visible
 	      });
 	    default:
 	      return state;
@@ -428,7 +438,8 @@
 	    loading: state_loading(state.loading, action),
 	    load_progress: state_load_progress(state.load_progress, action),
 	    top_info: state_top_info(state.top_info, action),
-	    account_settings: state_account_settings(state.account_settings, action)
+	    account_settings: state_account_settings(state.account_settings, action),
+	    user_menu: state_user_menu(state.user_menu, action)
 	  };
 	}
 	
@@ -23576,7 +23587,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.RIVER_SET_FEED_MODE = exports.ACCOUNT_SETTINGS_SHOW = exports.ACCOUNT_SETTINGS_HIDE = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
+	exports.RIVER_SET_FEED_MODE = exports.USER_MENU_TOGGLE = exports.ACCOUNT_SETTINGS_TOGGLE = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
 	exports.dropRiver = dropRiver;
 	exports.expandFeedUpdate = expandFeedUpdate;
 	exports.collapseFeedUpdate = collapseFeedUpdate;
@@ -23612,8 +23623,8 @@
 	exports.riverSetNameStart = riverSetNameStart;
 	exports.riverSetNameSuccess = riverSetNameSuccess;
 	exports.riverSetNameError = riverSetNameError;
-	exports.accountSettingsHide = accountSettingsHide;
-	exports.accountSettingsShow = accountSettingsShow;
+	exports.accountSettingsToggle = accountSettingsToggle;
+	exports.userMenuToggle = userMenuToggle;
 	exports.riverSetFeedMode = riverSetFeedMode;
 	exports.riverAddFeed = riverAddFeed;
 	exports.addRiver = addRiver;
@@ -23939,17 +23950,17 @@
 	  };
 	}
 	
-	var ACCOUNT_SETTINGS_HIDE = exports.ACCOUNT_SETTINGS_HIDE = 'ACCOUNT_SETTINGS_HIDE';
-	function accountSettingsHide() {
+	var ACCOUNT_SETTINGS_TOGGLE = exports.ACCOUNT_SETTINGS_TOGGLE = 'ACCOUNT_SETTINGS_TOGGLE';
+	function accountSettingsToggle() {
 	  return {
-	    type: ACCOUNT_SETTINGS_HIDE
+	    type: ACCOUNT_SETTINGS_TOGGLE
 	  };
 	}
 	
-	var ACCOUNT_SETTINGS_SHOW = exports.ACCOUNT_SETTINGS_SHOW = 'ACCOUNT_SETTINGS_SHOW';
-	function accountSettingsShow() {
+	var USER_MENU_TOGGLE = exports.USER_MENU_TOGGLE = 'USER_MENU_TOGGLE';
+	function userMenuToggle() {
 	  return {
-	    type: ACCOUNT_SETTINGS_SHOW
+	    type: USER_MENU_TOGGLE
 	  };
 	}
 	
@@ -24291,25 +24302,29 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
-	var _accountsettings = __webpack_require__(/*! ./accountsettings */ 218);
+	var _accountsettings = __webpack_require__(/*! ./accountsettings */ 200);
 	
 	var _accountsettings2 = _interopRequireDefault(_accountsettings);
 	
-	var _rivercolumn = __webpack_require__(/*! ./rivercolumn */ 200);
+	var _rivercolumn = __webpack_require__(/*! ./rivercolumn */ 202);
 	
 	var _rivercolumn2 = _interopRequireDefault(_rivercolumn);
 	
-	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 206);
+	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 208);
 	
 	var _riverprogress2 = _interopRequireDefault(_riverprogress);
 	
-	var _riversetballoon = __webpack_require__(/*! ./riversetballoon */ 214);
+	var _riversetballoon = __webpack_require__(/*! ./riversetballoon */ 216);
 	
 	var _riversetballoon2 = _interopRequireDefault(_riversetballoon);
 	
-	var _tooltip = __webpack_require__(/*! ./tooltip */ 205);
+	var _tooltip = __webpack_require__(/*! ./tooltip */ 207);
 	
 	var _tooltip2 = _interopRequireDefault(_tooltip);
+	
+	var _usermenu = __webpack_require__(/*! ./usermenu */ 218);
+	
+	var _usermenu2 = _interopRequireDefault(_usermenu);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
@@ -24341,12 +24356,15 @@
 	  var refresh_color = loading ? _style.RIVER_TITLE_BACKGROUND_COLOR : _style.APP_TEXT_COLOR;
 	  var onClick = loading ? function () {} : onRefresh;
 	
-	  var refresh_style = {
+	  var title_button_style = {
 	    display: 'inline-block',
 	    float: 'right',
-	    color: refresh_color,
-	    verticalAlign: 'middle'
+	    verticalAlign: 'middle',
+	    textAlign: 'center'
 	  };
+	  var refresh_style = Object.assign({}, title_button_style, {
+	    color: refresh_color
+	  });
 	
 	  var announcer_style = {
 	    display: 'inline-block',
@@ -24371,20 +24389,16 @@
 	      ),
 	      React.createElement(
 	        'div',
+	        { style: title_button_style },
+	        React.createElement(_usermenu2.default, null)
+	      ),
+	      React.createElement(
+	        'div',
 	        { style: refresh_style, onClick: onClick },
 	        React.createElement(
 	          _tooltip2.default,
 	          { position: 'bottomleft', tip: 'Refresh all feeds.' },
 	          React.createElement('i', { style: _style.BUTTON_STYLE, onClick: onClick, className: 'fa fa-refresh' })
-	        )
-	      ),
-	      React.createElement(
-	        'div',
-	        { style: refresh_style, onClick: onSettingsClick },
-	        React.createElement(
-	          _tooltip2.default,
-	          { position: 'bottomleft', tip: 'View account settings.' },
-	          React.createElement('i', { style: _style.BUTTON_STYLE, className: 'fa fa-user' })
 	        )
 	      ),
 	      React.createElement(
@@ -24600,6 +24614,7 @@
 	  textDecoration: 'initial'
 	};
 	
+	// TODO: THIS IS GARBAGE.
 	var BUTTON_STYLE = exports.BUTTON_STYLE = {
 	  fontSize: ICON_FONT_SIZE,
 	  float: 'right',
@@ -24610,6 +24625,250 @@
 
 /***/ },
 /* 200 */
+/*!***********************************************!*\
+  !*** ./wwwroot/components/accountsettings.js ***!
+  \***********************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _style = __webpack_require__(/*! ./style */ 199);
+	
+	var _settingscontrols = __webpack_require__(/*! ./settingscontrols */ 201);
+	
+	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
+	
+	
+	var AccountSettings = function AccountSettings() {
+	  var outer_style = {
+	    position: 'absolute',
+	    top: 0,
+	    left: 0,
+	
+	    width: '100%',
+	    height: '100%'
+	  };
+	
+	  var fontSize = '18px';
+	
+	  var inner_style = {
+	    marginLeft: 'auto',
+	    marginRight: 'auto',
+	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR,
+	    width: 460,
+	    height: 300,
+	    marginTop: 33 + _style.COLUMNSPACER,
+	    paddingLeft: 5,
+	    paddingRight: 5,
+	    border: "2px solid black",
+	    fontSize: fontSize
+	  };
+	
+	  var in_style = {
+	    width: 215,
+	    fontSize: fontSize
+	  };
+	
+	  var p_style = {
+	    width: 215,
+	    display: 'inline-block'
+	  };
+	
+	  var p_l_style = Object.assign({}, p_style, {
+	    textAlign: 'right',
+	    paddingRight: 10
+	  });
+	  var p_r_style = Object.assign({}, p_style, {
+	    paddingLeft: 10
+	  });
+	
+	  var r_style = {
+	    marginTop: 10
+	  };
+	
+	  var r_b_style = {
+	    marginTop: 15,
+	    marginBottom: 25,
+	    paddingRight: 5
+	  };
+	
+	  return React.createElement(
+	    'div',
+	    { style: outer_style },
+	    React.createElement(
+	      'div',
+	      { style: inner_style },
+	      React.createElement(
+	        'h2',
+	        null,
+	        'Account Settings'
+	      ),
+	      React.createElement('hr', null),
+	      React.createElement(
+	        'div',
+	        { style: r_style },
+	        React.createElement(
+	          'div',
+	          { style: p_l_style },
+	          'Email Address:'
+	        ),
+	        React.createElement(
+	          'div',
+	          { style: p_r_style },
+	          React.createElement('input', { style: in_style, type: 'text', id: 'email', name: 'email', placeholder: 'Email Address' })
+	        )
+	      ),
+	      React.createElement(
+	        'div',
+	        { style: r_b_style },
+	        React.createElement(_settingscontrols.SettingsButton, { text: 'Change Email Address' })
+	      ),
+	      React.createElement(
+	        'div',
+	        { style: r_style },
+	        React.createElement(
+	          'div',
+	          { style: p_l_style },
+	          'Password:'
+	        ),
+	        React.createElement(
+	          'div',
+	          { style: p_r_style },
+	          React.createElement('input', { style: in_style, type: 'password', id: 'pw1', name: 'pw1', placeholder: 'Password' })
+	        )
+	      ),
+	      React.createElement(
+	        'div',
+	        { style: r_style },
+	        React.createElement(
+	          'div',
+	          { style: p_l_style },
+	          'Repeat Password:'
+	        ),
+	        React.createElement(
+	          'div',
+	          { style: p_r_style },
+	          React.createElement('input', { style: in_style, type: 'password', id: 'pw2', name: 'pw2', placeholder: 'Password' })
+	        )
+	      ),
+	      React.createElement(
+	        'div',
+	        { style: r_b_style },
+	        React.createElement(_settingscontrols.SettingsButton, { text: 'Change Password' })
+	      )
+	    )
+	  );
+	};
+	
+	exports.default = AccountSettings;
+
+/***/ },
+/* 201 */
+/*!************************************************!*\
+  !*** ./wwwroot/components/settingscontrols.js ***!
+  \************************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	exports.SettingInputBox = exports.SettingsButton = undefined;
+	
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+	
+	var _style = __webpack_require__(/*! ./style */ 199);
+	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+	
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+	
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+	
+	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
+	var SettingsButton = exports.SettingsButton = function SettingsButton(_ref) {
+	  var onClick = _ref.onClick,
+	      text = _ref.text;
+	
+	  var divStyle = {
+	    textAlign: 'right',
+	    marginTop: _style.COLUMNSPACER
+	  };
+	  var style = {
+	    color: 'white',
+	    backgroundColor: _style.COLOR_DARK,
+	    padding: 3,
+	    border: '2px solid ' + _style.COLOR_VERY_DARK,
+	    cursor: 'pointer'
+	  };
+	
+	  return React.createElement(
+	    'div',
+	    { style: divStyle },
+	    React.createElement(
+	      'span',
+	      { style: style, onClick: onClick },
+	      text
+	    )
+	  );
+	};
+	
+	// This one is a class-based component because it maintains the internal
+	// state of the edit box.
+	
+	var SettingInputBox = exports.SettingInputBox = function (_React$Component) {
+	  _inherits(SettingInputBox, _React$Component);
+	
+	  function SettingInputBox(props) {
+	    _classCallCheck(this, SettingInputBox);
+	
+	    var _this = _possibleConstructorReturn(this, (SettingInputBox.__proto__ || Object.getPrototypeOf(SettingInputBox)).call(this, props));
+	
+	    _this.state = { value: props.value || '' };
+	    _this.setValue = props.setValue;
+	
+	    _this.handleChange = _this.handleChange.bind(_this);
+	    _this.handleSubmit = _this.handleSubmit.bind(_this);
+	    return _this;
+	  }
+	
+	  _createClass(SettingInputBox, [{
+	    key: 'handleChange',
+	    value: function handleChange(event) {
+	      this.setState({ value: event.target.value });
+	    }
+	  }, {
+	    key: 'handleSubmit',
+	    value: function handleSubmit(event) {
+	      this.setValue(this.state.value);
+	      event.preventDefault();
+	    }
+	  }, {
+	    key: 'render',
+	    value: function render() {
+	      var input_style = {
+	        width: '100%'
+	      };
+	
+	      return React.createElement(
+	        'div',
+	        null,
+	        React.createElement('input', { style: input_style, type: 'text', value: this.state.value, onChange: this.handleChange }),
+	        React.createElement(SettingsButton, { onClick: this.handleSubmit, text: this.props.buttonLabel })
+	      );
+	    }
+	  }]);
+	
+	  return SettingInputBox;
+	}(React.Component);
+
+/***/ },
+/* 202 */
 /*!*******************************************!*\
   !*** ./wwwroot/components/rivercolumn.js ***!
   \*******************************************/
@@ -24629,23 +24888,23 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
-	var _riverballoon = __webpack_require__(/*! ./riverballoon */ 201);
+	var _riverballoon = __webpack_require__(/*! ./riverballoon */ 203);
 	
 	var _riverballoon2 = _interopRequireDefault(_riverballoon);
 	
-	var _riversettings = __webpack_require__(/*! ./riversettings */ 202);
+	var _riversettings = __webpack_require__(/*! ./riversettings */ 204);
 	
 	var _riversettings2 = _interopRequireDefault(_riversettings);
 	
-	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 206);
+	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 208);
 	
 	var _riverprogress2 = _interopRequireDefault(_riverprogress);
 	
-	var _rivertitle = __webpack_require__(/*! ./rivertitle */ 207);
+	var _rivertitle = __webpack_require__(/*! ./rivertitle */ 209);
 	
 	var _rivertitle2 = _interopRequireDefault(_rivertitle);
 	
-	var _riverupdates = __webpack_require__(/*! ./riverupdates */ 208);
+	var _riverupdates = __webpack_require__(/*! ./riverupdates */ 210);
 	
 	var _riverupdates2 = _interopRequireDefault(_riverupdates);
 	
@@ -24752,7 +25011,7 @@
 	exports.default = RiverColumn;
 
 /***/ },
-/* 201 */
+/* 203 */
 /*!********************************************!*\
   !*** ./wwwroot/components/riverballoon.js ***!
   \********************************************/
@@ -24844,7 +25103,7 @@
 	exports.default = RiverBalloon;
 
 /***/ },
-/* 202 */
+/* 204 */
 /*!*********************************************!*\
   !*** ./wwwroot/components/riversettings.js ***!
   \*********************************************/
@@ -24862,17 +25121,17 @@
 	
 	var _actions = __webpack_require__(/*! ../actions */ 196);
 	
-	var _reltime = __webpack_require__(/*! ./reltime */ 203);
+	var _reltime = __webpack_require__(/*! ./reltime */ 205);
 	
 	var _reltime2 = _interopRequireDefault(_reltime);
 	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 204);
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 206);
 	
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	
-	var _settingscontrols = __webpack_require__(/*! ./settingscontrols */ 217);
+	var _settingscontrols = __webpack_require__(/*! ./settingscontrols */ 201);
 	
-	var _tooltip = __webpack_require__(/*! ./tooltip */ 205);
+	var _tooltip = __webpack_require__(/*! ./tooltip */ 207);
 	
 	var _tooltip2 = _interopRequireDefault(_tooltip);
 	
@@ -25260,7 +25519,7 @@
 	exports.default = RiverSettings;
 
 /***/ },
-/* 203 */
+/* 205 */
 /*!***************************************!*\
   !*** ./wwwroot/components/reltime.js ***!
   \***************************************/
@@ -25330,7 +25589,7 @@
 	exports.default = RelTime;
 
 /***/ },
-/* 204 */
+/* 206 */
 /*!*****************************************!*\
   !*** ./wwwroot/components/riverlink.js ***!
   \*****************************************/
@@ -25361,7 +25620,7 @@
 	exports.default = RiverLink;
 
 /***/ },
-/* 205 */
+/* 207 */
 /*!***************************************!*\
   !*** ./wwwroot/components/tooltip.js ***!
   \***************************************/
@@ -25502,7 +25761,7 @@
 	exports.default = Tooltip;
 
 /***/ },
-/* 206 */
+/* 208 */
 /*!*********************************************!*\
   !*** ./wwwroot/components/riverprogress.js ***!
   \*********************************************/
@@ -25565,7 +25824,7 @@
 	exports.default = RiverProgress;
 
 /***/ },
-/* 207 */
+/* 209 */
 /*!******************************************!*\
   !*** ./wwwroot/components/rivertitle.js ***!
   \******************************************/
@@ -25579,7 +25838,7 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
-	var _tooltip = __webpack_require__(/*! ./tooltip */ 205);
+	var _tooltip = __webpack_require__(/*! ./tooltip */ 207);
 	
 	var _tooltip2 = _interopRequireDefault(_tooltip);
 	
@@ -25686,7 +25945,7 @@
 	exports.default = RiverTitle;
 
 /***/ },
-/* 208 */
+/* 210 */
 /*!********************************************!*\
   !*** ./wwwroot/components/riverupdates.js ***!
   \********************************************/
@@ -25702,7 +25961,7 @@
 	
 	var _react2 = _interopRequireDefault(_react);
 	
-	var _riverfeedupdate = __webpack_require__(/*! ./riverfeedupdate */ 209);
+	var _riverfeedupdate = __webpack_require__(/*! ./riverfeedupdate */ 211);
 	
 	var _riverfeedupdate2 = _interopRequireDefault(_riverfeedupdate);
 	
@@ -25742,7 +26001,7 @@
 	exports.default = RiverUpdates;
 
 /***/ },
-/* 209 */
+/* 211 */
 /*!***********************************************!*\
   !*** ./wwwroot/components/riverfeedupdate.js ***!
   \***********************************************/
@@ -25760,11 +26019,11 @@
 	
 	var _util = __webpack_require__(/*! ../util */ 195);
 	
-	var _riverfeedupdatetitle = __webpack_require__(/*! ./riverfeedupdatetitle */ 210);
+	var _riverfeedupdatetitle = __webpack_require__(/*! ./riverfeedupdatetitle */ 212);
 	
 	var _riverfeedupdatetitle2 = _interopRequireDefault(_riverfeedupdatetitle);
 	
-	var _riveritem = __webpack_require__(/*! ./riveritem */ 211);
+	var _riveritem = __webpack_require__(/*! ./riveritem */ 213);
 	
 	var _riveritem2 = _interopRequireDefault(_riveritem);
 	
@@ -25865,7 +26124,7 @@
 	exports.default = RiverFeedUpdate;
 
 /***/ },
-/* 210 */
+/* 212 */
 /*!****************************************************!*\
   !*** ./wwwroot/components/riverfeedupdatetitle.js ***!
   \****************************************************/
@@ -25879,11 +26138,11 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 204);
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 206);
 	
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	
-	var _reltime = __webpack_require__(/*! ./reltime */ 203);
+	var _reltime = __webpack_require__(/*! ./reltime */ 205);
 	
 	var _reltime2 = _interopRequireDefault(_reltime);
 	
@@ -25920,7 +26179,7 @@
 	exports.default = RiverFeedUpdateTitle;
 
 /***/ },
-/* 211 */
+/* 213 */
 /*!*****************************************!*\
   !*** ./wwwroot/components/riveritem.js ***!
   \*****************************************/
@@ -25932,11 +26191,11 @@
 	  value: true
 	});
 	
-	var _riveritemtitle = __webpack_require__(/*! ./riveritemtitle */ 212);
+	var _riveritemtitle = __webpack_require__(/*! ./riveritemtitle */ 214);
 	
 	var _riveritemtitle2 = _interopRequireDefault(_riveritemtitle);
 	
-	var _riveritemthumbnail = __webpack_require__(/*! ./riveritemthumbnail */ 213);
+	var _riveritemthumbnail = __webpack_require__(/*! ./riveritemthumbnail */ 215);
 	
 	var _riveritemthumbnail2 = _interopRequireDefault(_riveritemthumbnail);
 	
@@ -25973,7 +26232,7 @@
 	exports.default = RiverItem;
 
 /***/ },
-/* 212 */
+/* 214 */
 /*!**********************************************!*\
   !*** ./wwwroot/components/riveritemtitle.js ***!
   \**********************************************/
@@ -25987,7 +26246,7 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 204);
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 206);
 	
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	
@@ -26017,7 +26276,7 @@
 	exports.default = RiverItemTitle;
 
 /***/ },
-/* 213 */
+/* 215 */
 /*!**************************************************!*\
   !*** ./wwwroot/components/riveritemthumbnail.js ***!
   \**************************************************/
@@ -26033,7 +26292,7 @@
 	
 	var _util = __webpack_require__(/*! ../util */ 195);
 	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 204);
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 206);
 	
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	
@@ -26079,7 +26338,7 @@
 	exports.default = RiverItemThumbnail;
 
 /***/ },
-/* 214 */
+/* 216 */
 /*!***********************************************!*\
   !*** ./wwwroot/components/riversetballoon.js ***!
   \***********************************************/
@@ -26095,7 +26354,7 @@
 	
 	var _actions = __webpack_require__(/*! ../actions */ 196);
 	
-	var _riverballoon = __webpack_require__(/*! ./riverballoon */ 201);
+	var _riverballoon = __webpack_require__(/*! ./riverballoon */ 203);
 	
 	var _riverballoon2 = _interopRequireDefault(_riverballoon);
 	
@@ -26122,7 +26381,7 @@
 	exports.default = RiverSetBalloon;
 
 /***/ },
-/* 215 */
+/* 217 */
 /*!******************************!*\
   !*** ./~/react-dom/index.js ***!
   \******************************/
@@ -26133,249 +26392,110 @@
 	module.exports = __webpack_require__(/*! react/lib/ReactDOM */ 6);
 
 /***/ },
-/* 216 */,
-/* 217 */
-/*!************************************************!*\
-  !*** ./wwwroot/components/settingscontrols.js ***!
-  \************************************************/
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-	exports.SettingInputBox = exports.SettingsButton = undefined;
-	
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-	
-	var _style = __webpack_require__(/*! ./style */ 199);
-	
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-	
-	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-	
-	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	var SettingsButton = exports.SettingsButton = function SettingsButton(_ref) {
-	  var onClick = _ref.onClick,
-	      text = _ref.text;
-	
-	  var divStyle = {
-	    textAlign: 'right',
-	    marginTop: _style.COLUMNSPACER
-	  };
-	  var style = {
-	    color: 'white',
-	    backgroundColor: _style.COLOR_DARK,
-	    padding: 3,
-	    border: '2px solid ' + _style.COLOR_VERY_DARK,
-	    cursor: 'pointer'
-	  };
-	
-	  return React.createElement(
-	    'div',
-	    { style: divStyle },
-	    React.createElement(
-	      'span',
-	      { style: style, onClick: onClick },
-	      text
-	    )
-	  );
-	};
-	
-	// This one is a class-based component because it maintains the internal
-	// state of the edit box.
-	
-	var SettingInputBox = exports.SettingInputBox = function (_React$Component) {
-	  _inherits(SettingInputBox, _React$Component);
-	
-	  function SettingInputBox(props) {
-	    _classCallCheck(this, SettingInputBox);
-	
-	    var _this = _possibleConstructorReturn(this, (SettingInputBox.__proto__ || Object.getPrototypeOf(SettingInputBox)).call(this, props));
-	
-	    _this.state = { value: props.value || '' };
-	    _this.setValue = props.setValue;
-	
-	    _this.handleChange = _this.handleChange.bind(_this);
-	    _this.handleSubmit = _this.handleSubmit.bind(_this);
-	    return _this;
-	  }
-	
-	  _createClass(SettingInputBox, [{
-	    key: 'handleChange',
-	    value: function handleChange(event) {
-	      this.setState({ value: event.target.value });
-	    }
-	  }, {
-	    key: 'handleSubmit',
-	    value: function handleSubmit(event) {
-	      this.setValue(this.state.value);
-	      event.preventDefault();
-	    }
-	  }, {
-	    key: 'render',
-	    value: function render() {
-	      var input_style = {
-	        width: '100%'
-	      };
-	
-	      return React.createElement(
-	        'div',
-	        null,
-	        React.createElement('input', { style: input_style, type: 'text', value: this.state.value, onChange: this.handleChange }),
-	        React.createElement(SettingsButton, { onClick: this.handleSubmit, text: this.props.buttonLabel })
-	      );
-	    }
-	  }]);
-	
-	  return SettingInputBox;
-	}(React.Component);
-
-/***/ },
 /* 218 */
-/*!***********************************************!*\
-  !*** ./wwwroot/components/accountsettings.js ***!
-  \***********************************************/
+/*!****************************************!*\
+  !*** ./wwwroot/components/usermenu.js ***!
+  \****************************************/
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
 	Object.defineProperty(exports, "__esModule", {
-	  value: true
+	    value: true
 	});
+	
+	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
+	
+	var _actions = __webpack_require__(/*! ../actions */ 196);
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
-	var _settingscontrols = __webpack_require__(/*! ./settingscontrols */ 217);
+	var _tooltip = __webpack_require__(/*! ./tooltip */ 207);
+	
+	var _tooltip2 = _interopRequireDefault(_tooltip);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
 	
 	
-	var AccountSettings = function AccountSettings() {
-	  var outer_style = {
-	    position: 'absolute',
-	    top: 0,
-	    left: 0,
+	var UserMenuBase = function UserMenuBase(_ref) {
+	    var visible = _ref.visible,
+	        onToggle = _ref.onToggle;
 	
-	    width: '100%',
-	    height: '100%'
-	  };
 	
-	  var fontSize = '18px';
+	    // TODO:STYLIFY
+	    var style = {
+	        cursor: 'pointer',
+	        fontSize: 19,
+	        width: 33,
+	        height: 33,
+	        padding: 7
+	    };
+	    var menu = React.createElement('span', null);
+	    if (visible) {
+	        style = Object.assign({}, style, {
+	            backgroundColor: _style.COLOR_VERY_DARK,
+	            color: _style.COLOR_VERY_LIGHT
+	        });
 	
-	  var inner_style = {
-	    marginLeft: 'auto',
-	    marginRight: 'auto',
-	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR,
-	    width: 460,
-	    height: 300,
-	    marginTop: 33 + _style.COLUMNSPACER,
-	    paddingLeft: 5,
-	    paddingRight: 5,
-	    border: "2px solid black",
-	    fontSize: fontSize
-	  };
+	        var menu_style = {
+	            backgroundColor: _style.COLOR_VERY_DARK,
+	            color: _style.COLOR_VERY_LIGHT,
+	            display: 'inline-block',
+	            fontSize: _style.TEXT_FONT_SIZE,
+	            fontWeight: 'normal',
+	            position: 'absolute',
+	            right: 0,
+	            textAlign: 'center',
+	            top: 33,
+	            width: 120,
+	            zIndex: 4
+	        };
 	
-	  var in_style = {
-	    width: 215,
-	    fontSize: fontSize
-	  };
+	        menu = React.createElement(
+	            'div',
+	            { style: menu_style },
+	            React.createElement(
+	                'p',
+	                null,
+	                'Option one'
+	            ),
+	            React.createElement(
+	                'p',
+	                null,
+	                'Option two'
+	            )
+	        );
+	    }
 	
-	  var p_style = {
-	    width: 215,
-	    display: 'inline-block'
-	  };
-	
-	  var p_l_style = Object.assign({}, p_style, {
-	    textAlign: 'right',
-	    paddingRight: 10
-	  });
-	  var p_r_style = Object.assign({}, p_style, {
-	    paddingLeft: 10
-	  });
-	
-	  var r_style = {
-	    marginTop: 10
-	  };
-	
-	  var r_b_style = {
-	    marginTop: 15,
-	    marginBottom: 25,
-	    paddingRight: 5
-	  };
-	
-	  return React.createElement(
-	    'div',
-	    { style: outer_style },
-	    React.createElement(
-	      'div',
-	      { style: inner_style },
-	      React.createElement(
-	        'h2',
-	        null,
-	        'Account Settings'
-	      ),
-	      React.createElement('hr', null),
-	      React.createElement(
+	    return React.createElement(
 	        'div',
-	        { style: r_style },
+	        { onClick: onToggle, style: style },
 	        React.createElement(
-	          'div',
-	          { style: p_l_style },
-	          'Email Address:'
+	            _tooltip2.default,
+	            { position: 'bottomleft', tip: 'View account settings.' },
+	            React.createElement('i', { className: 'fa fa-user' })
 	        ),
-	        React.createElement(
-	          'div',
-	          { style: p_r_style },
-	          React.createElement('input', { style: in_style, type: 'text', id: 'email', name: 'email', placeholder: 'Email Address' })
-	        )
-	      ),
-	      React.createElement(
-	        'div',
-	        { style: r_b_style },
-	        React.createElement(_settingscontrols.SettingsButton, { text: 'Change Email Address' })
-	      ),
-	      React.createElement(
-	        'div',
-	        { style: r_style },
-	        React.createElement(
-	          'div',
-	          { style: p_l_style },
-	          'Password:'
-	        ),
-	        React.createElement(
-	          'div',
-	          { style: p_r_style },
-	          React.createElement('input', { style: in_style, type: 'password', id: 'pw1', name: 'pw1', placeholder: 'Password' })
-	        )
-	      ),
-	      React.createElement(
-	        'div',
-	        { style: r_style },
-	        React.createElement(
-	          'div',
-	          { style: p_l_style },
-	          'Repeat Password:'
-	        ),
-	        React.createElement(
-	          'div',
-	          { style: p_r_style },
-	          React.createElement('input', { style: in_style, type: 'password', id: 'pw2', name: 'pw2', placeholder: 'Password' })
-	        )
-	      ),
-	      React.createElement(
-	        'div',
-	        { style: r_b_style },
-	        React.createElement(_settingscontrols.SettingsButton, { text: 'Change Password' })
-	      )
-	    )
-	  );
+	        menu
+	    );
 	};
 	
-	exports.default = AccountSettings;
+	var mapStateToProps = function mapStateToProps(state) {
+	    return {
+	        visible: state.user_menu.visible
+	    };
+	};
+	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
+	    return {
+	        onToggle: function onToggle() {
+	            return dispatch((0, _actions.userMenuToggle)());
+	        }
+	    };
+	};
+	var UserMenu = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(UserMenuBase);
+	
+	exports.default = UserMenu;
 
 /***/ }
 /******/ ]);

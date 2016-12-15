@@ -311,17 +311,17 @@ export function riverSetNameError(index, river, new_name, error) {
   };
 }
 
-export const ACCOUNT_SETTINGS_HIDE = 'ACCOUNT_SETTINGS_HIDE';
-export function accountSettingsHide() {
+export const ACCOUNT_SETTINGS_TOGGLE = 'ACCOUNT_SETTINGS_TOGGLE';
+export function accountSettingsToggle() {
   return {
-    type: ACCOUNT_SETTINGS_HIDE,
+    type: ACCOUNT_SETTINGS_TOGGLE,
   }
 }
 
-export const ACCOUNT_SETTINGS_SHOW = 'ACCOUNT_SETTINGS_SHOW';
-export function accountSettingsShow() {
+export const USER_MENU_TOGGLE = 'USER_MENU_TOGGLE';
+export function userMenuToggle() {
   return {
-    type: ACCOUNT_SETTINGS_SHOW,
+    type: USER_MENU_TOGGLE,
   }
 }
 

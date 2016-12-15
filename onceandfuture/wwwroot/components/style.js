@@ -49,6 +49,7 @@ export const DEFAULT_LINK_STYLE = {
   textDecoration: 'initial',
 };
 
+// TODO: THIS IS GARBAGE.
 export const BUTTON_STYLE = {
   fontSize: ICON_FONT_SIZE,
   float: 'right',
