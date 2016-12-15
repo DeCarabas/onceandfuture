@@ -197,7 +197,7 @@ const RiverSettingsBase = ({
   removeSource,
   setRiverName,
 }) => {
-  const TOP_SPACE = 50;
+  const TOP_SPACE = 45;
   const SIDE_PADDING = 0;
 
   const style = {

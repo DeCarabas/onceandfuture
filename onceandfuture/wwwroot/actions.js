@@ -311,10 +311,17 @@ export function riverSetNameError(index, river, new_name, error) {
   };
 }
 
-export const SHOW_ACCOUNT_SETTINGS = 'SHOW_ACCOUNT_SETTINGS';
-export function showAccountSettings() {
+export const ACCOUNT_SETTINGS_HIDE = 'ACCOUNT_SETTINGS_HIDE';
+export function accountSettingsHide() {
   return {
-    type: SHOW_ACCOUNT_SETTINGS,
+    type: ACCOUNT_SETTINGS_HIDE,
+  }
+}
+
+export const ACCOUNT_SETTINGS_SHOW = 'ACCOUNT_SETTINGS_SHOW';
+export function accountSettingsShow() {
+  return {
+    type: ACCOUNT_SETTINGS_SHOW,
   }
 }
 
@@ -487,7 +494,6 @@ export function refreshAllFeeds(user) {
           }
           if (part.length > 0) {
             const subParts = part.split('|');
-            if (subParts.length > 1) { console.log(subParts[1]); }
             const percent = parseInt(subParts[0], '10');
             const message = subParts.length > 1 ? subParts[1] : '';
             dispatch(refreshAllFeedsProgress(percent, message));

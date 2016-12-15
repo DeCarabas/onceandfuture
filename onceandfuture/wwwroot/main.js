@@ -9,6 +9,9 @@ import { update_key } from './util';
 import {
   RIVER_MODE_AUTO,
 
+  ACCOUNT_SETTINGS_HIDE,
+  ACCOUNT_SETTINGS_SHOW,
+
   ADD_RIVER_ERROR,
   ADD_RIVER_START,
   ADD_RIVER_SUCCESS,
@@ -44,7 +47,6 @@ import {
   REFRESH_ALL_FEEDS_SUCCESS,
   REFRESH_ALL_FEEDS_ERROR,
   REFRESH_ALL_FEEDS_PROGRESS,
-  SHOW_ACCOUNT_SETTINGS,
 
   addRiver,
   refreshRiverList,
@@ -358,7 +360,11 @@ function state_top_info(state = {}, action) {
 function state_account_settings(state = {visible: false}, action) {
   switch(action.type)
   {
-    case SHOW_ACCOUNT_SETTINGS:
+    case ACCOUNT_SETTINGS_HIDE:
+      return Object.assign({}, state, {
+        visible: false,
+      });
+    case ACCOUNT_SETTINGS_SHOW:
       return Object.assign({}, state, {
         visible: true,
       });

@@ -405,7 +405,11 @@
 	  var action = arguments[1];
 	
 	  switch (action.type) {
-	    case _actions.SHOW_ACCOUNT_SETTINGS:
+	    case _actions.ACCOUNT_SETTINGS_HIDE:
+	      return Object.assign({}, state, {
+	        visible: false
+	      });
+	    case _actions.ACCOUNT_SETTINGS_SHOW:
 	      return Object.assign({}, state, {
 	        visible: true
 	      });
@@ -23572,7 +23576,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.RIVER_SET_FEED_MODE = exports.SHOW_ACCOUNT_SETTINGS = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
+	exports.RIVER_SET_FEED_MODE = exports.ACCOUNT_SETTINGS_SHOW = exports.ACCOUNT_SETTINGS_HIDE = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
 	exports.dropRiver = dropRiver;
 	exports.expandFeedUpdate = expandFeedUpdate;
 	exports.collapseFeedUpdate = collapseFeedUpdate;
@@ -23608,7 +23612,8 @@
 	exports.riverSetNameStart = riverSetNameStart;
 	exports.riverSetNameSuccess = riverSetNameSuccess;
 	exports.riverSetNameError = riverSetNameError;
-	exports.showAccountSettings = showAccountSettings;
+	exports.accountSettingsHide = accountSettingsHide;
+	exports.accountSettingsShow = accountSettingsShow;
 	exports.riverSetFeedMode = riverSetFeedMode;
 	exports.riverAddFeed = riverAddFeed;
 	exports.addRiver = addRiver;
@@ -23934,10 +23939,17 @@
 	  };
 	}
 	
-	var SHOW_ACCOUNT_SETTINGS = exports.SHOW_ACCOUNT_SETTINGS = 'SHOW_ACCOUNT_SETTINGS';
-	function showAccountSettings() {
+	var ACCOUNT_SETTINGS_HIDE = exports.ACCOUNT_SETTINGS_HIDE = 'ACCOUNT_SETTINGS_HIDE';
+	function accountSettingsHide() {
 	  return {
-	    type: SHOW_ACCOUNT_SETTINGS
+	    type: ACCOUNT_SETTINGS_HIDE
+	  };
+	}
+	
+	var ACCOUNT_SETTINGS_SHOW = exports.ACCOUNT_SETTINGS_SHOW = 'ACCOUNT_SETTINGS_SHOW';
+	function accountSettingsShow() {
+	  return {
+	    type: ACCOUNT_SETTINGS_SHOW
 	  };
 	}
 	
@@ -24130,9 +24142,6 @@
 	          }
 	          if (part.length > 0) {
 	            var subParts = part.split('|');
-	            if (subParts.length > 1) {
-	              console.log(subParts[1]);
-	            }
 	            var percent = parseInt(subParts[0], '10');
 	            var message = subParts.length > 1 ? subParts[1] : '';
 	            dispatch(refreshAllFeedsProgress(percent, message));
@@ -24314,7 +24323,7 @@
 	      loading = _ref.loading,
 	      load_progress = _ref.load_progress,
 	      onRefresh = _ref.onRefresh,
-	      onShowSettings = _ref.onShowSettings;
+	      onSettingsClick = _ref.onSettingsClick;
 	
 	  var div_style = {
 	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR,
@@ -24371,7 +24380,7 @@
 	      ),
 	      React.createElement(
 	        'div',
-	        { style: refresh_style, onClick: onShowSettings },
+	        { style: refresh_style, onClick: onSettingsClick },
 	        React.createElement(
 	          _tooltip2.default,
 	          { position: 'bottomleft', tip: 'View account settings.' },
@@ -24421,6 +24430,7 @@
 	      show_settings = _ref3.show_settings,
 	      _onRefresh = _ref3.onRefresh,
 	      _onAddRiver = _ref3.onAddRiver,
+	      onHideSettings = _ref3.onHideSettings,
 	      onShowSettings = _ref3.onShowSettings;
 	
 	  var TOTAL_SPACING = _style.COLUMNSPACER * rivers.length;
@@ -24455,7 +24465,12 @@
 	    width: _style.COLUMNWIDTH / 6
 	  });
 	
-	  var accountSettings = show_settings ? React.createElement(_accountsettings2.default, null) : React.createElement('span', null);
+	  var accountSettings = React.createElement('span', null);
+	  var onSettingsClick = onShowSettings;
+	  if (show_settings) {
+	    accountSettings = React.createElement(_accountsettings2.default, null);
+	    onSettingsClick = onHideSettings;
+	  }
 	
 	  return React.createElement(
 	    'div',
@@ -24491,7 +24506,7 @@
 	        onRefresh: function onRefresh() {
 	          return _onRefresh(user);
 	        },
-	        onShowSettings: onShowSettings
+	        onSettingsClick: onSettingsClick
 	      })
 	    ),
 	    accountSettings
@@ -24517,8 +24532,11 @@
 	    onAddRiver: function addIt(user) {
 	      dispatch((0, _actions.addRiver)(user));
 	    },
+	    onHideSettings: function onHideSettings() {
+	      dispatch((0, _actions.accountSettingsHide)());
+	    },
 	    onShowSettings: function onShowSettings() {
-	      dispatch((0, _actions.showAccountSettings)());
+	      dispatch((0, _actions.accountSettingsShow)());
 	    }
 	  };
 	};
@@ -25156,7 +25174,7 @@
 	      removeSource = _ref9.removeSource,
 	      setRiverName = _ref9.setRiverName;
 	
-	  var TOP_SPACE = 50;
+	  var TOP_SPACE = 45;
 	  var SIDE_PADDING = 0;
 	
 	  var style = {

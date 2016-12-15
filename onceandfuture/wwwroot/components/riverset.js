@@ -1,6 +1,6 @@
 var React = require('react');
 import { connect } from 'react-redux';
-import { addRiver, refreshAllFeeds, showAccountSettings } from '../actions';
+import { accountSettingsHide, accountSettingsShow, addRiver, refreshAllFeeds,  } from '../actions';
 import {
   APP_BACKGROUND_COLOR,
   APP_TEXT_COLOR,
@@ -18,7 +18,7 @@ import Tooltip from './tooltip';
 
 const TITLE_HEIGHT = 33; // <div>"Rivers"..."refresh"</div>
 
-const RiverSetBar = ({title, loading, load_progress, onRefresh, onShowSettings}) => {
+const RiverSetBar = ({title, loading, load_progress, onRefresh, onSettingsClick}) => {
   const div_style = {
     backgroundColor: RIVER_TITLE_BACKGROUND_COLOR,
     height: TITLE_HEIGHT,
@@ -60,7 +60,7 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh, onShowSettings})
           <i style={BUTTON_STYLE} onClick={onClick} className="fa fa-refresh" />
         </Tooltip>
       </div>
-      <div style={refresh_style} onClick={onShowSettings}>
+      <div style={refresh_style} onClick={onSettingsClick}>
         <Tooltip position="bottomleft" tip="View account settings.">
           <i style={BUTTON_STYLE} className="fa fa-user" />
         </Tooltip>
@@ -96,6 +96,7 @@ export const RiverSetBase = ({
   show_settings,
   onRefresh,
   onAddRiver,
+  onHideSettings,
   onShowSettings,
 }) => {
   const TOTAL_SPACING = COLUMNSPACER * rivers.length;
@@ -130,7 +131,13 @@ export const RiverSetBase = ({
     width: COLUMNWIDTH / 6,
   });
 
-  const accountSettings = show_settings ? <AccountSettings /> : <span />;
+
+  let accountSettings = <span />;
+  let onSettingsClick = onShowSettings;
+  if (show_settings) {
+    accountSettings = <AccountSettings />;
+    onSettingsClick = onHideSettings;
+  }
 
   return (
     <div style={style}>
@@ -155,7 +162,7 @@ export const RiverSetBase = ({
           loading={loading}
           load_progress={load_progress}
           onRefresh={() => onRefresh(user)}
-          onShowSettings={onShowSettings}
+          onSettingsClick={onSettingsClick}
           />
       </div>
       {accountSettings}
@@ -178,7 +185,8 @@ const vrs_mapDispatchToProps = (dispatch) => {
   return {
     onRefresh: function refreshIt (user) { dispatch(refreshAllFeeds(user)); },
     onAddRiver: function addIt (user) { dispatch(addRiver(user)); },
-    onShowSettings: function() { dispatch(showAccountSettings()); },
+    onHideSettings: function() { dispatch(accountSettingsHide()); },
+    onShowSettings: function() { dispatch(accountSettingsShow()); },
   };
 };
 const RiverSet = connect(
