@@ -26489,24 +26489,8 @@
 	  );
 	};
 	
-	var RefreshFeedsButton = function RefreshFeedsButton(_ref2) {
-	  var onRefresh = _ref2.onRefresh,
-	      loading = _ref2.loading;
-	
-	  var onClick = loading ? function () {} : onRefresh;
-	  var style = {
-	    color: loading ? _style.RIVER_TITLE_BACKGROUND_COLOR : _style.APP_TEXT_COLOR
-	  };
-	
-	  return React.createElement(
-	    'div',
-	    { style: style },
-	    React.createElement(_iconbutton2.default, { onClick: onClick, icon: 'fa-refresh', tip: 'Refresh all feeds.', tipPosition: 'bottomleft' })
-	  );
-	};
-	
-	var Announcer = function Announcer(_ref3) {
-	  var message = _ref3.message;
+	var Announcer = function Announcer(_ref2) {
+	  var message = _ref2.message;
 	
 	  var announcer_style = {
 	    position: 'absolute',
@@ -26529,6 +26513,22 @@
 	      null,
 	      message
 	    )
+	  );
+	};
+	
+	var RefreshFeedsButton = function RefreshFeedsButton(_ref3) {
+	  var onRefresh = _ref3.onRefresh,
+	      loading = _ref3.loading;
+	
+	  var onClick = loading ? function () {} : onRefresh;
+	  var style = {
+	    color: loading ? _style.RIVER_TITLE_BACKGROUND_COLOR : _style.APP_TEXT_COLOR
+	  };
+	
+	  return React.createElement(
+	    'div',
+	    { style: style },
+	    React.createElement(_iconbutton2.default, { onClick: onClick, icon: 'fa-refresh', tip: 'Refresh all feeds.', tipPosition: 'bottomleft' })
 	  );
 	};
 	

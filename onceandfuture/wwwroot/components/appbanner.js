@@ -29,17 +29,6 @@ const BannerTitle = ({title}) => {
   return <div style={head_style}>{title}</div>;
 }
 
-const RefreshFeedsButton = ({onRefresh, loading}) => {
-  const onClick = loading ? () => { } : onRefresh;
-  const style = {
-    color: loading ? RIVER_TITLE_BACKGROUND_COLOR : APP_TEXT_COLOR
-  };
-
-  return <div style={style}>
-    <IconButton onClick={onClick} icon="fa-refresh" tip="Refresh all feeds." tipPosition="bottomleft" />
-  </div>;
-}
-
 const Announcer = ({message}) => {
   const announcer_style = {
     position: 'absolute',
@@ -56,6 +45,17 @@ const Announcer = ({message}) => {
 
   return <div style={announcer_style}><i>{message}</i></div>;
 };
+
+const RefreshFeedsButton = ({onRefresh, loading}) => {
+  const onClick = loading ? () => { } : onRefresh;
+  const style = {
+    color: loading ? RIVER_TITLE_BACKGROUND_COLOR : APP_TEXT_COLOR
+  };
+
+  return <div style={style}>
+    <IconButton onClick={onClick} icon="fa-refresh" tip="Refresh all feeds." tipPosition="bottomleft" />
+  </div>;
+}
 
 const AppBanner = ({title, loading, load_progress, onRefresh}) => {
   const div_style = {
