@@ -24528,6 +24528,9 @@
 	var SIZE_BUTTON_FONT = exports.SIZE_BUTTON_FONT = SIZE_BUTTON_WIDTH - 2 * SIZE_BUTTON_PADDING;
 	
 	// banner
+	var SIZE_BANNER_TITLE_FONT = exports.SIZE_BANNER_TITLE_FONT = 24;
+	var SIZE_BANNER_TITLE_PADDING_HORIZONTAL = exports.SIZE_BANNER_TITLE_PADDING_HORIZONTAL = SIZE_SPACER_WIDTH;
+	var SIZE_BANNER_TITLE_PADDING_VERTICAL = exports.SIZE_BANNER_TITLE_PADDING_VERTICAL = (SIZE_BANNER_HEIGHT - SIZE_BANNER_TITLE_FONT) / 2;
 	var SIZE_ANNOUNCER_HEIGHT = exports.SIZE_ANNOUNCER_HEIGHT = SIZE_BANNER_HEIGHT;
 	var SIZE_ANNOUNCER_FONT = exports.SIZE_ANNOUNCER_FONT = 12;
 	var SIZE_ANNOUNCER_PADDING_VERTICAL = exports.SIZE_ANNOUNCER_PADDING_VERTICAL = (SIZE_BANNER_HEIGHT - SIZE_ANNOUNCER_FONT) / 2;
@@ -26474,12 +26477,16 @@
 	  var title = _ref.title;
 	
 	  var head_style = {
-	    fontSize: _style.RIVER_TITLE_FONT_SIZE,
+	    position: 'absolute',
+	    top: 0, left: 0,
+	    height: _style.SIZE_BANNER_HEIGHT,
+	    paddingTop: _style.SIZE_BANNER_TITLE_PADDING_VERTICAL,
+	    paddingBottom: _style.SIZE_BANNER_TITLE_PADDING_VERTICAL,
+	    paddingLeft: _style.SIZE_BANNER_TITLE_PADDING_HORIZONTAL,
+	    fontSize: _style.SIZE_BANNER_TITLE_FONT,
+	
 	    display: 'inline-block',
-	    paddingLeft: _style.SIZE_SPACER_WIDTH,
-	    fontWeight: 'bold',
-	    paddingTop: 3,
-	    position: 'relative'
+	    fontWeight: 'bold'
 	  };
 	
 	  return React.createElement(

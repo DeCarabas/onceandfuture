@@ -4,6 +4,9 @@ import {
   SIZE_ANNOUNCER_HEIGHT,
   SIZE_ANNOUNCER_PADDING_VERTICAL,
   SIZE_BANNER_HEIGHT,
+  SIZE_BANNER_TITLE_FONT,
+  SIZE_BANNER_TITLE_PADDING_HORIZONTAL,
+  SIZE_BANNER_TITLE_PADDING_VERTICAL,
   SIZE_SPACER_WIDTH,
 
   APP_BACKGROUND_COLOR,
@@ -18,12 +21,16 @@ import UserMenu from './usermenu';
 
 const BannerTitle = ({title}) => {
   const head_style = {
-    fontSize: RIVER_TITLE_FONT_SIZE,
+    position: 'absolute',
+    top: 0, left: 0,
+    height: SIZE_BANNER_HEIGHT,
+    paddingTop: SIZE_BANNER_TITLE_PADDING_VERTICAL,
+    paddingBottom: SIZE_BANNER_TITLE_PADDING_VERTICAL,
+    paddingLeft: SIZE_BANNER_TITLE_PADDING_HORIZONTAL,
+    fontSize: SIZE_BANNER_TITLE_FONT,
+
     display: 'inline-block',
-    paddingLeft: SIZE_SPACER_WIDTH,
     fontWeight: 'bold',
-    paddingTop: 3,
-    position: 'relative',
   };
 
   return <div style={head_style}>{title}</div>;
