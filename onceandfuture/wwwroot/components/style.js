@@ -49,9 +49,6 @@ export const SIZE_BANNER_HEIGHT = 36;                  // A nice height.
 export const SIZE_BUTTON_HEIGHT = SIZE_BANNER_HEIGHT;  // Buttons fill the banner top-to-bottom.
 export const SIZE_BUTTON_WIDTH = SIZE_BUTTON_HEIGHT;   // Buttons are square.
 
-export const SIZE_LARGE_BUTTON_HEIGHT = SIZE_BUTTON_HEIGHT * 2;
-export const SIZE_LARGE_BUTTON_WIDTH = SIZE_BUTTON_WIDTH * 2;
-
 export const SIZE_PROGRESS_HEIGHT = 10;
 export const SIZE_SPACER_HEIGHT = 10;
 export const SIZE_SPACER_WIDTH = 10;
@@ -63,6 +60,15 @@ export const SIZE_COLUMN_WIDTH = 360;
 
 export const SIZE_FULL_IMAGE_GUTTER = 24;
 export const SIZE_FULL_IMAGE_WIDTH = SIZE_COLUMN_WIDTH - (2 * SIZE_FULL_IMAGE_GUTTER);
+
+// Buttons
+export const SIZE_BUTTON_PADDING = 8;
+export const SIZE_BUTTON_FONT = SIZE_BUTTON_WIDTH - (2 * SIZE_BUTTON_PADDING);
+
+// banner
+export const SIZE_ANNOUNCER_HEIGHT = SIZE_BANNER_HEIGHT;
+export const SIZE_ANNOUNCER_FONT = 12;
+export const SIZE_ANNOUNCER_PADDING_VERTICAL = (SIZE_BANNER_HEIGHT - SIZE_ANNOUNCER_FONT) / 2;
 
 // ---- Layers
 

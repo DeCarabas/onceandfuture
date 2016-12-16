@@ -24511,9 +24511,6 @@
 	var SIZE_BUTTON_HEIGHT = exports.SIZE_BUTTON_HEIGHT = SIZE_BANNER_HEIGHT; // Buttons fill the banner top-to-bottom.
 	var SIZE_BUTTON_WIDTH = exports.SIZE_BUTTON_WIDTH = SIZE_BUTTON_HEIGHT; // Buttons are square.
 	
-	var SIZE_LARGE_BUTTON_HEIGHT = exports.SIZE_LARGE_BUTTON_HEIGHT = SIZE_BUTTON_HEIGHT * 2;
-	var SIZE_LARGE_BUTTON_WIDTH = exports.SIZE_LARGE_BUTTON_WIDTH = SIZE_BUTTON_WIDTH * 2;
-	
 	var SIZE_PROGRESS_HEIGHT = exports.SIZE_PROGRESS_HEIGHT = 10;
 	var SIZE_SPACER_HEIGHT = exports.SIZE_SPACER_HEIGHT = 10;
 	var SIZE_SPACER_WIDTH = exports.SIZE_SPACER_WIDTH = 10;
@@ -24525,6 +24522,15 @@
 	
 	var SIZE_FULL_IMAGE_GUTTER = exports.SIZE_FULL_IMAGE_GUTTER = 24;
 	var SIZE_FULL_IMAGE_WIDTH = exports.SIZE_FULL_IMAGE_WIDTH = SIZE_COLUMN_WIDTH - 2 * SIZE_FULL_IMAGE_GUTTER;
+	
+	// Buttons
+	var SIZE_BUTTON_PADDING = exports.SIZE_BUTTON_PADDING = 8;
+	var SIZE_BUTTON_FONT = exports.SIZE_BUTTON_FONT = SIZE_BUTTON_WIDTH - 2 * SIZE_BUTTON_PADDING;
+	
+	// banner
+	var SIZE_ANNOUNCER_HEIGHT = exports.SIZE_ANNOUNCER_HEIGHT = SIZE_BANNER_HEIGHT;
+	var SIZE_ANNOUNCER_FONT = exports.SIZE_ANNOUNCER_FONT = 12;
+	var SIZE_ANNOUNCER_PADDING_VERTICAL = exports.SIZE_ANNOUNCER_PADDING_VERTICAL = (SIZE_BANNER_HEIGHT - SIZE_ANNOUNCER_FONT) / 2;
 	
 	// ---- Layers
 	
@@ -26443,6 +26449,10 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
+	var _iconbutton = __webpack_require__(/*! ./iconbutton */ 221);
+	
+	var _iconbutton2 = _interopRequireDefault(_iconbutton);
+	
 	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 208);
 	
 	var _riverprogress2 = _interopRequireDefault(_riverprogress);
@@ -26450,10 +26460,6 @@
 	var _riversetballoon = __webpack_require__(/*! ./riversetballoon */ 216);
 	
 	var _riversetballoon2 = _interopRequireDefault(_riversetballoon);
-	
-	var _tooltip = __webpack_require__(/*! ./tooltip */ 207);
-	
-	var _tooltip2 = _interopRequireDefault(_tooltip);
 	
 	var _usermenu = __webpack_require__(/*! ./usermenu */ 218);
 	
@@ -26483,39 +26489,63 @@
 	  );
 	};
 	
-	var AppBanner = function AppBanner(_ref2) {
-	  var title = _ref2.title,
-	      loading = _ref2.loading,
-	      load_progress = _ref2.load_progress,
-	      onRefresh = _ref2.onRefresh,
-	      onSettingsClick = _ref2.onSettingsClick;
+	var RefreshFeedsButton = function RefreshFeedsButton(_ref2) {
+	  var onRefresh = _ref2.onRefresh,
+	      loading = _ref2.loading;
+	
+	  var onClick = loading ? function () {} : onRefresh;
+	  var style = {
+	    color: loading ? _style.RIVER_TITLE_BACKGROUND_COLOR : _style.APP_TEXT_COLOR
+	  };
+	
+	  return React.createElement(
+	    'div',
+	    { style: style },
+	    React.createElement(_iconbutton2.default, { onClick: onClick, icon: 'fa-refresh', tip: 'Refresh all feeds.', tipPosition: 'bottomleft' })
+	  );
+	};
+	
+	var Announcer = function Announcer(_ref3) {
+	  var message = _ref3.message;
+	
+	  var announcer_style = {
+	    position: 'absolute',
+	    top: 0,
+	    width: '100%',
+	    height: _style.SIZE_ANNOUNCER_HEIGHT,
+	    fontSize: _style.SIZE_ANNOUNCER_FONT,
+	    paddingTop: _style.SIZE_ANNOUNCER_PADDING_VERTICAL,
+	    paddingBottom: _style.SIZE_ANNOUNCER_PADDING_VERTICAL,
+	
+	    display: 'inline-block',
+	    textAlign: 'center'
+	  };
+	
+	  return React.createElement(
+	    'div',
+	    { style: announcer_style },
+	    React.createElement(
+	      'i',
+	      null,
+	      message
+	    )
+	  );
+	};
+	
+	var AppBanner = function AppBanner(_ref4) {
+	  var title = _ref4.title,
+	      loading = _ref4.loading,
+	      load_progress = _ref4.load_progress,
+	      onRefresh = _ref4.onRefresh;
 	
 	  var div_style = {
 	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR,
 	    height: _style.SIZE_BANNER_HEIGHT
 	  };
 	
-	  var refresh_color = loading ? _style.RIVER_TITLE_BACKGROUND_COLOR : _style.APP_TEXT_COLOR;
-	  var onClick = loading ? function () {} : onRefresh;
-	
 	  var title_button_style = {
 	    display: 'inline-block',
-	    float: 'right',
-	    verticalAlign: 'middle',
-	    textAlign: 'center'
-	  };
-	  var refresh_style = Object.assign({}, title_button_style, {
-	    color: refresh_color
-	  });
-	
-	  var announcer_style = {
-	    display: 'inline-block',
-	    textAlign: 'center',
-	    width: '100%',
-	    verticalAlign: 'middle',
-	    height: 'auto',
-	    position: 'relative',
-	    top: -20
+	    float: 'right'
 	  };
 	
 	  return React.createElement(
@@ -26524,6 +26554,7 @@
 	    React.createElement(
 	      'div',
 	      { style: div_style },
+	      React.createElement(Announcer, { message: load_progress.message }),
 	      React.createElement(BannerTitle, { title: title }),
 	      React.createElement(
 	        'div',
@@ -26532,21 +26563,8 @@
 	      ),
 	      React.createElement(
 	        'div',
-	        { style: refresh_style, onClick: onClick },
-	        React.createElement(
-	          _tooltip2.default,
-	          { position: 'bottomleft', tip: 'Refresh all feeds.' },
-	          React.createElement('i', { style: _style.BUTTON_STYLE, onClick: onClick, className: 'fa fa-refresh' })
-	        )
-	      ),
-	      React.createElement(
-	        'div',
-	        { style: announcer_style },
-	        React.createElement(
-	          'i',
-	          null,
-	          load_progress.message
-	        )
+	        { style: title_button_style },
+	        React.createElement(RefreshFeedsButton, { loading: loading, onRefresh: onRefresh })
 	      )
 	    ),
 	    React.createElement(_riverprogress2.default, {
@@ -26558,6 +26576,58 @@
 	};
 	
 	exports.default = AppBanner;
+
+/***/ },
+/* 221 */
+/*!******************************************!*\
+  !*** ./wwwroot/components/iconbutton.js ***!
+  \******************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _style = __webpack_require__(/*! ./style */ 199);
+	
+	var _tooltip = __webpack_require__(/*! ./tooltip */ 207);
+	
+	var _tooltip2 = _interopRequireDefault(_tooltip);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var React = __webpack_require__(/*! react */ 4);
+	
+	
+	var IconButton = function IconButton(_ref) {
+	  var tip = _ref.tip,
+	      tipPosition = _ref.tipPosition,
+	      icon = _ref.icon,
+	      onClick = _ref.onClick;
+	
+	  var style = {
+	    width: _style.SIZE_BUTTON_WIDTH,
+	    height: _style.SIZE_BUTTON_HEIGHT,
+	    fontSize: _style.SIZE_BUTTON_FONT,
+	    padding: _style.SIZE_BUTTON_PADDING,
+	    cursor: 'pointer'
+	  };
+	  var className = "fa " + icon;
+	
+	  return React.createElement(
+	    'div',
+	    { style: style },
+	    React.createElement(
+	      _tooltip2.default,
+	      { position: tipPosition, tip: tip },
+	      React.createElement('i', { onClick: onClick, className: className })
+	    )
+	  );
+	};
+	
+	exports.default = IconButton;
 
 /***/ }
 /******/ ]);
