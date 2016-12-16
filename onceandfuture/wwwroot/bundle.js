@@ -24347,7 +24347,7 @@
 	  var head_style = {
 	    fontSize: _style.RIVER_TITLE_FONT_SIZE,
 	    display: 'inline-block',
-	    paddingLeft: _style.COLUMNSPACER,
+	    paddingLeft: _style.SIZE_SPACER_WIDTH,
 	    fontWeight: 'bold',
 	    paddingTop: 3,
 	    position: 'relative'
@@ -24419,65 +24419,68 @@
 	  );
 	};
 	
-	var AddRiverButton = exports.AddRiverButton = function AddRiverButton(_ref2) {
-	  var onAddRiver = _ref2.onAddRiver;
+	var columnLeft = function columnLeft(index) {
+	  return index * (_style.SIZE_COLUMN_WIDTH + _style.SIZE_SPACER_WIDTH) + _style.SIZE_SPACER_WIDTH;
+	};
 	
-	  var add_button_style = {
+	var AddRiverButton = exports.AddRiverButton = function AddRiverButton(_ref2) {
+	  var index = _ref2.index,
+	      onAddRiver = _ref2.onAddRiver;
+	
+	  var column_style = {
+	    position: 'absolute',
+	    top: _style.SIZE_COLUMN_TOP,
+	    left: columnLeft(index),
+	    width: _style.SIZE_BUTTON_WIDTH,
+	    height: _style.SIZE_BUTTON_HEIGHT,
+	    fontSize: _style.SIZE_BUTTON_HEIGHT,
+	
 	    textAlign: 'center',
-	    fontSize: 'xx-large',
-	    marginTop: 13,
+	    paddingTop: 13,
 	    cursor: 'pointer'
 	  };
 	
 	  return React.createElement(
 	    'div',
-	    { style: add_button_style, onClick: onAddRiver },
+	    { style: column_style, onClick: onAddRiver },
 	    React.createElement('i', { className: 'fa fa-plus-square' })
 	  );
 	};
 	
-	var RiverSetBase = exports.RiverSetBase = function RiverSetBase(_ref3) {
-	  var user = _ref3.user,
-	      rivers = _ref3.rivers,
-	      loading = _ref3.loading,
-	      load_progress = _ref3.load_progress,
-	      show_settings = _ref3.show_settings,
-	      _onRefresh = _ref3.onRefresh,
-	      _onAddRiver = _ref3.onAddRiver,
-	      onHideSettings = _ref3.onHideSettings,
-	      onShowSettings = _ref3.onShowSettings;
-	
-	  var TOTAL_SPACING = _style.COLUMNSPACER * rivers.length;
-	  var TOTAL_COLUMNS = _style.COLUMNWIDTH * rivers.length;
-	  var TOP_BAR_HEIGHT = 43;
+	var RiverColumnHolder = function RiverColumnHolder(_ref3) {
+	  var index = _ref3.index;
 	
 	  var style = {
-	    position: 'relative',
-	    height: '100%'
+	    left: columnLeft(index),
+	    width: _style.SIZE_COLUMN_WIDTH,
+	    position: 'absolute',
+	    top: _style.SIZE_COLUMN_TOP,
+	    bottom: _style.SIZE_SPACER_HEIGHT
 	  };
+	  return React.createElement(
+	    'div',
+	    { style: style },
+	    React.createElement(_rivercolumn2.default, { index: index })
+	  );
+	};
+	
+	var RiverSetBase = exports.RiverSetBase = function RiverSetBase(_ref4) {
+	  var user = _ref4.user,
+	      rivers = _ref4.rivers,
+	      loading = _ref4.loading,
+	      load_progress = _ref4.load_progress,
+	      show_settings = _ref4.show_settings,
+	      _onRefresh = _ref4.onRefresh,
+	      _onAddRiver = _ref4.onAddRiver,
+	      onHideSettings = _ref4.onHideSettings,
+	      onShowSettings = _ref4.onShowSettings;
+	
 	  var top_bar_style = {
 	    position: 'fixed',
 	    top: 0, left: 0, width: '100%',
-	    zIndex: 10,
-	    height: TOP_BAR_HEIGHT
+	    zIndex: _style.Z_INDEX_BANNER,
+	    height: _style.SIZE_PAGE_HEADER
 	  };
-	  var column_set_style = {
-	    padding: 10,
-	    position: 'relative',
-	    width: TOTAL_SPACING + TOTAL_COLUMNS,
-	    height: '100%'
-	  };
-	  var column_style = {
-	    width: _style.COLUMNWIDTH,
-	    position: 'absolute',
-	    top: 0,
-	    marginTop: TOP_BAR_HEIGHT + _style.COLUMNSPACER,
-	    bottom: _style.COLUMNSPACER
-	  };
-	  var add_river_style = Object.assign({}, column_style, {
-	    left: rivers.length * (_style.COLUMNWIDTH + _style.COLUMNSPACER),
-	    width: _style.COLUMNWIDTH / 6
-	  });
 	
 	  var accountSettings = React.createElement('span', null);
 	  var onSettingsClick = onShowSettings;
@@ -24488,28 +24491,7 @@
 	
 	  return React.createElement(
 	    'div',
-	    { style: style },
-	    React.createElement(
-	      'div',
-	      { key: 'river_set', style: column_set_style },
-	      rivers.map(function (r, index) {
-	        var c_style = Object.assign({}, column_style, {
-	          left: index * (_style.COLUMNWIDTH + _style.COLUMNSPACER) + _style.COLUMNSPACER
-	        });
-	        return React.createElement(
-	          'div',
-	          { style: c_style, key: r.name },
-	          React.createElement(_rivercolumn2.default, { index: index })
-	        );
-	      }),
-	      React.createElement(
-	        'div',
-	        { style: add_river_style },
-	        React.createElement(AddRiverButton, { onAddRiver: function onAddRiver() {
-	            return _onAddRiver(user);
-	          } })
-	      )
-	    ),
+	    null,
 	    React.createElement(
 	      'div',
 	      { style: top_bar_style },
@@ -24522,6 +24504,16 @@
 	        },
 	        onSettingsClick: onSettingsClick
 	      })
+	    ),
+	    React.createElement(
+	      'div',
+	      null,
+	      rivers.map(function (r, index) {
+	        return React.createElement(RiverColumnHolder, { index: index, key: 'r' + index });
+	      }),
+	      React.createElement(AddRiverButton, { index: rivers.length, onAddRiver: function onAddRiver() {
+	          return _onAddRiver(user);
+	        } })
 	    ),
 	    accountSettings
 	  );
@@ -24602,6 +24594,39 @@
 	
 	// ---- Sizes
 	
+	// ---------------------------------------------------------------------- -
+	//    RIVER                                                     | R | U | 36px  SIZE_BANNER_HEIGHT
+	// ---------------------------------------------------------------------- -
+	// =====================================                                  10px  SIZE_PROGRESS_HEIGHT
+	//  10px              10px              10px                              10px  SIZE_SPACER_HEIGHT
+	// ||     360px      ||      360px     ||
+	//   +--------------+  +--------------+                                         SIZE_COLUMN_TOP
+	//   |              |  |              |
+	var SIZE_BANNER_HEIGHT = exports.SIZE_BANNER_HEIGHT = 36; // A nice height.
+	var SIZE_BUTTON_HEIGHT = exports.SIZE_BUTTON_HEIGHT = SIZE_BANNER_HEIGHT; // Buttons fill the banner top-to-bottom.
+	var SIZE_BUTTON_WIDTH = exports.SIZE_BUTTON_WIDTH = SIZE_BUTTON_HEIGHT; // Buttons are square.
+	
+	var SIZE_LARGE_BUTTON_HEIGHT = exports.SIZE_LARGE_BUTTON_HEIGHT = SIZE_BUTTON_HEIGHT * 2;
+	var SIZE_LARGE_BUTTON_WIDTH = exports.SIZE_LARGE_BUTTON_WIDTH = SIZE_BUTTON_WIDTH * 2;
+	
+	var SIZE_PROGRESS_HEIGHT = exports.SIZE_PROGRESS_HEIGHT = 10;
+	var SIZE_SPACER_HEIGHT = exports.SIZE_SPACER_HEIGHT = 10;
+	var SIZE_SPACER_WIDTH = exports.SIZE_SPACER_WIDTH = 10;
+	
+	var SIZE_PAGE_HEADER = exports.SIZE_PAGE_HEADER = SIZE_BANNER_HEIGHT + SIZE_PROGRESS_HEIGHT;
+	
+	var SIZE_COLUMN_TOP = exports.SIZE_COLUMN_TOP = SIZE_PAGE_HEADER + SIZE_SPACER_HEIGHT;
+	var SIZE_COLUMN_WIDTH = exports.SIZE_COLUMN_WIDTH = 360;
+	
+	var SIZE_FULL_IMAGE_GUTTER = exports.SIZE_FULL_IMAGE_GUTTER = 24;
+	var SIZE_FULL_IMAGE_WIDTH = exports.SIZE_FULL_IMAGE_WIDTH = SIZE_COLUMN_WIDTH - 2 * SIZE_FULL_IMAGE_GUTTER;
+	
+	// ---- Layers
+	
+	var Z_INDEX_BASE = exports.Z_INDEX_BASE = 0;
+	var Z_INDEX_BANNER = exports.Z_INDEX_BANNER = 10;
+	
+	// KILL THESE
 	var COLUMNWIDTH = exports.COLUMNWIDTH = 350;
 	var FULL_IMAGE_WIDTH = exports.FULL_IMAGE_WIDTH = 300;
 	var COLUMNSPACER = exports.COLUMNSPACER = 10;

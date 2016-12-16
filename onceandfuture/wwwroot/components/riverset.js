@@ -2,11 +2,19 @@ var React = require('react');
 import { connect } from 'react-redux';
 import { accountSettingsHide, accountSettingsShow, addRiver, refreshAllFeeds,  } from '../actions';
 import {
+  SIZE_BUTTON_WIDTH,
+  SIZE_BUTTON_HEIGHT,
+  SIZE_COLUMN_TOP,
+  SIZE_COLUMN_WIDTH,
+  SIZE_SPACER_WIDTH,
+  SIZE_SPACER_HEIGHT,
+  SIZE_PAGE_HEADER,
+
+  Z_INDEX_BANNER,
+
   APP_BACKGROUND_COLOR,
   APP_TEXT_COLOR,
   BUTTON_STYLE,
-  COLUMNSPACER,
-  COLUMNWIDTH,
   RIVER_TITLE_FONT_SIZE,
   RIVER_TITLE_BACKGROUND_COLOR,
 } from './style';
@@ -27,7 +35,7 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh, onSettingsClick}
   const head_style = {
     fontSize: RIVER_TITLE_FONT_SIZE,
     display: 'inline-block',
-    paddingLeft: COLUMNSPACER,
+    paddingLeft: SIZE_SPACER_WIDTH,
     fontWeight: 'bold',
     paddingTop: 3,
     position: 'relative',
@@ -77,18 +85,39 @@ const RiverSetBar = ({title, loading, load_progress, onRefresh, onSettingsClick}
   </div>;
 };
 
-export const AddRiverButton = ({onAddRiver}) => {
-  const add_button_style = {
+const columnLeft =(index) => index * (SIZE_COLUMN_WIDTH + SIZE_SPACER_WIDTH) + SIZE_SPACER_WIDTH;
+
+export const AddRiverButton = ({index, onAddRiver}) => {
+  const column_style = {
+    position: 'absolute',
+    top: SIZE_COLUMN_TOP,
+    left: columnLeft(index),
+    width: SIZE_BUTTON_WIDTH,
+    height: SIZE_BUTTON_HEIGHT,
+    fontSize: SIZE_BUTTON_HEIGHT,
+
     textAlign: 'center',
-    fontSize: 'xx-large',
-    marginTop: 13,
+    paddingTop: 13,
     cursor: 'pointer',
   };
 
-  return <div style={add_button_style} onClick={onAddRiver}>
+  return <div style={column_style} onClick={onAddRiver}>
       <i className="fa fa-plus-square" />
   </div>;
 };
+
+const RiverColumnHolder = ({index}) => {
+  const style = {
+    left: columnLeft(index),
+    width: SIZE_COLUMN_WIDTH,
+    position: 'absolute',
+    top: SIZE_COLUMN_TOP,
+    bottom: SIZE_SPACER_HEIGHT,
+  };
+  return <div style={style}>
+    <RiverColumn index={index} />
+  </div>;
+}
 
 export const RiverSetBase = ({
   user,
@@ -101,38 +130,12 @@ export const RiverSetBase = ({
   onHideSettings,
   onShowSettings,
 }) => {
-  const TOTAL_SPACING = COLUMNSPACER * rivers.length;
-  const TOTAL_COLUMNS = COLUMNWIDTH * rivers.length;
-  const TOP_BAR_HEIGHT = 43;
-
-  const style = {
-    position: 'relative',
-    height: '100%',
-  };
   const top_bar_style = {
     position: 'fixed',
     top: 0, left: 0, width: '100%',
-    zIndex: 10,
-    height: TOP_BAR_HEIGHT,
+    zIndex: Z_INDEX_BANNER,
+    height: SIZE_PAGE_HEADER,
   };
-  const column_set_style = {
-    padding: 10,
-    position: 'relative',
-    width: TOTAL_SPACING + TOTAL_COLUMNS,
-    height: '100%',
-  };
-  const column_style = {
-    width: COLUMNWIDTH,
-    position: 'absolute',
-    top: 0,
-    marginTop: TOP_BAR_HEIGHT + COLUMNSPACER,
-    bottom: COLUMNSPACER,
-  };
-  const add_river_style = Object.assign({}, column_style, {
-    left: rivers.length * (COLUMNWIDTH + COLUMNSPACER),
-    width: COLUMNWIDTH / 6,
-  });
-
 
   let accountSettings = <span />;
   let onSettingsClick = onShowSettings;
@@ -142,22 +145,7 @@ export const RiverSetBase = ({
   }
 
   return (
-    <div style={style}>
-      <div key='river_set' style={column_set_style}>
-      {
-        rivers.map((r, index) => {
-          const c_style = Object.assign({}, column_style, {
-            left: index * (COLUMNWIDTH + COLUMNSPACER) + COLUMNSPACER,
-          });
-          return <div style={c_style} key={r.name}>
-            <RiverColumn index={index} />
-          </div>;
-        })
-      }
-      <div style={add_river_style}>
-        <AddRiverButton onAddRiver={() => onAddRiver(user)} />
-      </div>
-      </div>
+    <div>
       <div style={top_bar_style}>
         <RiverSetBar
           title='Rivers'
@@ -167,6 +155,11 @@ export const RiverSetBase = ({
           onSettingsClick={onSettingsClick}
           />
       </div>
+      <div>
+        { rivers.map((r, index) => <RiverColumnHolder index={index} key={'r'+index} />) }
+        <AddRiverButton index={rivers.length} onAddRiver={() => onAddRiver(user)} />
+      </div>
+
       {accountSettings}
     </div>
   );

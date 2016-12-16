@@ -37,6 +37,39 @@ export const ICON_FONT_SIZE = 18;
 
 // ---- Sizes
 
+// ---------------------------------------------------------------------- -
+//    RIVER                                                     | R | U | 36px  SIZE_BANNER_HEIGHT
+// ---------------------------------------------------------------------- -
+// =====================================                                  10px  SIZE_PROGRESS_HEIGHT
+//  10px              10px              10px                              10px  SIZE_SPACER_HEIGHT
+// ||     360px      ||      360px     ||
+//   +--------------+  +--------------+                                         SIZE_COLUMN_TOP
+//   |              |  |              |
+export const SIZE_BANNER_HEIGHT = 36;                  // A nice height.
+export const SIZE_BUTTON_HEIGHT = SIZE_BANNER_HEIGHT;  // Buttons fill the banner top-to-bottom.
+export const SIZE_BUTTON_WIDTH = SIZE_BUTTON_HEIGHT;   // Buttons are square.
+
+export const SIZE_LARGE_BUTTON_HEIGHT = SIZE_BUTTON_HEIGHT * 2;
+export const SIZE_LARGE_BUTTON_WIDTH = SIZE_BUTTON_WIDTH * 2;
+
+export const SIZE_PROGRESS_HEIGHT = 10;
+export const SIZE_SPACER_HEIGHT = 10;
+export const SIZE_SPACER_WIDTH = 10;
+
+export const SIZE_PAGE_HEADER = SIZE_BANNER_HEIGHT + SIZE_PROGRESS_HEIGHT;
+
+export const SIZE_COLUMN_TOP = SIZE_PAGE_HEADER + SIZE_SPACER_HEIGHT;
+export const SIZE_COLUMN_WIDTH = 360;
+
+export const SIZE_FULL_IMAGE_GUTTER = 24;
+export const SIZE_FULL_IMAGE_WIDTH = SIZE_COLUMN_WIDTH - (2 * SIZE_FULL_IMAGE_GUTTER);
+
+// ---- Layers
+
+export const Z_INDEX_BASE   = 0;
+export const Z_INDEX_BANNER = 10;
+
+// KILL THESE
 export const COLUMNWIDTH = 350;
 export const FULL_IMAGE_WIDTH = 300;
 export const COLUMNSPACER = 10;
