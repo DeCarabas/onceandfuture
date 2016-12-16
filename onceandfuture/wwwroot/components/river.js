@@ -27,7 +27,7 @@ function modalForRiver(river, index, dismiss, dispatch) {
   }
 };
 
-const RiverColumnBase = ({
+const RiverBase = ({
   rivers,
   index,
   onShowSettings,
@@ -96,11 +96,11 @@ const vrc_mapDispatchToProps = (dispatch) => {
   };
 };
 
-const RiverColumn = connect(
+const River = connect(
   vrc_mapStateToProps,
   vrc_mapDispatchToProps
 )(
-  RiverColumnBase
+  RiverBase
 );
 
-export default RiverColumn;
+export default River;

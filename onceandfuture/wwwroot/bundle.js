@@ -24306,9 +24306,9 @@
 	
 	var _accountsettings2 = _interopRequireDefault(_accountsettings);
 	
-	var _rivercolumn = __webpack_require__(/*! ./rivercolumn */ 202);
+	var _river = __webpack_require__(/*! ./river */ 219);
 	
-	var _rivercolumn2 = _interopRequireDefault(_rivercolumn);
+	var _river2 = _interopRequireDefault(_river);
 	
 	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 208);
 	
@@ -24447,7 +24447,7 @@
 	  );
 	};
 	
-	var RiverColumnHolder = function RiverColumnHolder(_ref3) {
+	var RiverColumn = function RiverColumn(_ref3) {
 	  var index = _ref3.index;
 	
 	  var style = {
@@ -24460,7 +24460,7 @@
 	  return React.createElement(
 	    'div',
 	    { style: style },
-	    React.createElement(_rivercolumn2.default, { index: index })
+	    React.createElement(_river2.default, { index: index })
 	  );
 	};
 	
@@ -24509,7 +24509,7 @@
 	      'div',
 	      null,
 	      rivers.map(function (r, index) {
-	        return React.createElement(RiverColumnHolder, { index: index, key: 'r' + index });
+	        return React.createElement(RiverColumn, { index: index, key: 'r' + index });
 	      }),
 	      React.createElement(AddRiverButton, { index: rivers.length, onAddRiver: function onAddRiver() {
 	          return _onAddRiver(user);
@@ -24893,149 +24893,7 @@
 	}(React.Component);
 
 /***/ },
-/* 202 */
-/*!*******************************************!*\
-  !*** ./wwwroot/components/rivercolumn.js ***!
-  \*******************************************/
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-	
-	var _react = __webpack_require__(/*! react */ 4);
-	
-	var _react2 = _interopRequireDefault(_react);
-	
-	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
-	
-	var _style = __webpack_require__(/*! ./style */ 199);
-	
-	var _riverballoon = __webpack_require__(/*! ./riverballoon */ 203);
-	
-	var _riverballoon2 = _interopRequireDefault(_riverballoon);
-	
-	var _riversettings = __webpack_require__(/*! ./riversettings */ 204);
-	
-	var _riversettings2 = _interopRequireDefault(_riversettings);
-	
-	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 208);
-	
-	var _riverprogress2 = _interopRequireDefault(_riverprogress);
-	
-	var _rivertitle = __webpack_require__(/*! ./rivertitle */ 209);
-	
-	var _rivertitle2 = _interopRequireDefault(_rivertitle);
-	
-	var _riverupdates = __webpack_require__(/*! ./riverupdates */ 210);
-	
-	var _riverupdates2 = _interopRequireDefault(_riverupdates);
-	
-	var _actions = __webpack_require__(/*! ../actions */ 196);
-	
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	function modalForRiver(river, index, dismiss, dispatch) {
-	  var modal = river.modal || {};
-	  switch (modal.kind) {
-	    case 'loading':
-	      return _react2.default.createElement(_riverprogress2.default, { percent: modal.percent });
-	    case 'settings':
-	      return _react2.default.createElement(_riversettings2.default, { river: river, index: index });
-	    case 'bubble':
-	      return _react2.default.createElement(_riverballoon2.default, { info: modal.info, dismiss: dismiss, dispatchAction: dispatch });
-	    default:
-	      return _react2.default.createElement('span', null);
-	  }
-	};
-	
-	var RiverColumnBase = function RiverColumnBase(_ref) {
-	  var rivers = _ref.rivers,
-	      index = _ref.index,
-	      onShowSettings = _ref.onShowSettings,
-	      onHideSettings = _ref.onHideSettings,
-	      onDismissBalloon = _ref.onDismissBalloon,
-	      dispatch = _ref.dispatch,
-	      onDropRiver = _ref.onDropRiver;
-	
-	  var style = {
-	    backgroundColor: _style.RIVER_COLUMN_BACKGROUND_COLOR,
-	    borderRadius: 10,
-	    border: '1px solid ' + _style.COLOR_VERY_DARK,
-	    height: '100%',
-	    width: '100%'
-	  };
-	
-	  var river = rivers[index] || {};
-	  var modal = modalForRiver(river, index, onDismissBalloon(index, river), dispatch);
-	
-	  var onDragOver = function onDragOver(ev) {
-	    ev.preventDefault();
-	    ev.dataTransfer.dropEffect = "move";
-	  };
-	
-	  var onDrop = function onDrop(ev) {
-	    ev.preventDefault();
-	    var source_river = ev.dataTransfer.getData('river');
-	    if (source_river) {
-	      onDropRiver(index, river, source_river);
-	    }
-	  };
-	
-	  return _react2.default.createElement(
-	    'div',
-	    { style: style, onDragOver: onDragOver, onDrop: onDrop },
-	    _react2.default.createElement(_rivertitle2.default, {
-	      river: river,
-	      onShowSettings: onShowSettings(index, river),
-	      onHideSettings: onHideSettings(index)
-	    }),
-	    modal,
-	    _react2.default.createElement(_riverupdates2.default, { river: river, index: index })
-	  );
-	};
-	
-	// VisibleRiverColumn
-	//
-	var vrc_mapStateToProps = function vrc_mapStateToProps(state) {
-	  return {
-	    rivers: state.rivers
-	  };
-	};
-	var vrc_mapDispatchToProps = function vrc_mapDispatchToProps(dispatch) {
-	  return {
-	    onShowSettings: function onShowSettings(i, r) {
-	      return function () {
-	        dispatch((0, _actions.showRiverSettings)(i));
-	        if (r.sources === null) {
-	          dispatch((0, _actions.riverGetFeedSources)(i, r));
-	        }
-	      };
-	    },
-	    onHideSettings: function onHideSettings(i) {
-	      return function () {
-	        return dispatch((0, _actions.hideRiverSettings)(i));
-	      };
-	    },
-	    onDismissBalloon: function onDismissBalloon(i) {
-	      return function () {
-	        return dispatch((0, _actions.dismissRiverBalloon)(i));
-	      };
-	    },
-	    dispatch: dispatch,
-	    onDropRiver: function onDropRiver(target_index, target_river, dragged_river_id) {
-	      return dispatch((0, _actions.dropRiver)(target_index, target_river, dragged_river_id));
-	    }
-	  };
-	};
-	
-	var RiverColumn = (0, _reactRedux.connect)(vrc_mapStateToProps, vrc_mapDispatchToProps)(RiverColumnBase);
-	
-	exports.default = RiverColumn;
-
-/***/ },
+/* 202 */,
 /* 203 */
 /*!********************************************!*\
   !*** ./wwwroot/components/riverballoon.js ***!
@@ -26521,6 +26379,149 @@
 	var UserMenu = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(UserMenuBase);
 	
 	exports.default = UserMenu;
+
+/***/ },
+/* 219 */
+/*!*************************************!*\
+  !*** ./wwwroot/components/river.js ***!
+  \*************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
+	
+	var _style = __webpack_require__(/*! ./style */ 199);
+	
+	var _riverballoon = __webpack_require__(/*! ./riverballoon */ 203);
+	
+	var _riverballoon2 = _interopRequireDefault(_riverballoon);
+	
+	var _riversettings = __webpack_require__(/*! ./riversettings */ 204);
+	
+	var _riversettings2 = _interopRequireDefault(_riversettings);
+	
+	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 208);
+	
+	var _riverprogress2 = _interopRequireDefault(_riverprogress);
+	
+	var _rivertitle = __webpack_require__(/*! ./rivertitle */ 209);
+	
+	var _rivertitle2 = _interopRequireDefault(_rivertitle);
+	
+	var _riverupdates = __webpack_require__(/*! ./riverupdates */ 210);
+	
+	var _riverupdates2 = _interopRequireDefault(_riverupdates);
+	
+	var _actions = __webpack_require__(/*! ../actions */ 196);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	function modalForRiver(river, index, dismiss, dispatch) {
+	  var modal = river.modal || {};
+	  switch (modal.kind) {
+	    case 'loading':
+	      return _react2.default.createElement(_riverprogress2.default, { percent: modal.percent });
+	    case 'settings':
+	      return _react2.default.createElement(_riversettings2.default, { river: river, index: index });
+	    case 'bubble':
+	      return _react2.default.createElement(_riverballoon2.default, { info: modal.info, dismiss: dismiss, dispatchAction: dispatch });
+	    default:
+	      return _react2.default.createElement('span', null);
+	  }
+	};
+	
+	var RiverBase = function RiverBase(_ref) {
+	  var rivers = _ref.rivers,
+	      index = _ref.index,
+	      onShowSettings = _ref.onShowSettings,
+	      onHideSettings = _ref.onHideSettings,
+	      onDismissBalloon = _ref.onDismissBalloon,
+	      dispatch = _ref.dispatch,
+	      onDropRiver = _ref.onDropRiver;
+	
+	  var style = {
+	    backgroundColor: _style.RIVER_COLUMN_BACKGROUND_COLOR,
+	    borderRadius: 10,
+	    border: '1px solid ' + _style.COLOR_VERY_DARK,
+	    height: '100%',
+	    width: '100%'
+	  };
+	
+	  var river = rivers[index] || {};
+	  var modal = modalForRiver(river, index, onDismissBalloon(index, river), dispatch);
+	
+	  var onDragOver = function onDragOver(ev) {
+	    ev.preventDefault();
+	    ev.dataTransfer.dropEffect = "move";
+	  };
+	
+	  var onDrop = function onDrop(ev) {
+	    ev.preventDefault();
+	    var source_river = ev.dataTransfer.getData('river');
+	    if (source_river) {
+	      onDropRiver(index, river, source_river);
+	    }
+	  };
+	
+	  return _react2.default.createElement(
+	    'div',
+	    { style: style, onDragOver: onDragOver, onDrop: onDrop },
+	    _react2.default.createElement(_rivertitle2.default, {
+	      river: river,
+	      onShowSettings: onShowSettings(index, river),
+	      onHideSettings: onHideSettings(index)
+	    }),
+	    modal,
+	    _react2.default.createElement(_riverupdates2.default, { river: river, index: index })
+	  );
+	};
+	
+	// VisibleRiverColumn
+	//
+	var vrc_mapStateToProps = function vrc_mapStateToProps(state) {
+	  return {
+	    rivers: state.rivers
+	  };
+	};
+	var vrc_mapDispatchToProps = function vrc_mapDispatchToProps(dispatch) {
+	  return {
+	    onShowSettings: function onShowSettings(i, r) {
+	      return function () {
+	        dispatch((0, _actions.showRiverSettings)(i));
+	        if (r.sources === null) {
+	          dispatch((0, _actions.riverGetFeedSources)(i, r));
+	        }
+	      };
+	    },
+	    onHideSettings: function onHideSettings(i) {
+	      return function () {
+	        return dispatch((0, _actions.hideRiverSettings)(i));
+	      };
+	    },
+	    onDismissBalloon: function onDismissBalloon(i) {
+	      return function () {
+	        return dispatch((0, _actions.dismissRiverBalloon)(i));
+	      };
+	    },
+	    dispatch: dispatch,
+	    onDropRiver: function onDropRiver(target_index, target_river, dragged_river_id) {
+	      return dispatch((0, _actions.dropRiver)(target_index, target_river, dragged_river_id));
+	    }
+	  };
+	};
+	
+	var River = (0, _reactRedux.connect)(vrc_mapStateToProps, vrc_mapDispatchToProps)(RiverBase);
+	
+	exports.default = River;
 
 /***/ }
 /******/ ]);

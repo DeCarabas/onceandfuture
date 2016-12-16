@@ -19,7 +19,7 @@ import {
   RIVER_TITLE_BACKGROUND_COLOR,
 } from './style';
 import AccountSettings from './accountsettings';
-import RiverColumn from './rivercolumn';
+import River from './river';
 import RiverProgress from './riverprogress';
 import RiverSetBalloon from './riversetballoon';
 import Tooltip from './tooltip';
@@ -106,7 +106,7 @@ export const AddRiverButton = ({index, onAddRiver}) => {
   </div>;
 };
 
-const RiverColumnHolder = ({index}) => {
+const RiverColumn = ({index}) => {
   const style = {
     left: columnLeft(index),
     width: SIZE_COLUMN_WIDTH,
@@ -115,7 +115,7 @@ const RiverColumnHolder = ({index}) => {
     bottom: SIZE_SPACER_HEIGHT,
   };
   return <div style={style}>
-    <RiverColumn index={index} />
+    <River index={index} />
   </div>;
 }
 
@@ -156,7 +156,7 @@ export const RiverSetBase = ({
           />
       </div>
       <div>
-        { rivers.map((r, index) => <RiverColumnHolder index={index} key={'r'+index} />) }
+        { rivers.map((r, index) => <RiverColumn index={index} key={'r'+index} />) }
         <AddRiverButton index={rivers.length} onAddRiver={() => onAddRiver(user)} />
       </div>
 
