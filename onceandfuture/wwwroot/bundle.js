@@ -24255,15 +24255,10 @@
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	// AppRoot
-	//
-	var AppRoot = function AppRoot() {
-	  var appstyle = {
-	    color: _style.APP_TEXT_COLOR,
-	    fontFamily: _style.SANS_FONTS,
-	    fontSize: _style.TEXT_FONT_SIZE,
-	    height: '100%'
-	  };
+	// We have this thing because we need the background color to scroll. I think normally we'd just put the background
+	// color on the <body> element? But because we use this whole style in JS thing I don't want to have two definitions
+	// for colors. (I suppose I could add one of those fancy tools that actually mixes real CSS and JS, but not yet.)
+	var AppBackground = function AppBackground() {
 	  var bgstyle = {
 	    backgroundColor: _style.APP_BACKGROUND_COLOR,
 	    position: 'fixed',
@@ -24272,10 +24267,20 @@
 	    width: '100%',
 	    height: '100%'
 	  };
+	  return _react2.default.createElement('div', { style: bgstyle });
+	};
+	
+	var AppRoot = function AppRoot() {
+	  var appstyle = {
+	    color: _style.APP_TEXT_COLOR,
+	    fontFamily: _style.SANS_FONTS,
+	    fontSize: _style.TEXT_FONT_SIZE,
+	    height: '100%'
+	  };
 	  return _react2.default.createElement(
 	    'div',
 	    { style: appstyle },
-	    _react2.default.createElement('div', { style: bgstyle }),
+	    _react2.default.createElement(AppBackground, null),
 	    _react2.default.createElement(_riverset2.default, null)
 	  );
 	};
@@ -24294,7 +24299,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.RiverSetBase = exports.AddRiverButton = undefined;
+	exports.AddRiverButton = undefined;
 	
 	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
 	
@@ -24306,126 +24311,26 @@
 	
 	var _accountsettings2 = _interopRequireDefault(_accountsettings);
 	
+	var _appbanner = __webpack_require__(/*! ./appbanner */ 220);
+	
+	var _appbanner2 = _interopRequireDefault(_appbanner);
+	
 	var _river = __webpack_require__(/*! ./river */ 219);
 	
 	var _river2 = _interopRequireDefault(_river);
-	
-	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 208);
-	
-	var _riverprogress2 = _interopRequireDefault(_riverprogress);
-	
-	var _riversetballoon = __webpack_require__(/*! ./riversetballoon */ 216);
-	
-	var _riversetballoon2 = _interopRequireDefault(_riversetballoon);
-	
-	var _tooltip = __webpack_require__(/*! ./tooltip */ 207);
-	
-	var _tooltip2 = _interopRequireDefault(_tooltip);
-	
-	var _usermenu = __webpack_require__(/*! ./usermenu */ 218);
-	
-	var _usermenu2 = _interopRequireDefault(_usermenu);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var React = __webpack_require__(/*! react */ 4);
 	
 	
-	var TITLE_HEIGHT = 33; // <div>"Rivers"..."refresh"</div>
-	
-	var RiverSetBar = function RiverSetBar(_ref) {
-	  var title = _ref.title,
-	      loading = _ref.loading,
-	      load_progress = _ref.load_progress,
-	      onRefresh = _ref.onRefresh,
-	      onSettingsClick = _ref.onSettingsClick;
-	
-	  var div_style = {
-	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR,
-	    height: TITLE_HEIGHT
-	  };
-	  var head_style = {
-	    fontSize: _style.RIVER_TITLE_FONT_SIZE,
-	    display: 'inline-block',
-	    paddingLeft: _style.SIZE_SPACER_WIDTH,
-	    fontWeight: 'bold',
-	    paddingTop: 3,
-	    position: 'relative'
-	  };
-	
-	  var refresh_color = loading ? _style.RIVER_TITLE_BACKGROUND_COLOR : _style.APP_TEXT_COLOR;
-	  var onClick = loading ? function () {} : onRefresh;
-	
-	  var title_button_style = {
-	    display: 'inline-block',
-	    float: 'right',
-	    verticalAlign: 'middle',
-	    textAlign: 'center'
-	  };
-	  var refresh_style = Object.assign({}, title_button_style, {
-	    color: refresh_color
-	  });
-	
-	  var announcer_style = {
-	    display: 'inline-block',
-	    textAlign: 'center',
-	    width: '100%',
-	    verticalAlign: 'middle',
-	    height: 'auto',
-	    position: 'relative',
-	    top: -20
-	  };
-	
-	  return React.createElement(
-	    'div',
-	    null,
-	    React.createElement(
-	      'div',
-	      { style: div_style },
-	      React.createElement(
-	        'div',
-	        { style: head_style },
-	        title
-	      ),
-	      React.createElement(
-	        'div',
-	        { style: title_button_style },
-	        React.createElement(_usermenu2.default, null)
-	      ),
-	      React.createElement(
-	        'div',
-	        { style: refresh_style, onClick: onClick },
-	        React.createElement(
-	          _tooltip2.default,
-	          { position: 'bottomleft', tip: 'Refresh all feeds.' },
-	          React.createElement('i', { style: _style.BUTTON_STYLE, onClick: onClick, className: 'fa fa-refresh' })
-	        )
-	      ),
-	      React.createElement(
-	        'div',
-	        { style: announcer_style },
-	        React.createElement(
-	          'i',
-	          null,
-	          load_progress.message
-	        )
-	      )
-	    ),
-	    React.createElement(_riverprogress2.default, {
-	      progress: load_progress.percent / 100,
-	      backgroundColor: _style.APP_BACKGROUND_COLOR
-	    }),
-	    React.createElement(_riversetballoon2.default, null)
-	  );
-	};
-	
 	var columnLeft = function columnLeft(index) {
 	  return index * (_style.SIZE_COLUMN_WIDTH + _style.SIZE_SPACER_WIDTH) + _style.SIZE_SPACER_WIDTH;
 	};
 	
-	var AddRiverButton = exports.AddRiverButton = function AddRiverButton(_ref2) {
-	  var index = _ref2.index,
-	      onAddRiver = _ref2.onAddRiver;
+	var AddRiverButton = exports.AddRiverButton = function AddRiverButton(_ref) {
+	  var index = _ref.index,
+	      onAddRiver = _ref.onAddRiver;
 	
 	  var column_style = {
 	    position: 'absolute',
@@ -24447,8 +24352,8 @@
 	  );
 	};
 	
-	var RiverColumn = function RiverColumn(_ref3) {
-	  var index = _ref3.index;
+	var RiverColumn = function RiverColumn(_ref2) {
+	  var index = _ref2.index;
 	
 	  var style = {
 	    left: columnLeft(index),
@@ -24464,16 +24369,16 @@
 	  );
 	};
 	
-	var RiverSetBase = exports.RiverSetBase = function RiverSetBase(_ref4) {
-	  var user = _ref4.user,
-	      rivers = _ref4.rivers,
-	      loading = _ref4.loading,
-	      load_progress = _ref4.load_progress,
-	      show_settings = _ref4.show_settings,
-	      _onRefresh = _ref4.onRefresh,
-	      _onAddRiver = _ref4.onAddRiver,
-	      onHideSettings = _ref4.onHideSettings,
-	      onShowSettings = _ref4.onShowSettings;
+	var RiverSetBase = function RiverSetBase(_ref3) {
+	  var user = _ref3.user,
+	      rivers = _ref3.rivers,
+	      loading = _ref3.loading,
+	      load_progress = _ref3.load_progress,
+	      show_settings = _ref3.show_settings,
+	      _onRefresh = _ref3.onRefresh,
+	      _onAddRiver = _ref3.onAddRiver,
+	      onHideSettings = _ref3.onHideSettings,
+	      onShowSettings = _ref3.onShowSettings;
 	
 	  var top_bar_style = {
 	    position: 'fixed',
@@ -24495,7 +24400,7 @@
 	    React.createElement(
 	      'div',
 	      { style: top_bar_style },
-	      React.createElement(RiverSetBar, {
+	      React.createElement(_appbanner2.default, {
 	        title: 'Rivers',
 	        loading: loading,
 	        load_progress: load_progress,
@@ -26522,6 +26427,137 @@
 	var River = (0, _reactRedux.connect)(vrc_mapStateToProps, vrc_mapDispatchToProps)(RiverBase);
 	
 	exports.default = River;
+
+/***/ },
+/* 220 */
+/*!*****************************************!*\
+  !*** ./wwwroot/components/appbanner.js ***!
+  \*****************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _style = __webpack_require__(/*! ./style */ 199);
+	
+	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 208);
+	
+	var _riverprogress2 = _interopRequireDefault(_riverprogress);
+	
+	var _riversetballoon = __webpack_require__(/*! ./riversetballoon */ 216);
+	
+	var _riversetballoon2 = _interopRequireDefault(_riversetballoon);
+	
+	var _tooltip = __webpack_require__(/*! ./tooltip */ 207);
+	
+	var _tooltip2 = _interopRequireDefault(_tooltip);
+	
+	var _usermenu = __webpack_require__(/*! ./usermenu */ 218);
+	
+	var _usermenu2 = _interopRequireDefault(_usermenu);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var React = __webpack_require__(/*! react */ 4);
+	
+	
+	var BannerTitle = function BannerTitle(_ref) {
+	  var title = _ref.title;
+	
+	  var head_style = {
+	    fontSize: _style.RIVER_TITLE_FONT_SIZE,
+	    display: 'inline-block',
+	    paddingLeft: _style.SIZE_SPACER_WIDTH,
+	    fontWeight: 'bold',
+	    paddingTop: 3,
+	    position: 'relative'
+	  };
+	
+	  return React.createElement(
+	    'div',
+	    { style: head_style },
+	    title
+	  );
+	};
+	
+	var AppBanner = function AppBanner(_ref2) {
+	  var title = _ref2.title,
+	      loading = _ref2.loading,
+	      load_progress = _ref2.load_progress,
+	      onRefresh = _ref2.onRefresh,
+	      onSettingsClick = _ref2.onSettingsClick;
+	
+	  var div_style = {
+	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR,
+	    height: _style.SIZE_BANNER_HEIGHT
+	  };
+	
+	  var refresh_color = loading ? _style.RIVER_TITLE_BACKGROUND_COLOR : _style.APP_TEXT_COLOR;
+	  var onClick = loading ? function () {} : onRefresh;
+	
+	  var title_button_style = {
+	    display: 'inline-block',
+	    float: 'right',
+	    verticalAlign: 'middle',
+	    textAlign: 'center'
+	  };
+	  var refresh_style = Object.assign({}, title_button_style, {
+	    color: refresh_color
+	  });
+	
+	  var announcer_style = {
+	    display: 'inline-block',
+	    textAlign: 'center',
+	    width: '100%',
+	    verticalAlign: 'middle',
+	    height: 'auto',
+	    position: 'relative',
+	    top: -20
+	  };
+	
+	  return React.createElement(
+	    'div',
+	    null,
+	    React.createElement(
+	      'div',
+	      { style: div_style },
+	      React.createElement(BannerTitle, { title: title }),
+	      React.createElement(
+	        'div',
+	        { style: title_button_style },
+	        React.createElement(_usermenu2.default, null)
+	      ),
+	      React.createElement(
+	        'div',
+	        { style: refresh_style, onClick: onClick },
+	        React.createElement(
+	          _tooltip2.default,
+	          { position: 'bottomleft', tip: 'Refresh all feeds.' },
+	          React.createElement('i', { style: _style.BUTTON_STYLE, onClick: onClick, className: 'fa fa-refresh' })
+	        )
+	      ),
+	      React.createElement(
+	        'div',
+	        { style: announcer_style },
+	        React.createElement(
+	          'i',
+	          null,
+	          load_progress.message
+	        )
+	      )
+	    ),
+	    React.createElement(_riverprogress2.default, {
+	      progress: load_progress.percent / 100,
+	      backgroundColor: _style.APP_BACKGROUND_COLOR
+	    }),
+	    React.createElement(_riversetballoon2.default, null)
+	  );
+	};
+	
+	exports.default = AppBanner;
 
 /***/ }
 /******/ ]);

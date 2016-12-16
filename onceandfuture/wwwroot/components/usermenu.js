@@ -4,7 +4,6 @@ import { userMenuToggle } from '../actions';
 import {
     COLOR_VERY_DARK,
     COLOR_VERY_LIGHT,
-    ICON_FONT_SIZE,
     TEXT_FONT_SIZE,
 } from './style';
 import Tooltip from './tooltip';
