@@ -3,6 +3,8 @@ import {
   COLOR_VERY_LIGHT,
   COLOR_VERY_DARK,
   TEXT_FONT_SIZE,
+
+  Z_INDEX_TOOLTIP,
 } from './style';
 
 const DIV_STYLE = {
@@ -18,7 +20,7 @@ const TIP_STYLE_BASE = {
   padding: '5px 10px',
   position: 'absolute',
   textAlign: 'center',
-  zIndex: 5,
+  zIndex: Z_INDEX_TOOLTIP,
   fontSize: TEXT_FONT_SIZE,
   fontWeight: 'normal',
 };

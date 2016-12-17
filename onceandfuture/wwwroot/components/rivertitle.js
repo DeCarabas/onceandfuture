@@ -1,16 +1,20 @@
 var React = require('react'); // N.B. Still need this because JSX.
 import {
-  COLUMNSPACER,
   RIVER_TITLE_BACKGROUND_COLOR,
-  RIVER_TITLE_FONT_SIZE,
-  BUTTON_STYLE,
+
+  SIZE_RIVER_TITLE_FONT,
+  SIZE_RIVER_TITLE_PADDING_HORIZONTAL,
+  SIZE_RIVER_TITLE_PADDING_VERTICAL,
+  SIZE_RIVER_TITLE_HEIGHT,
+  SIZE_RIVER_TITLE_TOP_SPACER,
 } from './style';
-import Tooltip from './tooltip';
+import IconButton from './iconbutton';
 
 const RiverSettingsButton = ({river, onShowSettings, onHideSettings}) => {
-  const style = Object.assign({}, BUTTON_STYLE, {
-    paddingTop: 6,
-  });
+  const style = {
+    position: 'absolute',
+    right: 0, top: 0,
+  };
   const is_settings = (river.modal || {}).kind === 'settings';
 
   var icon, onClick, tip;
@@ -24,19 +28,16 @@ const RiverSettingsButton = ({river, onShowSettings, onHideSettings}) => {
     tip = 'Show the settings panel for this feed.';
   }
 
-  return <span style={style}>
-    <Tooltip tip={tip} position='right'>
-      <i className={'fa ' + icon} onClick={onClick} />
-    </Tooltip>
-  </span>;
+  return <div style={style}>
+    <IconButton tip={tip} icon={icon} onClick={onClick} />
+  </div>;
 };
 
 const RiverDragHandle = ({river}) => {
-  const style = Object.assign({}, BUTTON_STYLE, {
-    paddingTop: 6,
-    cursor: 'move',
-    float: null,
-  });
+  const style = {
+    position: 'absolute',
+    left: 0, top: 0,
+  };
 
   const onDrag = (ev) => {
     ev.dataTransfer.setData("river", river.id);
@@ -44,26 +45,31 @@ const RiverDragHandle = ({river}) => {
     ev.dataTransfer.setDragImage(draggo, 0, 0);
   };
 
-  return <span style={style} draggable="true" onDragStart={onDrag}>
-    <Tooltip tip='Drag this onto another column to re-order it.' position='right'>
-      <i className='fa fa-bars' />
-    </Tooltip>
-  </span>;
+  return <div style={style} draggable="true" onDragStart={onDrag}>
+    <IconButton
+      cursor='move'
+      tip='Drag this onto another column to re-order it.'
+      icon='fa-bars'
+    />
+  </div>;
 };
 
 const RiverTitle = ({river, onShowSettings, onHideSettings}) => {
   const divStyle = {
+    height: SIZE_RIVER_TITLE_HEIGHT,
+    width: '100%',
+
     backgroundColor: RIVER_TITLE_BACKGROUND_COLOR,
-    verticalAlign: 'middle',
-    userSelect: 'none',
-    draggable: 'true',
   };
+
   const style = {
-    paddingLeft: COLUMNSPACER,
-    fontSize: RIVER_TITLE_FONT_SIZE,
-    marginBottom: 0,
-    userSelect: 'none',
-    draggable: 'true',
+    position: 'absolute',
+    left: SIZE_RIVER_TITLE_PADDING_HORIZONTAL,
+    height: '100%',
+    paddingTop: SIZE_RIVER_TITLE_PADDING_VERTICAL,
+    paddingBottom: SIZE_RIVER_TITLE_PADDING_VERTICAL,
+    marginTop: 0,
+    fontSize: SIZE_RIVER_TITLE_FONT,
   };
 
   return <div style={divStyle}>
@@ -71,8 +77,9 @@ const RiverTitle = ({river, onShowSettings, onHideSettings}) => {
       river={river}
       onShowSettings={onShowSettings}
       onHideSettings={onHideSettings}
-      />
-    <h1 style={style}><RiverDragHandle river={river} /> {river.name}</h1>
+    />
+    <RiverDragHandle river={river} />
+    <h1 style={style}>{river.name}</h1>
   </div>;
 };
 

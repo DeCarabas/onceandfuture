@@ -1,10 +1,12 @@
-var React = require('react'); // N.B. Still need this because JSX.
+import React from 'react';
 import { connect } from 'react-redux';
 import {
   COLUMNSPACER,
   COLOR_DARK,
   COLOR_VERY_LIGHT,
   COLOR_VERY_DARK,
+
+  Z_INDEX_SETTINGS,
 } from './style';
 import {
   RIVER_MODE_AUTO,
@@ -201,19 +203,12 @@ const RiverSettingsBase = ({
   const SIDE_PADDING = 0;
 
   const style = {
-    backgroundColor: COLOR_VERY_LIGHT,
-    zIndex: 3,
     position: 'absolute',
-    top: TOP_SPACE,
-    bottom: SIDE_PADDING,
-    left: SIDE_PADDING,
-    right: SIDE_PADDING,
+
+    backgroundColor: COLOR_VERY_LIGHT,
+    zIndex: Z_INDEX_SETTINGS,
     padding: COLUMNSPACER,
     border: '1px solid ' + COLOR_VERY_DARK,
-
-    maxHeight: '100%',
-//    overflowX: 'hidden',
-    overflowY: 'auto',
   };
 
   const addFeed = (url) => addFeedToRiver(index, river, url);

@@ -7,15 +7,16 @@ import {
 } from './style';
 import Tooltip from './tooltip';
 
-const IconButton = ({tip, tipPosition, icon, onClick}) => {
+const IconButton = ({cursor, tip, tipPosition, icon, onClick}) => {
   const style = {
     width: SIZE_BUTTON_WIDTH,
     height: SIZE_BUTTON_HEIGHT,
     fontSize: SIZE_BUTTON_FONT,
     padding: SIZE_BUTTON_PADDING,
-    cursor: 'pointer',
+    cursor: cursor || 'pointer',
   };
   const className = "fa " + icon;
+  tipPosition = tipPosition || 'right';
 
   return <div style={style}>
     <Tooltip position={tipPosition} tip={tip}>

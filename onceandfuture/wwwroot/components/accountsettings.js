@@ -87,7 +87,7 @@ const AccountSettings = () => {
         <SettingsButton text="Change Password" />
       </div>
     </div>
-  </div>
+  </div>;
 };
 
 export default AccountSettings;

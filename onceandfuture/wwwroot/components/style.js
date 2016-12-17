@@ -73,10 +73,27 @@ export const SIZE_ANNOUNCER_HEIGHT = SIZE_BANNER_HEIGHT;
 export const SIZE_ANNOUNCER_FONT = 12;
 export const SIZE_ANNOUNCER_PADDING_VERTICAL = (SIZE_BANNER_HEIGHT - SIZE_ANNOUNCER_FONT) / 2;
 
+
+//   /-------------------------------\
+//   |                               | SIZE_RIVER_TITLE_TOP_SPACER
+//   +-------------------------------+
+//   | = Main                      S | SIZE_RIVER_TITLE_HEIGHT
+//   +-------------------------------+
+//   |                               |
+export const SIZE_RIVER_TITLE_TOP_SPACER = SIZE_SPACER_HEIGHT;
+export const SIZE_RIVER_TITLE_HEIGHT = SIZE_BANNER_HEIGHT;
+export const SIZE_RIVER_TITLE_FONT = 24;
+export const SIZE_RIVER_TITLE_PADDING_HORIZONTAL = SIZE_BUTTON_WIDTH;
+export const SIZE_RIVER_TITLE_PADDING_VERTICAL = (SIZE_RIVER_TITLE_HEIGHT - SIZE_RIVER_TITLE_FONT) / 2;
+
+export const SIZE_RIVER_MODAL_TOP = SIZE_RIVER_TITLE_TOP_SPACER + SIZE_RIVER_TITLE_HEIGHT;
+
 // ---- Layers
 
-export const Z_INDEX_BASE   = 0;
-export const Z_INDEX_BANNER = 10;
+export const Z_INDEX_BASE     = 0;
+export const Z_INDEX_BANNER   = 100;
+export const Z_INDEX_SETTINGS = 300;
+export const Z_INDEX_TOOLTIP  = 900;
 
 // KILL THESE
 export const COLUMNWIDTH = 350;

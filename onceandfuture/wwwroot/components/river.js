@@ -2,7 +2,10 @@ import React from 'react';
 import { connect } from 'react-redux';
 import {
   RIVER_COLUMN_BACKGROUND_COLOR,
-  COLOR_VERY_DARK
+  COLOR_VERY_DARK,
+
+  SIZE_RIVER_MODAL_TOP,
+  SIZE_RIVER_TITLE_TOP_SPACER,
 } from './style';
 import RiverBalloon from './riverballoon';
 import RiverSettings from './riversettings';
@@ -18,13 +21,39 @@ import {
 } from '../actions';
 
 function modalForRiver(river, index, dismiss, dispatch) {
+  const style = {
+    position: 'absolute',
+    top: SIZE_RIVER_MODAL_TOP,
+    width: '100%',
+    height: '100%',
+  };
   const modal = river.modal || {};
+  let control;
   switch (modal.kind) {
-    case 'loading': return <RiverProgress percent={modal.percent} />;
-    case 'settings': return <RiverSettings river={river} index={index} />;
-    case 'bubble': return <RiverBalloon info={modal.info}  dismiss={dismiss} dispatchAction={dispatch} />;
-    default: return <span />;
+    case 'loading': control = <RiverProgress percent={modal.percent} />; break;
+    case 'settings': control = <RiverSettings river={river} index={index} />; break;
+    case 'bubble': control = <RiverBalloon info={modal.info}  dismiss={dismiss} dispatchAction={dispatch} />; break;
+    default: control = <span />; break;
   }
+  return <div style={style}>
+    {control}
+  </div>;
+};
+
+const RiverTitlePosition = ({river, onShowSettings, onHideSettings}) => {
+  const style = {
+    position: 'absolute',
+    top: SIZE_RIVER_TITLE_TOP_SPACER,
+    width: '100%',
+  };
+
+  return <div style={style}>
+      <RiverTitle
+        river={river}
+        onShowSettings={onShowSettings}
+        onHideSettings={onHideSettings}
+      />
+  </div>;
 };
 
 const RiverBase = ({
@@ -62,7 +91,7 @@ const RiverBase = ({
 
   return (
     <div style={style} onDragOver={onDragOver} onDrop={onDrop}>
-      <RiverTitle
+      <RiverTitlePosition
         river={river}
         onShowSettings={onShowSettings(index, river)}
         onHideSettings={onHideSettings(index)}
@@ -73,14 +102,12 @@ const RiverBase = ({
   );
 };
 
-// VisibleRiverColumn
-//
-const vrc_mapStateToProps = (state) => {
+const mapStateToProps = (state) => {
   return {
     rivers: state.rivers,
   };
 };
-const vrc_mapDispatchToProps = (dispatch) => {
+const mapDispatchToProps = (dispatch) => {
   return {
     onShowSettings: (i, r) => (() => {
       dispatch(showRiverSettings(i));
@@ -96,11 +123,6 @@ const vrc_mapDispatchToProps = (dispatch) => {
   };
 };
 
-const River = connect(
-  vrc_mapStateToProps,
-  vrc_mapDispatchToProps
-)(
-  RiverBase
-);
+const River = connect(mapStateToProps, mapDispatchToProps)(RiverBase);
 
 export default River;
