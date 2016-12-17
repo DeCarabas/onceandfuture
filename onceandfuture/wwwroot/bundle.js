@@ -24372,10 +24372,8 @@
 	var RiverSetBase = function RiverSetBase(_ref3) {
 	  var user = _ref3.user,
 	      rivers = _ref3.rivers,
-	      loading = _ref3.loading,
 	      load_progress = _ref3.load_progress,
 	      show_settings = _ref3.show_settings,
-	      _onRefresh = _ref3.onRefresh,
 	      _onAddRiver = _ref3.onAddRiver,
 	      onHideSettings = _ref3.onHideSettings,
 	      onShowSettings = _ref3.onShowSettings;
@@ -24402,11 +24400,7 @@
 	      { style: top_bar_style },
 	      React.createElement(_appbanner2.default, {
 	        title: 'Rivers',
-	        loading: loading,
 	        load_progress: load_progress,
-	        onRefresh: function onRefresh() {
-	          return _onRefresh(user);
-	        },
 	        onSettingsClick: onSettingsClick
 	      })
 	    ),
@@ -24424,22 +24418,16 @@
 	  );
 	};
 	
-	// VisibleRiverSet
-	//
 	var vrs_mapStateToProps = function vrs_mapStateToProps(state) {
 	  return {
 	    user: state.user,
 	    rivers: state.rivers,
-	    loading: state.loading,
 	    load_progress: state.load_progress,
 	    show_settings: state.account_settings.visible
 	  };
 	};
 	var vrs_mapDispatchToProps = function vrs_mapDispatchToProps(dispatch) {
 	  return {
-	    onRefresh: function refreshIt(user) {
-	      dispatch((0, _actions.refreshAllFeeds)(user));
-	    },
 	    onAddRiver: function addIt(user) {
 	      dispatch((0, _actions.addRiver)(user));
 	    },
@@ -26452,9 +26440,9 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 199);
 	
-	var _iconbutton = __webpack_require__(/*! ./iconbutton */ 221);
+	var _refreshfeedsbutton = __webpack_require__(/*! ./refreshfeedsbutton */ 222);
 	
-	var _iconbutton2 = _interopRequireDefault(_iconbutton);
+	var _refreshfeedsbutton2 = _interopRequireDefault(_refreshfeedsbutton);
 	
 	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 208);
 	
@@ -26523,27 +26511,9 @@
 	  );
 	};
 	
-	var RefreshFeedsButton = function RefreshFeedsButton(_ref3) {
-	  var onRefresh = _ref3.onRefresh,
-	      loading = _ref3.loading;
-	
-	  var onClick = loading ? function () {} : onRefresh;
-	  var style = {
-	    color: loading ? _style.RIVER_TITLE_BACKGROUND_COLOR : _style.APP_TEXT_COLOR
-	  };
-	
-	  return React.createElement(
-	    'div',
-	    { style: style },
-	    React.createElement(_iconbutton2.default, { onClick: onClick, icon: 'fa-refresh', tip: 'Refresh all feeds.', tipPosition: 'bottomleft' })
-	  );
-	};
-	
-	var AppBanner = function AppBanner(_ref4) {
-	  var title = _ref4.title,
-	      loading = _ref4.loading,
-	      load_progress = _ref4.load_progress,
-	      onRefresh = _ref4.onRefresh;
+	var AppBanner = function AppBanner(_ref3) {
+	  var title = _ref3.title,
+	      load_progress = _ref3.load_progress;
 	
 	  var div_style = {
 	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR,
@@ -26571,7 +26541,7 @@
 	      React.createElement(
 	        'div',
 	        { style: title_button_style },
-	        React.createElement(RefreshFeedsButton, { loading: loading, onRefresh: onRefresh })
+	        React.createElement(_refreshfeedsbutton2.default, null)
 	      )
 	    ),
 	    React.createElement(_riverprogress2.default, {
@@ -26635,6 +26605,70 @@
 	};
 	
 	exports.default = IconButton;
+
+/***/ },
+/* 222 */
+/*!**************************************************!*\
+  !*** ./wwwroot/components/refreshfeedsbutton.js ***!
+  \**************************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
+	
+	var _actions = __webpack_require__(/*! ../actions */ 196);
+	
+	var _style = __webpack_require__(/*! ./style */ 199);
+	
+	var _iconbutton = __webpack_require__(/*! ./iconbutton */ 221);
+	
+	var _iconbutton2 = _interopRequireDefault(_iconbutton);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var React = __webpack_require__(/*! react */ 4);
+	
+	
+	var RefreshFeedsButtonBase = function RefreshFeedsButtonBase(_ref) {
+	  var loading = _ref.loading,
+	      onRefresh = _ref.onRefresh,
+	      user = _ref.user;
+	
+	  var onClick = loading ? function () {} : function () {
+	    return onRefresh(user);
+	  };
+	  var style = {
+	    color: loading ? _style.RIVER_TITLE_BACKGROUND_COLOR : _style.APP_TEXT_COLOR
+	  };
+	
+	  return React.createElement(
+	    'div',
+	    { style: style },
+	    React.createElement(_iconbutton2.default, { onClick: onClick, icon: 'fa-refresh', tip: 'Refresh all feeds.', tipPosition: 'bottomleft' })
+	  );
+	};
+	
+	var mapStateToProps = function mapStateToProps(state) {
+	  return {
+	    user: state.user,
+	    loading: state.loading
+	  };
+	};
+	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
+	  return {
+	    onRefresh: function onRefresh(user) {
+	      return dispatch((0, _actions.refreshAllFeeds)(user));
+	    }
+	  };
+	};
+	var RefreshFeedsButton = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(RefreshFeedsButtonBase);
+	
+	exports.default = RefreshFeedsButton;
 
 /***/ }
 /******/ ]);

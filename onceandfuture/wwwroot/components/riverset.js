@@ -53,10 +53,8 @@ const RiverColumn = ({index}) => {
 const RiverSetBase = ({
   user,
   rivers,
-  loading,
   load_progress,
   show_settings,
-  onRefresh,
   onAddRiver,
   onHideSettings,
   onShowSettings,
@@ -80,9 +78,7 @@ const RiverSetBase = ({
       <div style={top_bar_style}>
         <AppBanner
           title='Rivers'
-          loading={loading}
           load_progress={load_progress}
-          onRefresh={() => onRefresh(user)}
           onSettingsClick={onSettingsClick}
           />
       </div>
@@ -96,20 +92,16 @@ const RiverSetBase = ({
   );
 };
 
-// VisibleRiverSet
-//
 const vrs_mapStateToProps = (state) => {
   return {
     user: state.user,
     rivers: state.rivers,
-    loading: state.loading,
     load_progress: state.load_progress,
     show_settings: state.account_settings.visible,
   };
 };
 const vrs_mapDispatchToProps = (dispatch) => {
   return {
-    onRefresh: function refreshIt (user) { dispatch(refreshAllFeeds(user)); },
     onAddRiver: function addIt (user) { dispatch(addRiver(user)); },
     onHideSettings: function() { dispatch(accountSettingsHide()); },
     onShowSettings: function() { dispatch(accountSettingsShow()); },

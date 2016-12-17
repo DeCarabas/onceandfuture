@@ -7,14 +7,11 @@ import {
   SIZE_BANNER_TITLE_FONT,
   SIZE_BANNER_TITLE_PADDING_HORIZONTAL,
   SIZE_BANNER_TITLE_PADDING_VERTICAL,
-  SIZE_SPACER_WIDTH,
 
   APP_BACKGROUND_COLOR,
-  APP_TEXT_COLOR,
-  RIVER_TITLE_FONT_SIZE,
   RIVER_TITLE_BACKGROUND_COLOR,
 } from './style';
-import IconButton from './iconbutton';
+import RefreshFeedsButton from './refreshfeedsbutton';
 import RiverProgress from './riverprogress';
 import RiverSetBalloon from './riversetballoon';
 import UserMenu from './usermenu';
@@ -53,18 +50,7 @@ const Announcer = ({message}) => {
   return <div style={announcer_style}><i>{message}</i></div>;
 };
 
-const RefreshFeedsButton = ({onRefresh, loading}) => {
-  const onClick = loading ? () => { } : onRefresh;
-  const style = {
-    color: loading ? RIVER_TITLE_BACKGROUND_COLOR : APP_TEXT_COLOR
-  };
-
-  return <div style={style}>
-    <IconButton onClick={onClick} icon="fa-refresh" tip="Refresh all feeds." tipPosition="bottomleft" />
-  </div>;
-}
-
-const AppBanner = ({title, loading, load_progress, onRefresh}) => {
+const AppBanner = ({title, load_progress}) => {
   const div_style = {
     backgroundColor: RIVER_TITLE_BACKGROUND_COLOR,
     height: SIZE_BANNER_HEIGHT,
@@ -83,7 +69,7 @@ const AppBanner = ({title, loading, load_progress, onRefresh}) => {
         <UserMenu />
       </div>
       <div style={title_button_style}>
-        <RefreshFeedsButton loading={loading} onRefresh={onRefresh} />
+        <RefreshFeedsButton />
       </div>
     </div>
     <RiverProgress
