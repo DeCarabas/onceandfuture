@@ -1,14 +1,15 @@
 var React = require('react'); // N.B. Still need this because JSX.
 import {
-  COLUMNSPACER,
   COLOR_DARK,
   COLOR_VERY_DARK,
+
+  SIZE_SPACER_HEIGHT,
 } from './style';
 
 export const SettingsButton = ({onClick, text}) => {
   const divStyle = {
     textAlign: 'right',
-    marginTop: COLUMNSPACER,
+    marginTop: SIZE_SPACER_HEIGHT,
   };
   const style = {
     color: 'white',

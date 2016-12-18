@@ -1,12 +1,12 @@
-var React = require('react'); // N.B. Still need this because JSX.
-import { DEFAULT_LINK_STYLE, ITEM_TITLE_FONT_SIZE } from './style'
-import RiverLink from './riverlink'
+import React from 'react';
+import { DEFAULT_LINK_STYLE, ITEM_TITLE_FONT_SIZE } from './style';
+import RiverLink from './riverlink';
 
 const RiverItemTitle = ({item}) => {
-  const style = Object.assign({}, DEFAULT_LINK_STYLE, {
+  const style = {
     fontSize: ITEM_TITLE_FONT_SIZE,
-  });
-  let titleText = item.title || item.pubDate;
+  };
+  const titleText = item.title || item.pubDate;
   return (
     <RiverLink href={item.link}>
       <span style={style}>{ titleText }</span>
@@ -14,4 +14,4 @@ const RiverItemTitle = ({item}) => {
   );
 }
 
-export default RiverItemTitle
+export default RiverItemTitle;

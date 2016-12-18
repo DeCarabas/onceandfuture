@@ -36,13 +36,15 @@ export const UPDATE_TITLE_FONT_SIZE = 12;
 export const ICON_FONT_SIZE = 18;
 
 // ---- Sizes
+// Generally, sizes and positions should be defined here, not computed
+// locally in the component.
 
 // ---------------------------------------------------------------------- -
 //    RIVER                                                     | R | U | 36px  SIZE_BANNER_HEIGHT
 // ---------------------------------------------------------------------- -
 // =====================================                                  10px  SIZE_PROGRESS_HEIGHT
-//  10px              10px              10px                              10px  SIZE_SPACER_HEIGHT
-// ||     360px      ||      360px     ||
+//  10px              10px (SIZE_SPACER_WIDTH)                            10px  SIZE_SPACER_HEIGHT
+// ||     360px      ||      360px (SIZE_COLUMN_WIDTH)
 //   +--------------+  +--------------+                                         SIZE_COLUMN_TOP
 //   |              |  |              |
 export const SIZE_BANNER_HEIGHT = 36;                  // A nice height.
@@ -65,7 +67,7 @@ export const SIZE_FULL_IMAGE_WIDTH = SIZE_COLUMN_WIDTH - (2 * SIZE_FULL_IMAGE_GU
 export const SIZE_BUTTON_PADDING = 8;
 export const SIZE_BUTTON_FONT = SIZE_BUTTON_WIDTH - (2 * SIZE_BUTTON_PADDING);
 
-// banner
+// Banner (up at top of the app)
 export const SIZE_BANNER_TITLE_FONT = 24;
 export const SIZE_BANNER_TITLE_PADDING_HORIZONTAL = SIZE_SPACER_WIDTH;
 export const SIZE_BANNER_TITLE_PADDING_VERTICAL = (SIZE_BANNER_HEIGHT - SIZE_BANNER_TITLE_FONT) / 2;
@@ -74,6 +76,7 @@ export const SIZE_ANNOUNCER_FONT = 12;
 export const SIZE_ANNOUNCER_PADDING_VERTICAL = (SIZE_BANNER_HEIGHT - SIZE_ANNOUNCER_FONT) / 2;
 
 
+// (River column stuff)
 //   /-------------------------------\
 //   |                               | SIZE_RIVER_TITLE_TOP_SPACER
 //   +-------------------------------+
@@ -89,30 +92,13 @@ export const SIZE_RIVER_TITLE_PADDING_VERTICAL = (SIZE_RIVER_TITLE_HEIGHT - SIZE
 export const SIZE_RIVER_MODAL_TOP = SIZE_RIVER_TITLE_TOP_SPACER + SIZE_RIVER_TITLE_HEIGHT;
 
 // ---- Layers
-
-export const Z_INDEX_BASE     = 0;
-export const Z_INDEX_BANNER   = 100;
-export const Z_INDEX_SETTINGS = 300;
-export const Z_INDEX_TOOLTIP  = 900;
+export const Z_INDEX_BASE             = 0;
+export const Z_INDEX_BANNER           = 100;
+export const Z_INDEX_SETTINGS         = 300;
+export const Z_INDEX_ACCOUNT_SETTINGS = 400;
+export const Z_INDEX_ACCOUNT_MENU     = 410;
+export const Z_INDEX_TOOLTIP          = 900;
 
 // KILL THESE
-export const COLUMNWIDTH = 350;
 export const FULL_IMAGE_WIDTH = 300;
 export const COLUMNSPACER = 10;
-export const PROGRESS_HEIGHT = 10;
-
-// ---- Default Styles
-
-export const DEFAULT_LINK_STYLE = {
-  color: DEFAULT_LINK_COLOR,
-  textDecoration: 'initial',
-};
-
-// TODO: THIS IS GARBAGE.
-export const BUTTON_STYLE = {
-  fontSize: ICON_FONT_SIZE,
-  float: 'right',
-  paddingTop: 8,
-  paddingRight: COLUMNSPACER,
-  cursor: 'pointer',
-};

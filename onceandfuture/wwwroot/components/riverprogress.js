@@ -1,14 +1,13 @@
 var React = require('react'); // N.B. Still need this because JSX.
-import { COLOR_LIGHT, PROGRESS_HEIGHT } from './style';
+import { COLOR_LIGHT, SIZE_PROGRESS_HEIGHT } from './style';
 
 const RiverProgress = ({progress, backgroundColor}) => {
   backgroundColor = backgroundColor || COLOR_LIGHT;
 
   const div_style = {
-    height: PROGRESS_HEIGHT,
+    height: SIZE_PROGRESS_HEIGHT,
     backgroundColor: backgroundColor,
     width: '100%',
-    zIndex: 1,
     position: 'absolute',
   };
 

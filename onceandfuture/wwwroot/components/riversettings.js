@@ -1,10 +1,12 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import {
-  COLUMNSPACER,
   COLOR_DARK,
   COLOR_VERY_LIGHT,
   COLOR_VERY_DARK,
+
+  SIZE_SPACER_HEIGHT,
+  SIZE_SPACER_WIDTH,
 
   Z_INDEX_SETTINGS,
 } from './style';
@@ -70,8 +72,8 @@ const FeedDisplayModeBox = ({mode, setFeedMode}) => {
     <div>
       <SettingsSectionTitle text="River Display Mode" />
       <p>You can choose if you'd rather have this river favor images or text, or automatically decide based
-      on the particular entry. </p>
-      <div style={{paddingTop: COLUMNSPACER}}>
+      on the particular entry.</p>
+      <div style={{paddingTop: SIZE_SPACER_HEIGHT}}>
         <div style={end_space} />
         <DisplayModeButton
           text={"Auto"}
@@ -153,7 +155,7 @@ const RiverSourcesBox = ({sources, deleteSource}) => {
     </tr>;
   } else if (sources) {
     tbl_body = sources.map(
-      s => <RiverSource source={s} key={s.feedUrl} deleteSource={deleteSource} />
+      (s, i) => <RiverSource source={s} key={'s'+i} deleteSource={deleteSource} />
     );
   } else {
     tbl_body = <tr>
@@ -199,15 +201,12 @@ const RiverSettingsBase = ({
   removeSource,
   setRiverName,
 }) => {
-  const TOP_SPACE = 45;
-  const SIDE_PADDING = 0;
-
   const style = {
     position: 'absolute',
 
     backgroundColor: COLOR_VERY_LIGHT,
     zIndex: Z_INDEX_SETTINGS,
-    padding: COLUMNSPACER,
+    padding: SIZE_SPACER_WIDTH,
     border: '1px solid ' + COLOR_VERY_DARK,
   };
 

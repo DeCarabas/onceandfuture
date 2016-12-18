@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  COLUMNWIDTH,
+  SIZE_COLUMN_WIDTH,
   RIVER_COLUMN_BACKGROUND_COLOR,
 } from './style';
 
@@ -26,7 +26,7 @@ const RiverBalloon = ({info, dispatchAction, dismiss}) => {
     padding: '0px 10px 3px 10px',
     backgroundColor: background,
     fontSize: 16,
-    maxWidth: COLUMNWIDTH,
+    maxWidth: SIZE_COLUMN_WIDTH,
   };
 
   const link_span_style = {

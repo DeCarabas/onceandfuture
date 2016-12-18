@@ -1,6 +1,6 @@
 var React = require('react');
 import { connect } from 'react-redux';
-import { accountSettingsHide, accountSettingsShow, addRiver, refreshAllFeeds,  } from '../actions';
+import { accountSettingsHide, accountSettingsShow, addRiver, } from '../actions';
 import {
   SIZE_BUTTON_WIDTH,
   SIZE_BUTTON_HEIGHT,
@@ -50,6 +50,18 @@ const RiverColumn = ({index}) => {
   </div>;
 }
 
+const AccountSettingsContainer = () =>  {
+  const style = {
+    position: 'absolute',
+    top: SIZE_COLUMN_TOP,
+    width: '100%',
+  };
+
+  return <div style={style}>
+    <AccountSettings />
+  </div>;
+};
+
 const RiverSetBase = ({
   user,
   rivers,
@@ -69,30 +81,32 @@ const RiverSetBase = ({
   let accountSettings = <span />;
   let onSettingsClick = onShowSettings;
   if (show_settings) {
-    accountSettings = <AccountSettings />;
+    accountSettings = <AccountSettingsContainer />;
     onSettingsClick = onHideSettings;
   }
 
-  return (
-    <div>
-      <div style={top_bar_style}>
-        <AppBanner
-          title='Rivers'
-          load_progress={load_progress}
-          onSettingsClick={onSettingsClick}
-          />
-      </div>
-      <div>
-        { rivers.map((r, index) => <RiverColumn index={index} key={'r'+index} />) }
-        <AddRiverButton index={rivers.length} onAddRiver={() => onAddRiver(user)} />
-      </div>
-
-      {accountSettings}
+  return <div>
+    <div style={top_bar_style}>
+      <AppBanner
+        title='Rivers'
+        load_progress={load_progress}
+        onSettingsClick={onSettingsClick}
+        />
     </div>
-  );
+    <div>
+      {rivers.map((r, i) => <RiverColumn index={i} key={'r'+i} />)}
+    </div>
+    <div>
+      <AddRiverButton
+        index={rivers.length}
+        onAddRiver={() => onAddRiver(user)}
+      />
+    </div>
+    {accountSettings}
+  </div>;
 };
 
-const vrs_mapStateToProps = (state) => {
+const mapStateToProps = (state) => {
   return {
     user: state.user,
     rivers: state.rivers,
@@ -100,18 +114,13 @@ const vrs_mapStateToProps = (state) => {
     show_settings: state.account_settings.visible,
   };
 };
-const vrs_mapDispatchToProps = (dispatch) => {
+const mapDispatchToProps = (dispatch) => {
   return {
     onAddRiver: function addIt (user) { dispatch(addRiver(user)); },
     onHideSettings: function() { dispatch(accountSettingsHide()); },
     onShowSettings: function() { dispatch(accountSettingsShow()); },
   };
 };
-const RiverSet = connect(
-  vrs_mapStateToProps,
-  vrs_mapDispatchToProps
-)(
-  RiverSetBase
-);
+const RiverSet = connect(mapStateToProps, mapDispatchToProps)(RiverSetBase);
 
 export default RiverSet;

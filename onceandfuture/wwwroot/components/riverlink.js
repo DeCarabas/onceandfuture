@@ -1,12 +1,12 @@
-var React = require('react'); // N.B. Still need this because JSX.
-import { DEFAULT_LINK_STYLE } from './style';
+import React from 'react';
+import { DEFAULT_LINK_COLOR } from './style';
 
 const RiverLink = ({href, children}) => {
-  return (
-    <a style={DEFAULT_LINK_STYLE} href={href} target="_blank">
-      {children}
-    </a>
-  );
+  const style = {
+    color: DEFAULT_LINK_COLOR,
+    textDecoration: 'initial',
+  };
+  return <a style={style} href={href} target="_blank">{children}</a>;
 };
 
 export default RiverLink;

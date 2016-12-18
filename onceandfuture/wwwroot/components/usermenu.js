@@ -1,56 +1,64 @@
 var React = require('react'); // N.B. Still need this because JSX.
 import { connect } from 'react-redux';
-import { userMenuToggle } from '../actions';
 import {
-    COLOR_VERY_DARK,
-    COLOR_VERY_LIGHT,
-    TEXT_FONT_SIZE,
+  accountSettingsToggle,
+  userMenuToggle,
+} from '../actions';
+import {
+  COLOR_VERY_DARK,
+  COLOR_VERY_LIGHT,
+
+  SIZE_BUTTON_HEIGHT,
+
+  Z_INDEX_ACCOUNT_MENU,
 } from './style';
-import Tooltip from './tooltip';
+import IconButton from './iconbutton';
 
-const UserMenuBase = function({visible, onToggle}) {
+const Menu = ({visible, onShowSettings}) => {
+  const menu_style = {
+    display: visible ? 'inline-block' : 'none',
+    position: 'absolute',
+    top: SIZE_BUTTON_HEIGHT, right: 0,
+    width: 120,
 
-    // TODO:STYLIFY
-    let style = {
-        cursor: 'pointer',
-        fontSize: 19,
-        width: 33,
-        height: 33,
-        padding: 7,
-    };
-    let menu = <span />;
-    if (visible) {
-        style = Object.assign({}, style, {
-            backgroundColor: COLOR_VERY_DARK,
-            color: COLOR_VERY_LIGHT,
-        });
+    zIndex: Z_INDEX_ACCOUNT_MENU,
 
-        const menu_style = {
-            backgroundColor: COLOR_VERY_DARK,
-            color: COLOR_VERY_LIGHT,
-            display: 'inline-block',
-            fontSize: TEXT_FONT_SIZE,
-            fontWeight: 'normal',
-            position: 'absolute',
-            right: 0,
-            textAlign: 'center',
-            top: 33,
-            width: 120,
-            zIndex: 4,
-        };
+    backgroundColor: COLOR_VERY_DARK,
+    color: COLOR_VERY_LIGHT,
+    textAlign: 'center',
+    cursor: 'pointer',
+  };
 
-        menu = <div style={menu_style}>
-            <p>Option one</p>
-            <p>Option two</p>
-        </div>;
-    }
+  return <div style={menu_style}>
+    <p onClick={onShowSettings}>Account settings...</p>
+    <p>Logout</p>
+  </div>;
+};
 
-    return <div onClick={onToggle} style={style}>
-        <Tooltip position="bottomleft" tip="View account settings.">
-          <i className="fa fa-user" />
-        </Tooltip>
-        {menu}
-    </div>;
+const UserMenuBase = function({
+  visible,
+  onToggle,
+  onShowSettings,
+}) {
+  let style = {};
+  if (visible) {
+    style = Object.assign({}, style, {
+      backgroundColor: COLOR_VERY_DARK,
+      color: COLOR_VERY_LIGHT,
+    });
+  }
+
+
+
+  return <div style={style}>
+    <IconButton
+      tip="View account settings"
+      tipPosition="bottomleft"
+      icon="fa-user"
+      onClick={onToggle}
+    />
+    <Menu visible={visible} onShowSettings={onShowSettings} />
+  </div>;
 };
 
 const mapStateToProps = (state) => {
@@ -60,7 +68,8 @@ const mapStateToProps = (state) => {
 };
 const mapDispatchToProps = (dispatch) => {
   return {
-      onToggle: () => dispatch(userMenuToggle()),
+    onToggle: () => dispatch(userMenuToggle()),
+    onShowSettings: () => dispatch(accountSettingsToggle()),
   };
 };
 const UserMenu = connect(mapStateToProps, mapDispatchToProps)(UserMenuBase);

@@ -409,6 +409,10 @@
 	      return Object.assign({}, state, {
 	        visible: !state.visible
 	      });
+	    case _actions.USER_MENU_TOGGLE:
+	      return Object.assign({}, state, {
+	        visible: false
+	      });
 	    default:
 	      return state;
 	  }
@@ -419,6 +423,10 @@
 	  var action = arguments[1];
 	
 	  switch (action.type) {
+	    case _actions.ACCOUNT_SETTINGS_TOGGLE:
+	      return Object.assign({}, state, {
+	        visible: false
+	      });
 	    case _actions.USER_MENU_TOGGLE:
 	      return Object.assign({}, state, {
 	        visible: !state.visible
@@ -8864,6 +8872,20 @@
 	  );
 	};
 	
+	var AccountSettingsContainer = function AccountSettingsContainer() {
+	  var style = {
+	    position: 'absolute',
+	    top: _style.SIZE_COLUMN_TOP,
+	    width: '100%'
+	  };
+	
+	  return React.createElement(
+	    'div',
+	    { style: style },
+	    React.createElement(_accountsettings2.default, null)
+	  );
+	};
+	
 	var RiverSetBase = function RiverSetBase(_ref3) {
 	  var user = _ref3.user,
 	      rivers = _ref3.rivers,
@@ -8883,7 +8905,7 @@
 	  var accountSettings = React.createElement('span', null);
 	  var onSettingsClick = onShowSettings;
 	  if (show_settings) {
-	    accountSettings = React.createElement(_accountsettings2.default, null);
+	    accountSettings = React.createElement(AccountSettingsContainer, null);
 	    onSettingsClick = onHideSettings;
 	  }
 	
@@ -8902,18 +8924,25 @@
 	    React.createElement(
 	      'div',
 	      null,
-	      rivers.map(function (r, index) {
-	        return React.createElement(RiverColumn, { index: index, key: 'r' + index });
-	      }),
-	      React.createElement(AddRiverButton, { index: rivers.length, onAddRiver: function onAddRiver() {
+	      rivers.map(function (r, i) {
+	        return React.createElement(RiverColumn, { index: i, key: 'r' + i });
+	      })
+	    ),
+	    React.createElement(
+	      'div',
+	      null,
+	      React.createElement(AddRiverButton, {
+	        index: rivers.length,
+	        onAddRiver: function onAddRiver() {
 	          return _onAddRiver(user);
-	        } })
+	        }
+	      })
 	    ),
 	    accountSettings
 	  );
 	};
 	
-	var vrs_mapStateToProps = function vrs_mapStateToProps(state) {
+	var mapStateToProps = function mapStateToProps(state) {
 	  return {
 	    user: state.user,
 	    rivers: state.rivers,
@@ -8921,7 +8950,7 @@
 	    show_settings: state.account_settings.visible
 	  };
 	};
-	var vrs_mapDispatchToProps = function vrs_mapDispatchToProps(dispatch) {
+	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
 	  return {
 	    onAddRiver: function addIt(user) {
 	      dispatch((0, _actions.addRiver)(user));
@@ -8934,7 +8963,7 @@
 	    }
 	  };
 	};
-	var RiverSet = (0, _reactRedux.connect)(vrs_mapStateToProps, vrs_mapDispatchToProps)(RiverSetBase);
+	var RiverSet = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(RiverSetBase);
 	
 	exports.default = RiverSet;
 
@@ -8981,13 +9010,15 @@
 	var ICON_FONT_SIZE = exports.ICON_FONT_SIZE = 18;
 	
 	// ---- Sizes
+	// Generally, sizes and positions should be defined here, not computed
+	// locally in the component.
 	
 	// ---------------------------------------------------------------------- -
 	//    RIVER                                                     | R | U | 36px  SIZE_BANNER_HEIGHT
 	// ---------------------------------------------------------------------- -
 	// =====================================                                  10px  SIZE_PROGRESS_HEIGHT
-	//  10px              10px              10px                              10px  SIZE_SPACER_HEIGHT
-	// ||     360px      ||      360px     ||
+	//  10px              10px (SIZE_SPACER_WIDTH)                            10px  SIZE_SPACER_HEIGHT
+	// ||     360px      ||      360px (SIZE_COLUMN_WIDTH)
 	//   +--------------+  +--------------+                                         SIZE_COLUMN_TOP
 	//   |              |  |              |
 	var SIZE_BANNER_HEIGHT = exports.SIZE_BANNER_HEIGHT = 36; // A nice height.
@@ -9010,7 +9041,7 @@
 	var SIZE_BUTTON_PADDING = exports.SIZE_BUTTON_PADDING = 8;
 	var SIZE_BUTTON_FONT = exports.SIZE_BUTTON_FONT = SIZE_BUTTON_WIDTH - 2 * SIZE_BUTTON_PADDING;
 	
-	// banner
+	// Banner (up at top of the app)
 	var SIZE_BANNER_TITLE_FONT = exports.SIZE_BANNER_TITLE_FONT = 24;
 	var SIZE_BANNER_TITLE_PADDING_HORIZONTAL = exports.SIZE_BANNER_TITLE_PADDING_HORIZONTAL = SIZE_SPACER_WIDTH;
 	var SIZE_BANNER_TITLE_PADDING_VERTICAL = exports.SIZE_BANNER_TITLE_PADDING_VERTICAL = (SIZE_BANNER_HEIGHT - SIZE_BANNER_TITLE_FONT) / 2;
@@ -9018,6 +9049,7 @@
 	var SIZE_ANNOUNCER_FONT = exports.SIZE_ANNOUNCER_FONT = 12;
 	var SIZE_ANNOUNCER_PADDING_VERTICAL = exports.SIZE_ANNOUNCER_PADDING_VERTICAL = (SIZE_BANNER_HEIGHT - SIZE_ANNOUNCER_FONT) / 2;
 	
+	// (River column stuff)
 	//   /-------------------------------\
 	//   |                               | SIZE_RIVER_TITLE_TOP_SPACER
 	//   +-------------------------------+
@@ -9033,33 +9065,16 @@
 	var SIZE_RIVER_MODAL_TOP = exports.SIZE_RIVER_MODAL_TOP = SIZE_RIVER_TITLE_TOP_SPACER + SIZE_RIVER_TITLE_HEIGHT;
 	
 	// ---- Layers
-	
 	var Z_INDEX_BASE = exports.Z_INDEX_BASE = 0;
 	var Z_INDEX_BANNER = exports.Z_INDEX_BANNER = 100;
 	var Z_INDEX_SETTINGS = exports.Z_INDEX_SETTINGS = 300;
+	var Z_INDEX_ACCOUNT_SETTINGS = exports.Z_INDEX_ACCOUNT_SETTINGS = 400;
+	var Z_INDEX_ACCOUNT_MENU = exports.Z_INDEX_ACCOUNT_MENU = 410;
 	var Z_INDEX_TOOLTIP = exports.Z_INDEX_TOOLTIP = 900;
 	
 	// KILL THESE
-	var COLUMNWIDTH = exports.COLUMNWIDTH = 350;
 	var FULL_IMAGE_WIDTH = exports.FULL_IMAGE_WIDTH = 300;
 	var COLUMNSPACER = exports.COLUMNSPACER = 10;
-	var PROGRESS_HEIGHT = exports.PROGRESS_HEIGHT = 10;
-	
-	// ---- Default Styles
-	
-	var DEFAULT_LINK_STYLE = exports.DEFAULT_LINK_STYLE = {
-	  color: DEFAULT_LINK_COLOR,
-	  textDecoration: 'initial'
-	};
-	
-	// TODO: THIS IS GARBAGE.
-	var BUTTON_STYLE = exports.BUTTON_STYLE = {
-	  fontSize: ICON_FONT_SIZE,
-	  float: 'right',
-	  paddingTop: 8,
-	  paddingRight: COLUMNSPACER,
-	  cursor: 'pointer'
-	};
 
 /***/ },
 /* 82 */
@@ -9082,28 +9097,19 @@
 	
 	
 	var AccountSettings = function AccountSettings() {
-	  var outer_style = {
-	    position: 'absolute',
-	    top: 0,
-	    left: 0,
-	
-	    width: '100%',
-	    height: '100%'
-	  };
-	
 	  var fontSize = '18px';
 	
 	  var inner_style = {
+	    width: 460,
 	    marginLeft: 'auto',
 	    marginRight: 'auto',
 	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR,
-	    width: 460,
-	    height: 300,
-	    marginTop: 33 + _style.COLUMNSPACER,
 	    paddingLeft: 5,
 	    paddingRight: 5,
 	    border: "2px solid black",
-	    fontSize: fontSize
+	    fontSize: fontSize,
+	
+	    zIndex: _style.Z_INDEX_ACCOUNT_SETTINGS
 	  };
 	
 	  var in_style = {
@@ -9136,68 +9142,64 @@
 	
 	  return React.createElement(
 	    'div',
-	    { style: outer_style },
+	    { style: inner_style },
+	    React.createElement(
+	      'h2',
+	      null,
+	      'Account Settings'
+	    ),
+	    React.createElement('hr', null),
 	    React.createElement(
 	      'div',
-	      { style: inner_style },
-	      React.createElement(
-	        'h2',
-	        null,
-	        'Account Settings'
-	      ),
-	      React.createElement('hr', null),
+	      { style: r_style },
 	      React.createElement(
 	        'div',
-	        { style: r_style },
-	        React.createElement(
-	          'div',
-	          { style: p_l_style },
-	          'Email Address:'
-	        ),
-	        React.createElement(
-	          'div',
-	          { style: p_r_style },
-	          React.createElement('input', { style: in_style, type: 'text', id: 'email', name: 'email', placeholder: 'Email Address' })
-	        )
+	        { style: p_l_style },
+	        'Email Address:'
 	      ),
 	      React.createElement(
 	        'div',
-	        { style: r_b_style },
-	        React.createElement(_settingscontrols.SettingsButton, { text: 'Change Email Address' })
-	      ),
-	      React.createElement(
-	        'div',
-	        { style: r_style },
-	        React.createElement(
-	          'div',
-	          { style: p_l_style },
-	          'Password:'
-	        ),
-	        React.createElement(
-	          'div',
-	          { style: p_r_style },
-	          React.createElement('input', { style: in_style, type: 'password', id: 'pw1', name: 'pw1', placeholder: 'Password' })
-	        )
-	      ),
-	      React.createElement(
-	        'div',
-	        { style: r_style },
-	        React.createElement(
-	          'div',
-	          { style: p_l_style },
-	          'Repeat Password:'
-	        ),
-	        React.createElement(
-	          'div',
-	          { style: p_r_style },
-	          React.createElement('input', { style: in_style, type: 'password', id: 'pw2', name: 'pw2', placeholder: 'Password' })
-	        )
-	      ),
-	      React.createElement(
-	        'div',
-	        { style: r_b_style },
-	        React.createElement(_settingscontrols.SettingsButton, { text: 'Change Password' })
+	        { style: p_r_style },
+	        React.createElement('input', { style: in_style, type: 'text', id: 'email', name: 'email', placeholder: 'Email Address' })
 	      )
+	    ),
+	    React.createElement(
+	      'div',
+	      { style: r_b_style },
+	      React.createElement(_settingscontrols.SettingsButton, { text: 'Change Email Address' })
+	    ),
+	    React.createElement(
+	      'div',
+	      { style: r_style },
+	      React.createElement(
+	        'div',
+	        { style: p_l_style },
+	        'Password:'
+	      ),
+	      React.createElement(
+	        'div',
+	        { style: p_r_style },
+	        React.createElement('input', { style: in_style, type: 'password', id: 'pw1', name: 'pw1', placeholder: 'Password' })
+	      )
+	    ),
+	    React.createElement(
+	      'div',
+	      { style: r_style },
+	      React.createElement(
+	        'div',
+	        { style: p_l_style },
+	        'Repeat Password:'
+	      ),
+	      React.createElement(
+	        'div',
+	        { style: p_r_style },
+	        React.createElement('input', { style: in_style, type: 'password', id: 'pw2', name: 'pw2', placeholder: 'Password' })
+	      )
+	    ),
+	    React.createElement(
+	      'div',
+	      { style: r_b_style },
+	      React.createElement(_settingscontrols.SettingsButton, { text: 'Change Password' })
 	    )
 	  );
 	};
@@ -9235,7 +9237,7 @@
 	
 	  var divStyle = {
 	    textAlign: 'right',
-	    marginTop: _style.COLUMNSPACER
+	    marginTop: _style.SIZE_SPACER_HEIGHT
 	  };
 	  var style = {
 	    color: 'white',
@@ -9718,10 +9720,9 @@
 	  backgroundColor = backgroundColor || _style.COLOR_LIGHT;
 	
 	  var div_style = {
-	    height: _style.PROGRESS_HEIGHT,
+	    height: _style.SIZE_PROGRESS_HEIGHT,
 	    backgroundColor: backgroundColor,
 	    width: '100%',
-	    zIndex: 1,
 	    position: 'absolute'
 	  };
 	
@@ -9846,7 +9847,7 @@
 	    padding: '0px 10px 3px 10px',
 	    backgroundColor: background,
 	    fontSize: 16,
-	    maxWidth: _style.COLUMNWIDTH
+	    maxWidth: _style.SIZE_COLUMN_WIDTH
 	  };
 	
 	  var link_span_style = {
@@ -9901,7 +9902,7 @@
 	'use strict';
 	
 	Object.defineProperty(exports, "__esModule", {
-	    value: true
+	  value: true
 	});
 	
 	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
@@ -9910,88 +9911,89 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 81);
 	
-	var _tooltip = __webpack_require__(/*! ./tooltip */ 87);
+	var _iconbutton = __webpack_require__(/*! ./iconbutton */ 86);
 	
-	var _tooltip2 = _interopRequireDefault(_tooltip);
+	var _iconbutton2 = _interopRequireDefault(_iconbutton);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
 	
 	
-	var UserMenuBase = function UserMenuBase(_ref) {
-	    var visible = _ref.visible,
-	        onToggle = _ref.onToggle;
+	var Menu = function Menu(_ref) {
+	  var visible = _ref.visible,
+	      onShowSettings = _ref.onShowSettings;
 	
+	  var menu_style = {
+	    display: visible ? 'inline-block' : 'none',
+	    position: 'absolute',
+	    top: _style.SIZE_BUTTON_HEIGHT, right: 0,
+	    width: 120,
 	
-	    // TODO:STYLIFY
-	    var style = {
-	        cursor: 'pointer',
-	        fontSize: 19,
-	        width: 33,
-	        height: 33,
-	        padding: 7
-	    };
-	    var menu = React.createElement('span', null);
-	    if (visible) {
-	        style = Object.assign({}, style, {
-	            backgroundColor: _style.COLOR_VERY_DARK,
-	            color: _style.COLOR_VERY_LIGHT
-	        });
+	    zIndex: _style.Z_INDEX_ACCOUNT_MENU,
 	
-	        var menu_style = {
-	            backgroundColor: _style.COLOR_VERY_DARK,
-	            color: _style.COLOR_VERY_LIGHT,
-	            display: 'inline-block',
-	            fontSize: _style.TEXT_FONT_SIZE,
-	            fontWeight: 'normal',
-	            position: 'absolute',
-	            right: 0,
-	            textAlign: 'center',
-	            top: 33,
-	            width: 120,
-	            zIndex: 4
-	        };
+	    backgroundColor: _style.COLOR_VERY_DARK,
+	    color: _style.COLOR_VERY_LIGHT,
+	    textAlign: 'center',
+	    cursor: 'pointer'
+	  };
 	
-	        menu = React.createElement(
-	            'div',
-	            { style: menu_style },
-	            React.createElement(
-	                'p',
-	                null,
-	                'Option one'
-	            ),
-	            React.createElement(
-	                'p',
-	                null,
-	                'Option two'
-	            )
-	        );
-	    }
+	  return React.createElement(
+	    'div',
+	    { style: menu_style },
+	    React.createElement(
+	      'p',
+	      { onClick: onShowSettings },
+	      'Account settings...'
+	    ),
+	    React.createElement(
+	      'p',
+	      null,
+	      'Logout'
+	    )
+	  );
+	};
 	
-	    return React.createElement(
-	        'div',
-	        { onClick: onToggle, style: style },
-	        React.createElement(
-	            _tooltip2.default,
-	            { position: 'bottomleft', tip: 'View account settings.' },
-	            React.createElement('i', { className: 'fa fa-user' })
-	        ),
-	        menu
-	    );
+	var UserMenuBase = function UserMenuBase(_ref2) {
+	  var visible = _ref2.visible,
+	      onToggle = _ref2.onToggle,
+	      onShowSettings = _ref2.onShowSettings;
+	
+	  var style = {};
+	  if (visible) {
+	    style = Object.assign({}, style, {
+	      backgroundColor: _style.COLOR_VERY_DARK,
+	      color: _style.COLOR_VERY_LIGHT
+	    });
+	  }
+	
+	  return React.createElement(
+	    'div',
+	    { style: style },
+	    React.createElement(_iconbutton2.default, {
+	      tip: 'View account settings',
+	      tipPosition: 'bottomleft',
+	      icon: 'fa-user',
+	      onClick: onToggle
+	    }),
+	    React.createElement(Menu, { visible: visible, onShowSettings: onShowSettings })
+	  );
 	};
 	
 	var mapStateToProps = function mapStateToProps(state) {
-	    return {
-	        visible: state.user_menu.visible
-	    };
+	  return {
+	    visible: state.user_menu.visible
+	  };
 	};
 	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
-	    return {
-	        onToggle: function onToggle() {
-	            return dispatch((0, _actions.userMenuToggle)());
-	        }
-	    };
+	  return {
+	    onToggle: function onToggle() {
+	      return dispatch((0, _actions.userMenuToggle)());
+	    },
+	    onShowSettings: function onShowSettings() {
+	      return dispatch((0, _actions.accountSettingsToggle)());
+	    }
+	  };
 	};
 	var UserMenu = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(UserMenuBase);
 	
@@ -10282,11 +10284,11 @@
 	    _react2.default.createElement(
 	      'p',
 	      null,
-	      'You can choose if you\'d rather have this river favor images or text, or automatically decide based on the particular entry. '
+	      'You can choose if you\'d rather have this river favor images or text, or automatically decide based on the particular entry.'
 	    ),
 	    _react2.default.createElement(
 	      'div',
-	      { style: { paddingTop: _style.COLUMNSPACER } },
+	      { style: { paddingTop: _style.SIZE_SPACER_HEIGHT } },
 	      _react2.default.createElement('div', { style: end_space }),
 	      _react2.default.createElement(DisplayModeButton, {
 	        text: "Auto",
@@ -10429,8 +10431,8 @@
 	      )
 	    );
 	  } else if (sources) {
-	    tbl_body = sources.map(function (s) {
-	      return _react2.default.createElement(RiverSource, { source: s, key: s.feedUrl, deleteSource: deleteSource });
+	    tbl_body = sources.map(function (s, i) {
+	      return _react2.default.createElement(RiverSource, { source: s, key: 's' + i, deleteSource: deleteSource });
 	    });
 	  } else {
 	    tbl_body = _react2.default.createElement(
@@ -10504,15 +10506,12 @@
 	      removeSource = _ref9.removeSource,
 	      setRiverName = _ref9.setRiverName;
 	
-	  var TOP_SPACE = 45;
-	  var SIDE_PADDING = 0;
-	
 	  var style = {
 	    position: 'absolute',
 	
 	    backgroundColor: _style.COLOR_VERY_LIGHT,
 	    zIndex: _style.Z_INDEX_SETTINGS,
-	    padding: _style.COLUMNSPACER,
+	    padding: _style.SIZE_SPACER_WIDTH,
 	    border: '1px solid ' + _style.COLOR_VERY_DARK
 	  };
 	
@@ -10665,18 +10664,25 @@
 	  value: true
 	});
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _style = __webpack_require__(/*! ./style */ 81);
 	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var RiverLink = function RiverLink(_ref) {
 	  var href = _ref.href,
 	      children = _ref.children;
 	
-	  return React.createElement(
+	  var style = {
+	    color: _style.DEFAULT_LINK_COLOR,
+	    textDecoration: 'initial'
+	  };
+	  return _react2.default.createElement(
 	    'a',
-	    { style: _style.DEFAULT_LINK_STYLE, href: href, target: '_blank' },
+	    { style: style, href: href, target: '_blank' },
 	    children
 	  );
 	};
@@ -11102,6 +11108,10 @@
 	  value: true
 	});
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _style = __webpack_require__(/*! ./style */ 81);
 	
 	var _riverlink = __webpack_require__(/*! ./riverlink */ 95);
@@ -11110,20 +11120,17 @@
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
-	
 	var RiverItemTitle = function RiverItemTitle(_ref) {
 	  var item = _ref.item;
 	
-	  var style = Object.assign({}, _style.DEFAULT_LINK_STYLE, {
+	  var style = {
 	    fontSize: _style.ITEM_TITLE_FONT_SIZE
-	  });
+	  };
 	  var titleText = item.title || item.pubDate;
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    _riverlink2.default,
 	    { href: item.link },
-	    React.createElement(
+	    _react2.default.createElement(
 	      'span',
 	      { style: style },
 	      titleText

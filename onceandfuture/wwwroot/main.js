@@ -364,6 +364,10 @@ function state_account_settings(state = {visible: false}, action) {
       return Object.assign({}, state, {
         visible: !state.visible,
       });
+    case USER_MENU_TOGGLE:
+      return Object.assign({}, state, {
+        visible: false,
+      });
     default:
       return state;
   }
@@ -372,6 +376,10 @@ function state_account_settings(state = {visible: false}, action) {
 function state_user_menu(state = {visible: false}, action) {
   switch(action.type)
   {
+    case ACCOUNT_SETTINGS_TOGGLE:
+      return Object.assign({}, state, {
+        visible: false,
+      });
     case USER_MENU_TOGGLE:
       return Object.assign({}, state, {
         visible: !state.visible,
