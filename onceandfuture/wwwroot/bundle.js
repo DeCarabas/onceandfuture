@@ -9669,9 +9669,13 @@
 	
 	      return _react2.default.createElement(
 	        'div',
-	        { style: DIV_STYLE, onMouseEnter: this.handleMouseEnter, onMouseLeave: this.handleMouseLeave },
+	        { style: DIV_STYLE },
 	        tip,
-	        this.props.children
+	        _react2.default.createElement(
+	          'div',
+	          { onMouseEnter: this.handleMouseEnter, onMouseLeave: this.handleMouseLeave },
+	          this.props.children
+	        )
 	      );
 	    }
 	  }, {

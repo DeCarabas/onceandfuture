@@ -81,9 +81,11 @@ class Tooltip extends React.Component {
       </span>;
     }
 
-    return <div style={DIV_STYLE} onMouseEnter={this.handleMouseEnter} onMouseLeave={this.handleMouseLeave}>
+    return <div style={DIV_STYLE}>
       {tip}
-      {this.props.children}
+      <div onMouseEnter={this.handleMouseEnter} onMouseLeave={this.handleMouseLeave}>
+        {this.props.children}
+      </div>
     </div>;
   }
 
