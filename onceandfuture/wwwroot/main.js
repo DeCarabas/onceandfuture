@@ -365,6 +365,7 @@ function state_account_settings(state = {visible: false}, action) {
         visible: !state.visible,
       });
     case USER_MENU_TOGGLE:
+    case REFRESH_ALL_FEEDS_START:
       return Object.assign({}, state, {
         visible: false,
       });
@@ -377,6 +378,7 @@ function state_user_menu(state = {visible: false}, action) {
   switch(action.type)
   {
     case ACCOUNT_SETTINGS_TOGGLE:
+    case REFRESH_ALL_FEEDS_START:
       return Object.assign({}, state, {
         visible: false,
       });

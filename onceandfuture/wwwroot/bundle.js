@@ -410,6 +410,7 @@
 	        visible: !state.visible
 	      });
 	    case _actions.USER_MENU_TOGGLE:
+	    case _actions.REFRESH_ALL_FEEDS_START:
 	      return Object.assign({}, state, {
 	        visible: false
 	      });
@@ -424,6 +425,7 @@
 	
 	  switch (action.type) {
 	    case _actions.ACCOUNT_SETTINGS_TOGGLE:
+	    case _actions.REFRESH_ALL_FEEDS_START:
 	      return Object.assign({}, state, {
 	        visible: false
 	      });
@@ -9536,18 +9538,19 @@
 	    height: _style.SIZE_BUTTON_HEIGHT,
 	    fontSize: _style.SIZE_BUTTON_FONT,
 	    padding: _style.SIZE_BUTTON_PADDING,
-	    cursor: cursor || 'pointer'
+	    cursor: cursor || 'pointer',
+	    display: 'block'
 	  };
 	  var className = "fa " + icon;
 	  tipPosition = tipPosition || 'right';
 	
 	  return React.createElement(
 	    'div',
-	    { style: style },
+	    { onClick: onClick, style: style },
 	    React.createElement(
 	      _tooltip2.default,
 	      { position: tipPosition, tip: tip },
-	      React.createElement('i', { onClick: onClick, className: className })
+	      React.createElement('i', { className: className })
 	    )
 	  );
 	};
@@ -9659,7 +9662,7 @@
 	      }
 	
 	      var tip = _react2.default.createElement('span', null);
-	      if (this.state.inside) {
+	      if (this.state.inside && this.props.tip) {
 	        tip = _react2.default.createElement(
 	          'span',
 	          { style: TIP_STYLE },
@@ -9971,11 +9974,12 @@
 	    });
 	  }
 	
+	  var tip = null; //"View account settings";
 	  return React.createElement(
 	    'div',
 	    { style: style },
 	    React.createElement(_iconbutton2.default, {
-	      tip: 'View account settings',
+	      tip: tip,
 	      tipPosition: 'bottomleft',
 	      icon: 'fa-user',
 	      onClick: onToggle

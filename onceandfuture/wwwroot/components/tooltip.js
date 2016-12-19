@@ -75,7 +75,7 @@ class Tooltip extends React.Component {
     }
 
     let tip = <span />;
-    if (this.state.inside) {
+    if (this.state.inside && this.props.tip) {
       tip = <span style={TIP_STYLE}>
         {this.props.tip}
       </span>;

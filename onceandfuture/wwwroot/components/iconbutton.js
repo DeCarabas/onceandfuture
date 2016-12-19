@@ -14,14 +14,15 @@ const IconButton = ({cursor, tip, tipPosition, icon, onClick}) => {
     fontSize: SIZE_BUTTON_FONT,
     padding: SIZE_BUTTON_PADDING,
     cursor: cursor || 'pointer',
+    display: 'block',
   };
   const className = "fa " + icon;
   tipPosition = tipPosition || 'right';
 
-  return <div style={style}>
-    <Tooltip position={tipPosition} tip={tip}>
-      <i onClick={onClick} className={className} />
-    </Tooltip>
+  return <div onClick={onClick} style={style}>
+      <Tooltip position={tipPosition} tip={tip}>
+        <i className={className} />
+      </Tooltip>
   </div>;
 }
 

@@ -48,11 +48,10 @@ const UserMenuBase = function({
     });
   }
 
-
-
+  const tip = null; //"View account settings";
   return <div style={style}>
     <IconButton
-      tip="View account settings"
+      tip={tip}
       tipPosition="bottomleft"
       icon="fa-user"
       onClick={onToggle}
