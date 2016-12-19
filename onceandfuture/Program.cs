@@ -318,6 +318,11 @@
             return true;
         }
 
+        public void SignOut(HttpContext context)
+        {
+            context.Response.Cookies.Delete(CookieName);
+        }
+
         struct LoginCookieCache
         {
             public Guid Plaintext;
@@ -556,15 +561,15 @@
                 await Task.WhenAll(feedTasks);
 
                 // Then all of the rivers...
-                for(int i = 0; i < profile.Rivers.Count; i++)
+                for (int i = 0; i < profile.Rivers.Count; i++)
                 {
                     RiverDefinition riverDef = profile.Rivers[i];
                     riverTasks[i] = this.feedParser
                         .RefreshAggregateRiverWithFeeds(
-                            riverDef.Id, 
-                            riverDef.Feeds, 
-                            this.aggregateStore, 
-                            this.feedStore, 
+                            riverDef.Id,
+                            riverDef.Feeds,
+                            this.aggregateStore,
+                            this.feedStore,
                             HttpContext.RequestAborted
                         )
                         .ContinueWith(fetchCallback);
@@ -592,6 +597,14 @@
             }
 
             return new EmptyResult();
+        }
+
+        [HttpPost("/api/v1/user/{user}/signout")]
+        public IActionResult SignOut(string user)
+        {
+            var authnManager = HttpContext.RequestServices.GetRequiredService<AuthenticationManager>();
+            authnManager.SignOut(HttpContext);
+            return Ok();
         }
 
         [HttpDelete("/api/v1/user/{user}/river/{id}")]

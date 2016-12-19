@@ -315,14 +315,23 @@ export const ACCOUNT_SETTINGS_TOGGLE = 'ACCOUNT_SETTINGS_TOGGLE';
 export function accountSettingsToggle() {
   return {
     type: ACCOUNT_SETTINGS_TOGGLE,
-  }
+  };
 }
 
 export const USER_MENU_TOGGLE = 'USER_MENU_TOGGLE';
 export function userMenuToggle() {
   return {
     type: USER_MENU_TOGGLE,
-  }
+  };
+}
+
+export const SIGN_OUT_ERROR = 'SIGN_OUT_ERROR';
+export function signOutError(user, error) {
+  return {
+    type: SIGN_OUT_ERROR,
+    user: user,
+    error: error,
+  };
 }
 
 function decodeError(xhr) {
@@ -562,5 +571,18 @@ export function setRiverOrder(user, river_order) {
   return xhrAction({
     verb: 'POST', url: '/api/v1/user/' + user + '/set_order',
     msg: { riverIds: river_order },
+  });
+}
+
+export function signOut(user) {
+  return xhrAction({
+    verb: 'POST', url: '/api/v1/user/' + user +'/signout',
+    msg: {},
+    loaded: () => {
+      window.location.href = "/";
+    },
+    error: (dispatch, message) => {
+      dispatch(signOutError(user, message));
+    },
   });
 }

@@ -2,6 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import {
   accountSettingsToggle,
+  signOut,
   userMenuToggle,
 } from '../actions';
 import {
@@ -14,7 +15,7 @@ import {
 } from './style';
 import IconButton from './iconbutton';
 
-const Menu = ({visible, onShowSettings}) => {
+const Menu = ({visible, onShowSettings, onSignOut}) => {
   const menu_style = {
     display: visible ? 'inline-block' : 'none',
     position: 'absolute',
@@ -31,14 +32,17 @@ const Menu = ({visible, onShowSettings}) => {
 
   return <div style={menu_style}>
     <p onClick={onShowSettings}>Account settings...</p>
-    <p>Logout</p>
+    <hr />
+    <p onClick={onSignOut}>Sign out</p>
   </div>;
 };
 
 const UserMenuBase = function({
+  user,
   visible,
   onToggle,
   onShowSettings,
+  onSignOut,
 }) {
   let style = {};
   if (visible) {
@@ -48,6 +52,8 @@ const UserMenuBase = function({
     });
   }
 
+  const onSignOutClick = () => onSignOut(user);
+
   const tip = null; //"View account settings";
   return <div style={style}>
     <IconButton
@@ -56,12 +62,17 @@ const UserMenuBase = function({
       icon="fa-user"
       onClick={onToggle}
     />
-    <Menu visible={visible} onShowSettings={onShowSettings} />
+    <Menu
+      visible={visible}
+      onShowSettings={onShowSettings}
+      onSignOut={onSignOutClick}
+    />
   </div>;
 };
 
 const mapStateToProps = (state) => {
   return {
+    user: state.user,
     visible: state.user_menu.visible,
   };
 };
@@ -69,6 +80,7 @@ const mapDispatchToProps = (dispatch) => {
   return {
     onToggle: () => dispatch(userMenuToggle()),
     onShowSettings: () => dispatch(accountSettingsToggle()),
+    onSignOut: (user) => dispatch(signOut(user)),
   };
 };
 const UserMenu = connect(mapStateToProps, mapDispatchToProps)(UserMenuBase);

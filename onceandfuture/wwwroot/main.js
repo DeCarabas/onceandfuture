@@ -46,6 +46,7 @@ import {
   REFRESH_ALL_FEEDS_SUCCESS,
   REFRESH_ALL_FEEDS_ERROR,
   REFRESH_ALL_FEEDS_PROGRESS,
+  SIGN_OUT_ERROR,
   USER_MENU_TOGGLE,
 
   addRiver,
@@ -344,6 +345,12 @@ function state_top_info(state = {}, action) {
     case RIVER_LIST_UPDATE_FAILED:
       return {
         text: "I can't update your list of rivers right now.",
+        level: 'error',
+      };
+
+    case SIGN_OUT_ERROR:
+      return {
+        text: "Something went wrong signing you out. Please try again.",
         level: 'error',
       };
 
