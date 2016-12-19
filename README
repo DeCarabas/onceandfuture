@@ -10,12 +10,6 @@ Todo:
 =======
 
 - Refresh is super slow on the docker image.
-- Settings tool tips are BUSTED (and the whole window looks wrong). Probably
-  I need some UI reform; maybe the hackery has just gotten out of hand.
-
-  - FIX BANNER HEIGHT TO 33PX AND LOCK IT IN STYLES
-  - REFORM Z INDICES TO A SET OF DEFINED LAYERS
-  - FIGURE OUT WHY SETTINGS BOX FILLS COLUMN
 
 UI:
 - Account creation flow
@@ -23,10 +17,12 @@ UI:
 - Change email address option
 - Add/remove river sets
 - Sign Out
-- More/less UX is jarring.
+- More/less UX is jarring. Fixing this, though, requires restricting the
+  number of items that I can have in a river at once, at least initially.
 - Import/export OPML
 - Font size for bubbles is wrong.
 - When removing a feed, remove from sources.
+- Vertical scrollbar on main window (why?)
 
 Back-end Stuff:
 - Cache health check results; currently pinging the QA instance very hard.

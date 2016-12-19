@@ -10957,8 +10957,6 @@
 	  return _react2.default.createElement('p', null);
 	};
 	
-	// RiverFeedUpdate
-	//
 	var RiverFeedUpdateBase = function RiverFeedUpdateBase(_ref2) {
 	  var update = _ref2.update,
 	      mode = _ref2.mode,
@@ -10975,6 +10973,9 @@
 	  };
 	
 	  var items = update.expanded ? update.item : update.item.slice(0, 3);
+	  var ris = items.map(function (item, index) {
+	    return _react2.default.createElement(_riveritem2.default, { item: item, mode: mode, key: 'i' + index });
+	  });
 	  return _react2.default.createElement(
 	    'div',
 	    { style: style },
@@ -10982,9 +10983,7 @@
 	    _react2.default.createElement(
 	      'div',
 	      { style: innerStyle },
-	      items.map(function (i) {
-	        return _react2.default.createElement(_riveritem2.default, { item: i, mode: mode, key: i.id });
-	      }),
+	      ris,
 	      _react2.default.createElement(MoreBox, {
 	        update: update,
 	        river_index: river_index,
