@@ -1,10 +1,10 @@
 {
   "parser": "babel-eslint",
   "plugins": [ "react" ],
+  "extends": "eslint:recommended",
   "env": {
     "browser": true,
-    "es6": true,
-    "node": true
+    "es6": true
   },
   "ecmaFeatures": {
     "arrowFunctions": true,
@@ -26,6 +26,7 @@
     "no-global-assign": ["error"],
     "no-multi-spaces": [0],
     "no-shadow": [0],
+    "no-undef": ["error"],
     "no-unused-vars": [1],
     "no-use-before-define": [2, "nofunc"],
     "quotes": [0],

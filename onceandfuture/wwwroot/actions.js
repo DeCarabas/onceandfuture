@@ -332,7 +332,7 @@ function decodeError(xhr) {
     const fault = JSON.parse(xhr.responseText);
     errorMessage = fault.description || errorMessage;
   }
-  catch(_) { }
+  catch(_) { /* Ignore errors */ }
   return errorMessage;
 }
 
@@ -355,9 +355,6 @@ function xhrAction(options) {
     if (options.error) {
       xhr.addEventListener("error", () => {
         if (xhr.status == 403 /* Forbidden */) {
-          const errorMessage = decodeError(xhr);
-          console.log("Got forbidden: ", errorMessage);
-          console.log("Redirecting to login...");
           window.location.href = "/login";
         } else {
           options.error(dispatch, decodeError(xhr));
@@ -367,9 +364,6 @@ function xhrAction(options) {
     if (options.loaded_json || options.loaded) {
       xhr.addEventListener("load", () => {
         if (xhr.status == 403 /* Forbidden */) {
-          const errorMessage = decodeError(xhr);
-          console.log("Got forbidden: ", errorMessage);
-          console.log("Redirecting to login...");
           window.location.href = "/login";
         } else if (options.error && xhr.status > 399) {
           options.error(dispatch, decodeError(xhr));
@@ -432,7 +426,7 @@ export function addRiver(user, id = null) {
       dispatch(addRiverSuccess(result.rivers));
     },
     error: (dispatch, message) => {
-      dispatch(addRiverError(index, message));
+      dispatch(addRiverError(message));
     },
   });
 }

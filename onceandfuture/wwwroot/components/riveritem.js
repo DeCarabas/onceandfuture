@@ -1,6 +1,6 @@
-var React = require('react'); // N.B. Still need this because JSX.
-import RiverItemTitle from './riveritemtitle'
-import RiverItemThumbnail from './riveritemthumbnail'
+import React from 'react';
+import RiverItemTitle from './riveritemtitle';
+import RiverItemThumbnail from './riveritemthumbnail';
 
 const RiverItem = ({item, mode = 'auto'}) => {
   let style = {

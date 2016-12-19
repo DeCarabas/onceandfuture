@@ -1,4 +1,4 @@
-var React = require('react'); // N.B. Still need this because JSX.
+import React from 'react';
 import { connect } from 'react-redux';
 import { expandFeedUpdate, collapseFeedUpdate } from '../actions';
 import { update_key } from '../util';

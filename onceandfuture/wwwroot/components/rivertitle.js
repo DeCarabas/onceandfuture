@@ -1,4 +1,4 @@
-var React = require('react'); // N.B. Still need this because JSX.
+import React from 'react';
 import {
   RIVER_TITLE_BACKGROUND_COLOR,
 
@@ -6,7 +6,6 @@ import {
   SIZE_RIVER_TITLE_PADDING_HORIZONTAL,
   SIZE_RIVER_TITLE_PADDING_VERTICAL,
   SIZE_RIVER_TITLE_HEIGHT,
-  SIZE_RIVER_TITLE_TOP_SPACER,
 } from './style';
 import IconButton from './iconbutton';
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { DEFAULT_LINK_STYLE, ITEM_TITLE_FONT_SIZE } from './style';
+import { ITEM_TITLE_FONT_SIZE } from './style';
 import RiverLink from './riverlink';
 
 const RiverItemTitle = ({item}) => {

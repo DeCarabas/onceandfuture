@@ -1,7 +1,7 @@
-var React = require('react'); // N.B. Still need this because JSX.
-import { UPDATE_TITLE_FONT_SIZE } from './style'
-import RiverLink from './riverlink'
-import RelTime from './reltime'
+import React from 'react';
+import { UPDATE_TITLE_FONT_SIZE } from './style';
+import RiverLink from './riverlink';
+import RelTime from './reltime';
 
 const RiverFeedUpdateTitle = ({update}) => {
   const style = {

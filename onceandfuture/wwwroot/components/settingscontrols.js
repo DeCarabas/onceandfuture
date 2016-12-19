@@ -1,4 +1,4 @@
-var React = require('react'); // N.B. Still need this because JSX.
+import React from 'react';
 import {
   COLOR_DARK,
   COLOR_VERY_DARK,

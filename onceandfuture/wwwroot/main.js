@@ -1,5 +1,5 @@
-var React = require('react');
-var ReactDOM = require('react-dom');
+import React from 'react';
+import ReactDOM from 'react-dom';
 import { Provider } from 'react-redux';
 import { createStore, applyMiddleware } from 'redux';
 import thunkMiddleware from 'redux-thunk';
@@ -108,8 +108,10 @@ function state_river_feed_updates(state = [], action) {
       return migrate_updates(state, action.response.updatedFeeds.updatedFeed);
     case EXPAND_FEED_UPDATE:
     case COLLAPSE_FEED_UPDATE:
-      const index = state.findIndex(u => update_key(u) === action.update_key);
-      return apply_state_array(state, index, state_river_feed_update, action);
+      {
+        const index = state.findIndex(u => update_key(u) === action.update_key);
+        return apply_state_array(state, index, state_river_feed_update, action);
+      }
     default:
       return state;
   }
@@ -254,21 +256,23 @@ function state_rivers(state = [], action) {
       });
 
     case DROP_RIVER:
-      const source_river_index = state.findIndex((r) => r.id === action.dragged_river_id);
-      if (source_river_index < 0) { return state; }
+      {
+        const source_river_index = state.findIndex((r) => r.id === action.dragged_river_id);
+        if (source_river_index < 0) { return state; }
 
-      // Leave out the source river...
-      const state_without_source = [].concat(
-        state.slice(0, source_river_index),
-        state.slice(source_river_index + 1, state.length)
-      );
+        // Leave out the source river...
+        const state_without_source = [].concat(
+          state.slice(0, source_river_index),
+          state.slice(source_river_index + 1, state.length)
+        );
 
-      // And splice it to the left of the target index.
-      return [].concat(
-        state_without_source.slice(0, action.target_index),
-        [ state[source_river_index] ],
-        state_without_source.slice(action.target_index, state_without_source.length)
-      );
+        // And splice it to the left of the target index.
+        return [].concat(
+          state_without_source.slice(0, action.target_index),
+          [ state[source_river_index] ],
+          state_without_source.slice(action.target_index, state_without_source.length)
+        );
+      }
 
     default: // By default forward events to the appropriate element.
       return apply_state_array(state, action.river_index, state_river, action);

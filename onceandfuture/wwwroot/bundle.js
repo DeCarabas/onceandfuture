@@ -49,6 +49,14 @@
 
 	'use strict';
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	var _reactDom = __webpack_require__(/*! react-dom */ 103);
+	
+	var _reactDom2 = _interopRequireDefault(_reactDom);
+	
 	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
 	
 	var _redux = __webpack_require__(/*! redux */ 43);
@@ -70,10 +78,6 @@
 	var _approot2 = _interopRequireDefault(_approot);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var React = __webpack_require__(/*! react */ 4);
-	var ReactDOM = __webpack_require__(/*! react-dom */ 103);
-	
 	
 	// User doesn't channge, based on host URL.
 	var user = window.location.pathname.split('/')[2];
@@ -135,10 +139,12 @@
 	      return migrate_updates(state, action.response.updatedFeeds.updatedFeed);
 	    case _actions.EXPAND_FEED_UPDATE:
 	    case _actions.COLLAPSE_FEED_UPDATE:
-	      var index = state.findIndex(function (u) {
-	        return (0, _util.update_key)(u) === action.update_key;
-	      });
-	      return apply_state_array(state, index, state_river_feed_update, action);
+	      {
+	        var index = state.findIndex(function (u) {
+	          return (0, _util.update_key)(u) === action.update_key;
+	        });
+	        return apply_state_array(state, index, state_river_feed_update, action);
+	      }
 	    default:
 	      return state;
 	  }
@@ -290,18 +296,20 @@
 	      });
 	
 	    case _actions.DROP_RIVER:
-	      var source_river_index = state.findIndex(function (r) {
-	        return r.id === action.dragged_river_id;
-	      });
-	      if (source_river_index < 0) {
-	        return state;
+	      {
+	        var source_river_index = state.findIndex(function (r) {
+	          return r.id === action.dragged_river_id;
+	        });
+	        if (source_river_index < 0) {
+	          return state;
+	        }
+	
+	        // Leave out the source river...
+	        var state_without_source = [].concat(state.slice(0, source_river_index), state.slice(source_river_index + 1, state.length));
+	
+	        // And splice it to the left of the target index.
+	        return [].concat(state_without_source.slice(0, action.target_index), [state[source_river_index]], state_without_source.slice(action.target_index, state_without_source.length));
 	      }
-	
-	      // Leave out the source river...
-	      var state_without_source = [].concat(state.slice(0, source_river_index), state.slice(source_river_index + 1, state.length));
-	
-	      // And splice it to the left of the target index.
-	      return [].concat(state_without_source.slice(0, action.target_index), [state[source_river_index]], state_without_source.slice(action.target_index, state_without_source.length));
 	
 	    default:
 	      // By default forward events to the appropriate element.
@@ -482,10 +490,10 @@
 	  }
 	});
 	
-	ReactDOM.render(React.createElement(
+	_reactDom2.default.render(_react2.default.createElement(
 	  _reactRedux.Provider,
 	  { store: store },
-	  React.createElement(_approot2.default, null)
+	  _react2.default.createElement(_approot2.default, null)
 	), document.getElementById('example'));
 	
 	store.dispatch((0, _actions.refreshRiverList)(user));
@@ -8058,8 +8066,10 @@
 	exports.make_full_url = make_full_url;
 	function assert(condition, message) {
 	  if (!condition) {
+	    /* eslint-disable no-debugger, no-console */
 	    debugger;
 	    console.log('Assertion failed: ', message);
+	    /* eslint-enable */
 	    throw Error('Assertion failed', message);
 	  }
 	}
@@ -8474,7 +8484,7 @@
 	  try {
 	    var fault = JSON.parse(xhr.responseText);
 	    errorMessage = fault.description || errorMessage;
-	  } catch (_) {}
+	  } catch (_) {/* Ignore errors */}
 	  return errorMessage;
 	}
 	
@@ -8499,9 +8509,6 @@
 	    if (options.error) {
 	      xhr.addEventListener("error", function () {
 	        if (xhr.status == 403 /* Forbidden */) {
-	            var errorMessage = decodeError(xhr);
-	            console.log("Got forbidden: ", errorMessage);
-	            console.log("Redirecting to login...");
 	            window.location.href = "/login";
 	          } else {
 	          options.error(dispatch, decodeError(xhr));
@@ -8511,9 +8518,6 @@
 	    if (options.loaded_json || options.loaded) {
 	      xhr.addEventListener("load", function () {
 	        if (xhr.status == 403 /* Forbidden */) {
-	            var errorMessage = decodeError(xhr);
-	            console.log("Got forbidden: ", errorMessage);
-	            console.log("Redirecting to login...");
 	            window.location.href = "/login";
 	          } else if (options.error && xhr.status > 399) {
 	          options.error(dispatch, decodeError(xhr));
@@ -8586,7 +8590,7 @@
 	      dispatch(addRiverSuccess(result.rivers));
 	    },
 	    error: function error(dispatch, message) {
-	      dispatch(addRiverError(index, message));
+	      dispatch(addRiverError(message));
 	    }
 	  });
 	}
@@ -8806,6 +8810,10 @@
 	});
 	exports.AddRiverButton = undefined;
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
 	
 	var _actions = __webpack_require__(/*! ../actions */ 78);
@@ -8825,9 +8833,6 @@
 	var _river2 = _interopRequireDefault(_river);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var React = __webpack_require__(/*! react */ 4);
-	
 	
 	var columnLeft = function columnLeft(index) {
 	  return index * (_style.SIZE_COLUMN_WIDTH + _style.SIZE_SPACER_WIDTH) + _style.SIZE_SPACER_WIDTH;
@@ -8850,10 +8855,10 @@
 	    cursor: 'pointer'
 	  };
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: column_style, onClick: onAddRiver },
-	    React.createElement('i', { className: 'fa fa-plus-square' })
+	    _react2.default.createElement('i', { className: 'fa fa-plus-square' })
 	  );
 	};
 	
@@ -8867,10 +8872,10 @@
 	    top: _style.SIZE_COLUMN_TOP,
 	    bottom: _style.SIZE_SPACER_HEIGHT
 	  };
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: style },
-	    React.createElement(_river2.default, { index: index })
+	    _react2.default.createElement(_river2.default, { index: index })
 	  );
 	};
 	
@@ -8881,10 +8886,10 @@
 	    width: '100%'
 	  };
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: style },
-	    React.createElement(_accountsettings2.default, null)
+	    _react2.default.createElement(_accountsettings2.default, null)
 	  );
 	};
 	
@@ -8904,36 +8909,36 @@
 	    height: _style.SIZE_PAGE_HEADER
 	  };
 	
-	  var accountSettings = React.createElement('span', null);
+	  var accountSettings = _react2.default.createElement('span', null);
 	  var onSettingsClick = onShowSettings;
 	  if (show_settings) {
-	    accountSettings = React.createElement(AccountSettingsContainer, null);
+	    accountSettings = _react2.default.createElement(AccountSettingsContainer, null);
 	    onSettingsClick = onHideSettings;
 	  }
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    null,
-	    React.createElement(
+	    _react2.default.createElement(
 	      'div',
 	      { style: top_bar_style },
-	      React.createElement(_appbanner2.default, {
+	      _react2.default.createElement(_appbanner2.default, {
 	        title: 'Rivers',
 	        load_progress: load_progress,
 	        onSettingsClick: onSettingsClick
 	      })
 	    ),
-	    React.createElement(
+	    _react2.default.createElement(
 	      'div',
 	      null,
 	      rivers.map(function (r, i) {
-	        return React.createElement(RiverColumn, { index: i, key: 'r' + i });
+	        return _react2.default.createElement(RiverColumn, { index: i, key: 'r' + i });
 	      })
 	    ),
-	    React.createElement(
+	    _react2.default.createElement(
 	      'div',
 	      null,
-	      React.createElement(AddRiverButton, {
+	      _react2.default.createElement(AddRiverButton, {
 	        index: rivers.length,
 	        onAddRiver: function onAddRiver() {
 	          return _onAddRiver(user);
@@ -9091,12 +9096,15 @@
 	  value: true
 	});
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _style = __webpack_require__(/*! ./style */ 81);
 	
 	var _settingscontrols = __webpack_require__(/*! ./settingscontrols */ 83);
 	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var AccountSettings = function AccountSettings() {
 	  var fontSize = '18px';
@@ -9142,66 +9150,66 @@
 	    paddingRight: 5
 	  };
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: inner_style },
-	    React.createElement(
+	    _react2.default.createElement(
 	      'h2',
 	      null,
 	      'Account Settings'
 	    ),
-	    React.createElement('hr', null),
-	    React.createElement(
+	    _react2.default.createElement('hr', null),
+	    _react2.default.createElement(
 	      'div',
 	      { style: r_style },
-	      React.createElement(
+	      _react2.default.createElement(
 	        'div',
 	        { style: p_l_style },
 	        'Email Address:'
 	      ),
-	      React.createElement(
+	      _react2.default.createElement(
 	        'div',
 	        { style: p_r_style },
-	        React.createElement('input', { style: in_style, type: 'text', id: 'email', name: 'email', placeholder: 'Email Address' })
+	        _react2.default.createElement('input', { style: in_style, type: 'text', id: 'email', name: 'email', placeholder: 'Email Address' })
 	      )
 	    ),
-	    React.createElement(
+	    _react2.default.createElement(
 	      'div',
 	      { style: r_b_style },
-	      React.createElement(_settingscontrols.SettingsButton, { text: 'Change Email Address' })
+	      _react2.default.createElement(_settingscontrols.SettingsButton, { text: 'Change Email Address' })
 	    ),
-	    React.createElement(
+	    _react2.default.createElement(
 	      'div',
 	      { style: r_style },
-	      React.createElement(
+	      _react2.default.createElement(
 	        'div',
 	        { style: p_l_style },
 	        'Password:'
 	      ),
-	      React.createElement(
+	      _react2.default.createElement(
 	        'div',
 	        { style: p_r_style },
-	        React.createElement('input', { style: in_style, type: 'password', id: 'pw1', name: 'pw1', placeholder: 'Password' })
+	        _react2.default.createElement('input', { style: in_style, type: 'password', id: 'pw1', name: 'pw1', placeholder: 'Password' })
 	      )
 	    ),
-	    React.createElement(
+	    _react2.default.createElement(
 	      'div',
 	      { style: r_style },
-	      React.createElement(
+	      _react2.default.createElement(
 	        'div',
 	        { style: p_l_style },
 	        'Repeat Password:'
 	      ),
-	      React.createElement(
+	      _react2.default.createElement(
 	        'div',
 	        { style: p_r_style },
-	        React.createElement('input', { style: in_style, type: 'password', id: 'pw2', name: 'pw2', placeholder: 'Password' })
+	        _react2.default.createElement('input', { style: in_style, type: 'password', id: 'pw2', name: 'pw2', placeholder: 'Password' })
 	      )
 	    ),
-	    React.createElement(
+	    _react2.default.createElement(
 	      'div',
 	      { style: r_b_style },
-	      React.createElement(_settingscontrols.SettingsButton, { text: 'Change Password' })
+	      _react2.default.createElement(_settingscontrols.SettingsButton, { text: 'Change Password' })
 	    )
 	  );
 	};
@@ -9224,7 +9232,13 @@
 	
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _style = __webpack_require__(/*! ./style */ 81);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 	
@@ -9232,7 +9246,6 @@
 	
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
 	var SettingsButton = exports.SettingsButton = function SettingsButton(_ref) {
 	  var onClick = _ref.onClick,
 	      text = _ref.text;
@@ -9249,10 +9262,10 @@
 	    cursor: 'pointer'
 	  };
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: divStyle },
-	    React.createElement(
+	    _react2.default.createElement(
 	      'span',
 	      { style: style, onClick: onClick },
 	      text
@@ -9297,17 +9310,17 @@
 	        width: '100%'
 	      };
 	
-	      return React.createElement(
+	      return _react2.default.createElement(
 	        'div',
 	        null,
-	        React.createElement('input', { style: input_style, type: 'text', value: this.state.value, onChange: this.handleChange }),
-	        React.createElement(SettingsButton, { onClick: this.handleSubmit, text: this.props.buttonLabel })
+	        _react2.default.createElement('input', { style: input_style, type: 'text', value: this.state.value, onChange: this.handleChange }),
+	        _react2.default.createElement(SettingsButton, { onClick: this.handleSubmit, text: this.props.buttonLabel })
 	      );
 	    }
 	  }]);
 	
 	  return SettingInputBox;
-	}(React.Component);
+	}(_react2.default.Component);
 
 /***/ },
 /* 84 */
@@ -9321,6 +9334,10 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
+	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
 	
 	var _style = __webpack_require__(/*! ./style */ 81);
 	
@@ -9342,9 +9359,6 @@
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	var React = __webpack_require__(/*! react */ 4);
-	
-	
 	var BannerTitle = function BannerTitle(_ref) {
 	  var title = _ref.title;
 	
@@ -9361,7 +9375,7 @@
 	    fontWeight: 'bold'
 	  };
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: head_style },
 	    title
@@ -9384,10 +9398,10 @@
 	    textAlign: 'center'
 	  };
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: announcer_style },
-	    React.createElement(
+	    _react2.default.createElement(
 	      'i',
 	      null,
 	      message
@@ -9409,30 +9423,30 @@
 	    float: 'right'
 	  };
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    null,
-	    React.createElement(
+	    _react2.default.createElement(
 	      'div',
 	      { style: div_style },
-	      React.createElement(Announcer, { message: load_progress.message }),
-	      React.createElement(BannerTitle, { title: title }),
-	      React.createElement(
+	      _react2.default.createElement(Announcer, { message: load_progress.message }),
+	      _react2.default.createElement(BannerTitle, { title: title }),
+	      _react2.default.createElement(
 	        'div',
 	        { style: title_button_style },
-	        React.createElement(_usermenu2.default, null)
+	        _react2.default.createElement(_usermenu2.default, null)
 	      ),
-	      React.createElement(
+	      _react2.default.createElement(
 	        'div',
 	        { style: title_button_style },
-	        React.createElement(_refreshfeedsbutton2.default, null)
+	        _react2.default.createElement(_refreshfeedsbutton2.default, null)
 	      )
 	    ),
-	    React.createElement(_riverprogress2.default, {
+	    _react2.default.createElement(_riverprogress2.default, {
 	      progress: load_progress.percent / 100,
 	      backgroundColor: _style.APP_BACKGROUND_COLOR
 	    }),
-	    React.createElement(_riversetballoon2.default, null)
+	    _react2.default.createElement(_riversetballoon2.default, null)
 	  );
 	};
 	
@@ -9451,6 +9465,10 @@
 	  value: true
 	});
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
 	
 	var _actions = __webpack_require__(/*! ../actions */ 78);
@@ -9462,9 +9480,6 @@
 	var _iconbutton2 = _interopRequireDefault(_iconbutton);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var React = __webpack_require__(/*! react */ 4);
-	
 	
 	var RefreshFeedsButtonBase = function RefreshFeedsButtonBase(_ref) {
 	  var loading = _ref.loading,
@@ -9478,10 +9493,10 @@
 	    color: loading ? _style.RIVER_TITLE_BACKGROUND_COLOR : _style.APP_TEXT_COLOR
 	  };
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: style },
-	    React.createElement(_iconbutton2.default, { onClick: onClick, icon: 'fa-refresh', tip: 'Refresh all feeds.', tipPosition: 'bottomleft' })
+	    _react2.default.createElement(_iconbutton2.default, { onClick: onClick, icon: 'fa-refresh', tip: 'Refresh all feeds.', tipPosition: 'bottomleft' })
 	  );
 	};
 	
@@ -9515,6 +9530,10 @@
 	  value: true
 	});
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _style = __webpack_require__(/*! ./style */ 81);
 	
 	var _tooltip = __webpack_require__(/*! ./tooltip */ 87);
@@ -9522,9 +9541,6 @@
 	var _tooltip2 = _interopRequireDefault(_tooltip);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var React = __webpack_require__(/*! react */ 4);
-	
 	
 	var IconButton = function IconButton(_ref) {
 	  var cursor = _ref.cursor,
@@ -9544,13 +9560,13 @@
 	  var className = "fa " + icon;
 	  tipPosition = tipPosition || 'right';
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { onClick: onClick, style: style },
-	    React.createElement(
+	    _react2.default.createElement(
 	      _tooltip2.default,
 	      { position: tipPosition, tip: tip },
-	      React.createElement('i', { className: className })
+	      _react2.default.createElement('i', { className: className })
 	    )
 	  );
 	};
@@ -9715,10 +9731,13 @@
 	  value: true
 	});
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _style = __webpack_require__(/*! ./style */ 81);
 	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var RiverProgress = function RiverProgress(_ref) {
 	  var progress = _ref.progress,
@@ -9754,11 +9773,11 @@
 	
 	  };
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: div_style },
-	    React.createElement('span', { style: span_style }),
-	    React.createElement('div', { style: candy_style })
+	    _react2.default.createElement('span', { style: span_style }),
+	    _react2.default.createElement('div', { style: candy_style })
 	  );
 	};
 	
@@ -9912,6 +9931,10 @@
 	  value: true
 	});
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
 	
 	var _actions = __webpack_require__(/*! ../actions */ 78);
@@ -9923,9 +9946,6 @@
 	var _iconbutton2 = _interopRequireDefault(_iconbutton);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
 	
 	var Menu = function Menu(_ref) {
 	  var visible = _ref.visible,
@@ -9945,15 +9965,15 @@
 	    cursor: 'pointer'
 	  };
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: menu_style },
-	    React.createElement(
+	    _react2.default.createElement(
 	      'p',
 	      { onClick: onShowSettings },
 	      'Account settings...'
 	    ),
-	    React.createElement(
+	    _react2.default.createElement(
 	      'p',
 	      null,
 	      'Logout'
@@ -9975,16 +9995,16 @@
 	  }
 	
 	  var tip = null; //"View account settings";
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: style },
-	    React.createElement(_iconbutton2.default, {
+	    _react2.default.createElement(_iconbutton2.default, {
 	      tip: tip,
 	      tipPosition: 'bottomleft',
 	      icon: 'fa-user',
 	      onClick: onToggle
 	    }),
-	    React.createElement(Menu, { visible: visible, onShowSettings: onShowSettings })
+	    _react2.default.createElement(Menu, { visible: visible, onShowSettings: onShowSettings })
 	  );
 	};
 	
@@ -10076,7 +10096,7 @@
 	    { style: style },
 	    control
 	  );
-	};
+	}
 	
 	var RiverTitlePosition = function RiverTitlePosition(_ref) {
 	  var river = _ref.river,
@@ -10710,6 +10730,10 @@
 	  value: true
 	});
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _style = __webpack_require__(/*! ./style */ 81);
 	
 	var _iconbutton = __webpack_require__(/*! ./iconbutton */ 86);
@@ -10717,9 +10741,6 @@
 	var _iconbutton2 = _interopRequireDefault(_iconbutton);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
 	
 	var RiverSettingsButton = function RiverSettingsButton(_ref) {
 	  var river = _ref.river,
@@ -10743,10 +10764,10 @@
 	    tip = 'Show the settings panel for this feed.';
 	  }
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: style },
-	    React.createElement(_iconbutton2.default, { tip: tip, icon: icon, onClick: onClick })
+	    _react2.default.createElement(_iconbutton2.default, { tip: tip, icon: icon, onClick: onClick })
 	  );
 	};
 	
@@ -10764,10 +10785,10 @@
 	    ev.dataTransfer.setDragImage(draggo, 0, 0);
 	  };
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: style, draggable: 'true', onDragStart: onDrag },
-	    React.createElement(_iconbutton2.default, {
+	    _react2.default.createElement(_iconbutton2.default, {
 	      cursor: 'move',
 	      tip: 'Drag this onto another column to re-order it.',
 	      icon: 'fa-bars'
@@ -10797,16 +10818,16 @@
 	    fontSize: _style.SIZE_RIVER_TITLE_FONT
 	  };
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: divStyle },
-	    React.createElement(RiverSettingsButton, {
+	    _react2.default.createElement(RiverSettingsButton, {
 	      river: river,
 	      onShowSettings: onShowSettings,
 	      onHideSettings: onHideSettings
 	    }),
-	    React.createElement(RiverDragHandle, { river: river }),
-	    React.createElement(
+	    _react2.default.createElement(RiverDragHandle, { river: river }),
+	    _react2.default.createElement(
 	      'h1',
 	      { style: style },
 	      river.name
@@ -10885,6 +10906,10 @@
 	  value: true
 	});
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _reactRedux = __webpack_require__(/*! react-redux */ 1);
 	
 	var _actions = __webpack_require__(/*! ../actions */ 78);
@@ -10901,9 +10926,6 @@
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
-	
 	var MoreBox = function MoreBox(_ref) {
 	  var update = _ref.update,
 	      river_index = _ref.river_index,
@@ -10917,14 +10939,14 @@
 	    };
 	    if (!update.expanded) {
 	      var click = expand(river_index, (0, _util.update_key)(update));
-	      return React.createElement(
+	      return _react2.default.createElement(
 	        'p',
 	        { style: moreStyle, onClick: click },
 	        'More...'
 	      );
 	    } else {
 	      var _click = collapse(river_index, (0, _util.update_key)(update));
-	      return React.createElement(
+	      return _react2.default.createElement(
 	        'p',
 	        { style: moreStyle, onClick: _click },
 	        'Less...'
@@ -10932,7 +10954,7 @@
 	    }
 	  }
 	
-	  return React.createElement('p', null);
+	  return _react2.default.createElement('p', null);
 	};
 	
 	// RiverFeedUpdate
@@ -10953,17 +10975,17 @@
 	  };
 	
 	  var items = update.expanded ? update.item : update.item.slice(0, 3);
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: style },
-	    React.createElement(_riverfeedupdatetitle2.default, { update: update }),
-	    React.createElement(
+	    _react2.default.createElement(_riverfeedupdatetitle2.default, { update: update }),
+	    _react2.default.createElement(
 	      'div',
 	      { style: innerStyle },
 	      items.map(function (i) {
-	        return React.createElement(_riveritem2.default, { item: i, mode: mode, key: i.id });
+	        return _react2.default.createElement(_riveritem2.default, { item: i, mode: mode, key: i.id });
 	      }),
-	      React.createElement(MoreBox, {
+	      _react2.default.createElement(MoreBox, {
 	        update: update,
 	        river_index: river_index,
 	        expand: expand,
@@ -11008,6 +11030,10 @@
 	  value: true
 	});
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _style = __webpack_require__(/*! ./style */ 81);
 	
 	var _riverlink = __webpack_require__(/*! ./riverlink */ 95);
@@ -11020,31 +11046,28 @@
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
-	
 	var RiverFeedUpdateTitle = function RiverFeedUpdateTitle(_ref) {
 	  var update = _ref.update;
 	
 	  var style = {
 	    fontSize: _style.UPDATE_TITLE_FONT_SIZE
 	  };
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: style },
-	    React.createElement('hr', null),
-	    React.createElement(
+	    _react2.default.createElement('hr', null),
+	    _react2.default.createElement(
 	      'div',
 	      { style: { float: 'right' } },
 	      'Updated ',
-	      React.createElement(_reltime2.default, { time: update.whenLastUpdate })
+	      _react2.default.createElement(_reltime2.default, { time: update.whenLastUpdate })
 	    ),
-	    React.createElement(
+	    _react2.default.createElement(
 	      _riverlink2.default,
 	      { href: update.websiteUrl },
 	      update.feedTitle
 	    ),
-	    React.createElement('div', { style: { float: 'clear', marginBottom: 10 } })
+	    _react2.default.createElement('div', { style: { float: 'clear', marginBottom: 10 } })
 	  );
 	};
 	
@@ -11063,6 +11086,10 @@
 	  value: true
 	});
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _riveritemtitle = __webpack_require__(/*! ./riveritemtitle */ 101);
 	
 	var _riveritemtitle2 = _interopRequireDefault(_riveritemtitle);
@@ -11072,9 +11099,6 @@
 	var _riveritemthumbnail2 = _interopRequireDefault(_riveritemthumbnail);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
 	
 	var RiverItem = function RiverItem(_ref) {
 	  var item = _ref.item,
@@ -11086,18 +11110,18 @@
 	    overflow: 'auto'
 	  };
 	
-	  return React.createElement(
+	  return _react2.default.createElement(
 	    'div',
 	    { style: style },
-	    React.createElement(_riveritemtitle2.default, { item: item }),
-	    React.createElement('div', { style: { float: 'clear' } }),
-	    React.createElement(_riveritemthumbnail2.default, { item: item, mode: mode }),
-	    React.createElement(
+	    _react2.default.createElement(_riveritemtitle2.default, { item: item }),
+	    _react2.default.createElement('div', { style: { float: 'clear' } }),
+	    _react2.default.createElement(_riveritemthumbnail2.default, { item: item, mode: mode }),
+	    _react2.default.createElement(
 	      'p',
 	      null,
 	      item.body
 	    ),
-	    React.createElement('div', { style: { float: 'clear' } })
+	    _react2.default.createElement('div', { style: { float: 'clear' } })
 	  );
 	};
 	
@@ -11161,6 +11185,10 @@
 	  value: true
 	});
 	
+	var _react = __webpack_require__(/*! react */ 4);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
 	var _style = __webpack_require__(/*! ./style */ 81);
 	
 	var _util = __webpack_require__(/*! ../util */ 77);
@@ -11170,9 +11198,6 @@
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var React = __webpack_require__(/*! react */ 4); // N.B. Still need this because JSX.
-	
 	
 	var RiverItemThumbnail = function RiverItemThumbnail(_ref) {
 	  var item = _ref.item,
@@ -11198,13 +11223,13 @@
 	      imgstyle.height = _style.FULL_IMAGE_WIDTH;
 	    }
 	
-	    return React.createElement(
+	    return _react2.default.createElement(
 	      _riverlink2.default,
 	      { href: item.link },
-	      React.createElement('img', { style: imgstyle, src: (0, _util.make_full_url)(thumb.url) })
+	      _react2.default.createElement('img', { style: imgstyle, src: (0, _util.make_full_url)(thumb.url) })
 	    );
 	  } else {
-	    return React.createElement('span', null);
+	    return _react2.default.createElement('span', null);
 	  }
 	};
 	

@@ -1,7 +1,9 @@
 export function assert(condition, message) {
   if (!condition) {
+    /* eslint-disable no-debugger, no-console */
     debugger;
     console.log('Assertion failed: ', message);
+    /* eslint-enable */
     throw Error('Assertion failed', message);
   }
 }

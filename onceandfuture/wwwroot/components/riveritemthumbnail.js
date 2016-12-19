@@ -1,7 +1,7 @@
-var React = require('react'); // N.B. Still need this because JSX.
-import { FULL_IMAGE_WIDTH } from './style'
-import { make_full_url } from '../util'
-import RiverLink from './riverlink'
+import React from 'react';
+import { FULL_IMAGE_WIDTH } from './style';
+import { make_full_url } from '../util';
+import RiverLink from './riverlink';
 
 const RiverItemThumbnail = ({item, mode = 'auto'}) => {
   let thumb = item.thumbnail;
@@ -13,7 +13,7 @@ const RiverItemThumbnail = ({item, mode = 'auto'}) => {
       marginLeft: 3,
       marginRight: 3,
       marginBottom: 3,
-    }
+    };
     if ((mode === 'text') ||
        (mode === 'auto' && (item.body || '').length > 100)) {
       imgstyle.float = 'right';
@@ -34,4 +34,4 @@ const RiverItemThumbnail = ({item, mode = 'auto'}) => {
   }
 }
 
-export default RiverItemThumbnail
+export default RiverItemThumbnail;

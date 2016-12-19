@@ -1,4 +1,4 @@
-var React = require('react');
+import React from 'react';
 import {
   SIZE_ANNOUNCER_FONT,
   SIZE_ANNOUNCER_HEIGHT,

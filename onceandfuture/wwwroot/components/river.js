@@ -38,7 +38,7 @@ function modalForRiver(river, index, dismiss, dispatch) {
   return <div style={style}>
     {control}
   </div>;
-};
+}
 
 const RiverTitlePosition = ({river, onShowSettings, onHideSettings}) => {
   const style = {
