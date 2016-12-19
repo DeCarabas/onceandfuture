@@ -48,19 +48,30 @@
         public UserProfile(
             IEnumerable<RiverDefinition> rivers = null,
             IEnumerable<LoginCookie> logins = null,
-            string password = null)
+            string password = null,
+            string email = null,
+            bool emailVerified = false)
         {
             Rivers = ImmutableList.CreateRange(rivers ?? Enumerable.Empty<RiverDefinition>());
             Logins = ImmutableList.CreateRange(logins ?? Enumerable.Empty<LoginCookie>());
             Password = password;
+            Email = email;
+            EmailVerified = emailVerified;
         }
 
         public UserProfile With(
             IEnumerable<RiverDefinition> rivers = null,
             IEnumerable<LoginCookie> logins = null,
-            string password = null)
+            string password = null,
+            string email = null,
+            bool? emailVerified = null)
         {
-            return new UserProfile(rivers ?? Rivers, logins ?? Logins, password ?? Password);
+            return new UserProfile(
+                rivers ?? Rivers, 
+                logins ?? Logins, 
+                password ?? Password, 
+                email ?? Email, 
+                emailVerified ?? EmailVerified);
         }
 
         [JsonProperty("rivers")]
@@ -69,6 +80,10 @@
         public ImmutableList<LoginCookie> Logins { get; }
         [JsonProperty("password")]
         public string Password { get; }
+        [JsonProperty("email")]
+        public string Email { get; }
+        [JsonProperty("emailVerified")]
+        public bool EmailVerified { get; }
     }
 
 

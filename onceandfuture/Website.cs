@@ -763,6 +763,51 @@
             return Ok(); // TODO: Progress?
         }
 
+        [HttpPost("/api/v1/user/{user}/password")]
+        public async Task<IActionResult> PostSetPassword(string user)
+        {
+            // should be genva
+            var requestBody = await ReadRequest<SetPasswordRequest>();
+            UserProfile profile = await this.profileStore.GetProfileFor(user);
+
+            var newProfile = profile.With(
+                password: AuthenticationManager.EncryptPassword(requestBody.Password),
+                logins: new LoginCookie[0]);
+            await this.profileStore.SaveProfileFor(user, newProfile);
+
+            // TODO: Send mail.
+
+            return Ok();
+        }
+
+        [HttpGet("/api/v1/user/{user}/email")]
+        public async Task<IActionResult> PostGetEmail(string user)
+        {
+            UserProfile profile = await this.profileStore.GetProfileFor(user);
+            return Json(new
+            {
+                email=profile.Email,
+                emailVerified=profile.EmailVerified,
+            });
+        }
+
+        [HttpPost("/api/v1/user/{user}/email")]
+        public async Task<IActionResult> PostSetEmail(string user)
+        {
+            // should be genva
+            var requestBody = await ReadRequest<SetEmailRequest>();
+            UserProfile profile = await this.profileStore.GetProfileFor(user);
+
+            var newProfile = profile.With(
+                email: requestBody.Email,
+                emailVerified: false);
+            await this.profileStore.SaveProfileFor(user, newProfile);
+
+            // TODO: Send mail to old and new.
+
+            return Ok();
+        }
+
         IActionResult GetSourcesForRiver(River[] feedrivers)
         {
             return Json(new
@@ -862,6 +907,28 @@
 
             [JsonProperty("mode", Required = Required.Always)]
             public string Mode { get; }
+        }
+
+        public class SetPasswordRequest
+        {
+            public SetPasswordRequest(string password)
+            {
+                this.Password = password;
+            }            
+
+            [JsonProperty("password")]
+            public string Password { get; }
+        }
+
+        public class SetEmailRequest
+        {
+            public SetEmailRequest(string email)
+            {
+                this.Email = email;
+            }
+
+            [JsonProperty("email")]
+            public string Email { get; }
         }
     }
 
@@ -1258,5 +1325,4 @@
             app.UseMvc();
         }
     }
-
 }

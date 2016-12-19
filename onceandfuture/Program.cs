@@ -49,6 +49,10 @@
                 .AddOption("user", "The user to set the password for.", o => o.IsRequired())
                 .AddOption("password", "The password to set it to.", o => o.IsRequired())
             )
+            .AddVerb("setemail", "Set a user's email address", DoSetEmail, v => v
+                .AddOption("user", "The user to set the password for.", o => o.IsRequired())
+                .AddOption("email", "The address to set it to.", o => o.IsRequired())
+            )
             .AddVerb("resetlogin", "Reset a user's login cookies", DoResetLogins, v => v
                 .AddOption("user", "The user to reset.", o => o.IsRequired())
             )
@@ -341,6 +345,21 @@
                 .UseEnvironment(args["environment"].Value)
                 .Build();
             host.Run();
+            return 0;
+        }
+
+        static int DoSetEmail(ParsedOpts args)
+        {
+            string user = args["user"].Value;
+            string email = args["email"].Value;
+
+            var profileStore = new UserProfileStore();
+            var profile = profileStore.GetProfileFor(user).Result;
+            var newProfile = profile.With(
+                email: email,
+                emailVerified: false);
+            profileStore.SaveProfileFor(user, newProfile).Wait();
+            Console.WriteLine("OK");
             return 0;
         }
 
