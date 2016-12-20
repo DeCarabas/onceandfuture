@@ -91,6 +91,9 @@ export const SIZE_RIVER_TITLE_PADDING_VERTICAL = (SIZE_RIVER_TITLE_HEIGHT - SIZE
 
 export const SIZE_RIVER_MODAL_TOP = SIZE_RIVER_TITLE_TOP_SPACER + SIZE_RIVER_TITLE_HEIGHT;
 
+// (account setting stuff)
+
+
 // ---- Layers
 export const Z_INDEX_BASE             = 0;
 export const Z_INDEX_BANNER           = 100;

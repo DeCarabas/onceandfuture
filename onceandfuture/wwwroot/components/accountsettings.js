@@ -3,6 +3,8 @@ import { connect } from 'react-redux';
 import {
   COLOR_VERY_LIGHT,
 
+  SIZE_BANNER_HEIGHT,
+
   Z_INDEX_ACCOUNT_SETTINGS,
 } from './style';
 import {
@@ -18,10 +20,13 @@ import IconButton from './iconbutton';
 const HeaderBox = ({onClose}) => {
   const style = {
     position: "relative",
+    height: SIZE_BANNER_HEIGHT,
   };
 
   const h_style = {
-    margin: "0 0 10 0",
+    position: "absolute",
+    top: 5,
+    margin: 0,
   };
 
   const b_style = {

@@ -26930,6 +26930,9 @@
 	
 	var SIZE_RIVER_MODAL_TOP = exports.SIZE_RIVER_MODAL_TOP = SIZE_RIVER_TITLE_TOP_SPACER + SIZE_RIVER_TITLE_HEIGHT;
 	
+	// (account setting stuff)
+	
+	
 	// ---- Layers
 	var Z_INDEX_BASE = exports.Z_INDEX_BASE = 0;
 	var Z_INDEX_BANNER = exports.Z_INDEX_BANNER = 100;
@@ -26977,11 +26980,14 @@
 	  var onClose = _ref.onClose;
 	
 	  var style = {
-	    position: "relative"
+	    position: "relative",
+	    height: _style.SIZE_BANNER_HEIGHT
 	  };
 	
 	  var h_style = {
-	    margin: "0 0 10 0"
+	    position: "absolute",
+	    top: 5,
+	    margin: 0
 	  };
 	
 	  var b_style = {
