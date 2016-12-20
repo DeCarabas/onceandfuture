@@ -24,16 +24,12 @@ import {
 } from '../actions';
 import RelTime from './reltime';
 import RiverLink from './riverlink';
-import { SettingsButton, SettingInputBox} from './settingscontrols';
+import {
+  SettingsButton,
+  SettingInputBox,
+  SettingsSectionTitle,
+} from './settingscontrols';
 import Tooltip from './tooltip';
-
-const SettingsSectionTitle = ({text}) => {
-  const style = {
-    fontWeight: 'bold',
-  };
-
-  return <div style={style}>{text}</div>;
-}
 
 const AddFeedBox = ({addFeedToRiver}) => {
   return (

@@ -26683,7 +26683,7 @@
 	
 	var _accountsettings2 = _interopRequireDefault(_accountsettings);
 	
-	var _appbanner = __webpack_require__(/*! ./appbanner */ 230);
+	var _appbanner = __webpack_require__(/*! ./appbanner */ 232);
 	
 	var _appbanner2 = _interopRequireDefault(_appbanner);
 	
@@ -26959,119 +26959,121 @@
 	
 	var _react2 = _interopRequireDefault(_react);
 	
+	var _reactRedux = __webpack_require__(/*! react-redux */ 178);
+	
 	var _style = __webpack_require__(/*! ./style */ 227);
+	
+	var _actions = __webpack_require__(/*! ../actions */ 224);
 	
 	var _settingscontrols = __webpack_require__(/*! ./settingscontrols */ 229);
 	
+	var _iconbutton = __webpack_require__(/*! ./iconbutton */ 230);
+	
+	var _iconbutton2 = _interopRequireDefault(_iconbutton);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	var AccountSettings = function AccountSettings() {
-	  var fontSize = '18px';
+	var HeaderBox = function HeaderBox(_ref) {
+	  var onClose = _ref.onClose;
 	
-	  var inner_style = {
-	    width: 460,
-	    marginLeft: 'auto',
-	    marginRight: 'auto',
-	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR,
-	    paddingLeft: 5,
-	    paddingRight: 5,
-	    border: "2px solid black",
-	    fontSize: fontSize,
-	
-	    zIndex: _style.Z_INDEX_ACCOUNT_SETTINGS
+	  var style = {
+	    position: "relative"
 	  };
 	
-	  var in_style = {
-	    width: 215,
-	    fontSize: fontSize
+	  var h_style = {
+	    margin: "0 0 10 0"
 	  };
 	
-	  var p_style = {
-	    width: 215,
-	    display: 'inline-block'
-	  };
-	
-	  var p_l_style = Object.assign({}, p_style, {
-	    textAlign: 'right',
-	    paddingRight: 10
-	  });
-	  var p_r_style = Object.assign({}, p_style, {
-	    paddingLeft: 10
-	  });
-	
-	  var r_style = {
-	    marginTop: 10
-	  };
-	
-	  var r_b_style = {
-	    marginTop: 15,
-	    marginBottom: 25,
-	    paddingRight: 5
+	  var b_style = {
+	    position: "absolute",
+	    top: 0, right: 0
 	  };
 	
 	  return _react2.default.createElement(
 	    'div',
-	    { style: inner_style },
+	    { style: style },
 	    _react2.default.createElement(
 	      'h2',
-	      null,
+	      { style: h_style },
 	      'Account Settings'
 	    ),
-	    _react2.default.createElement('hr', null),
 	    _react2.default.createElement(
 	      'div',
-	      { style: r_style },
-	      _react2.default.createElement(
-	        'div',
-	        { style: p_l_style },
-	        'Email Address:'
-	      ),
-	      _react2.default.createElement(
-	        'div',
-	        { style: p_r_style },
-	        _react2.default.createElement('input', { style: in_style, type: 'text', id: 'email', name: 'email', placeholder: 'Email Address' })
-	      )
-	    ),
-	    _react2.default.createElement(
-	      'div',
-	      { style: r_b_style },
-	      _react2.default.createElement(_settingscontrols.SettingsButton, { text: 'Change Email Address' })
-	    ),
-	    _react2.default.createElement(
-	      'div',
-	      { style: r_style },
-	      _react2.default.createElement(
-	        'div',
-	        { style: p_l_style },
-	        'Password:'
-	      ),
-	      _react2.default.createElement(
-	        'div',
-	        { style: p_r_style },
-	        _react2.default.createElement('input', { style: in_style, type: 'password', id: 'pw1', name: 'pw1', placeholder: 'Password' })
-	      )
-	    ),
-	    _react2.default.createElement(
-	      'div',
-	      { style: r_style },
-	      _react2.default.createElement(
-	        'div',
-	        { style: p_l_style },
-	        'Repeat Password:'
-	      ),
-	      _react2.default.createElement(
-	        'div',
-	        { style: p_r_style },
-	        _react2.default.createElement('input', { style: in_style, type: 'password', id: 'pw2', name: 'pw2', placeholder: 'Password' })
-	      )
-	    ),
-	    _react2.default.createElement(
-	      'div',
-	      { style: r_b_style },
-	      _react2.default.createElement(_settingscontrols.SettingsButton, { text: 'Change Password' })
+	      { style: b_style },
+	      _react2.default.createElement(_iconbutton2.default, { tip: 'Close', icon: 'fa-window-close', onClick: onClose })
 	    )
 	  );
 	};
+	
+	var ChangeEmailBox = function ChangeEmailBox(_ref2) {
+	  var address = _ref2.address,
+	      setAddress = _ref2.setAddress;
+	
+	  return _react2.default.createElement(
+	    'div',
+	    null,
+	    _react2.default.createElement(_settingscontrols.SettingsSectionTitle, { text: 'Change Email Address' }),
+	    _react2.default.createElement(
+	      'p',
+	      null,
+	      'Change your email address.'
+	    ),
+	    _react2.default.createElement(_settingscontrols.SettingInputBox, { value: address, setValue: setAddress, buttonLabel: 'Change' })
+	  );
+	};
+	
+	var ChangePasswordBox = function ChangePasswordBox(_ref3) {
+	  var setPassword = _ref3.setPassword;
+	
+	  return _react2.default.createElement(
+	    'div',
+	    null,
+	    _react2.default.createElement(_settingscontrols.SettingsSectionTitle, { text: 'Change Password' }),
+	    _react2.default.createElement(
+	      'p',
+	      null,
+	      'Change your email password.'
+	    ),
+	    _react2.default.createElement(_settingscontrols.SettingPasswordBox, { setValue: setPassword, buttonLabel: 'Change' })
+	  );
+	};
+	
+	var AccountSettingsBase = function AccountSettingsBase(_ref4) {
+	  var onClose = _ref4.onClose;
+	
+	  var style = {
+	    width: 460,
+	    marginLeft: 'auto',
+	    marginRight: 'auto',
+	    backgroundColor: _style.COLOR_VERY_LIGHT,
+	    padding: 10,
+	    border: "2px solid black",
+	    borderRadius: 10,
+	
+	    zIndex: _style.Z_INDEX_ACCOUNT_SETTINGS
+	  };
+	
+	  return _react2.default.createElement(
+	    'div',
+	    { style: style },
+	    _react2.default.createElement(HeaderBox, { onClose: onClose }),
+	    _react2.default.createElement(ChangeEmailBox, null),
+	    _react2.default.createElement(ChangePasswordBox, null)
+	  );
+	};
+	
+	var mapStateToProps = function mapStateToProps(state) {
+	  return {};
+	};
+	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
+	  return {
+	    onClose: function onClose() {
+	      return dispatch((0, _actions.accountSettingsToggle)());
+	    }
+	  };
+	};
+	
+	var AccountSettings = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(AccountSettingsBase);
 	
 	exports.default = AccountSettings;
 
@@ -27087,7 +27089,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.SettingInputBox = exports.SettingsButton = undefined;
+	exports.SettingPasswordBox = exports.SettingInputBox = exports.SettingsButton = exports.SettingsSectionTitle = undefined;
 	
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 	
@@ -27105,9 +27107,23 @@
 	
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 	
-	var SettingsButton = exports.SettingsButton = function SettingsButton(_ref) {
-	  var onClick = _ref.onClick,
-	      text = _ref.text;
+	var SettingsSectionTitle = exports.SettingsSectionTitle = function SettingsSectionTitle(_ref) {
+	  var text = _ref.text;
+	
+	  var style = {
+	    fontWeight: 'bold'
+	  };
+	
+	  return _react2.default.createElement(
+	    'div',
+	    { style: style },
+	    text
+	  );
+	};
+	
+	var SettingsButton = exports.SettingsButton = function SettingsButton(_ref2) {
+	  var onClick = _ref2.onClick,
+	      text = _ref2.text;
 	
 	  var divStyle = {
 	    textAlign: 'right',
@@ -27132,9 +27148,6 @@
 	  );
 	};
 	
-	// This one is a class-based component because it maintains the internal
-	// state of the edit box.
-	
 	var SettingInputBox = exports.SettingInputBox = function (_React$Component) {
 	  _inherits(SettingInputBox, _React$Component);
 	
@@ -27144,6 +27157,9 @@
 	    var _this = _possibleConstructorReturn(this, (SettingInputBox.__proto__ || Object.getPrototypeOf(SettingInputBox)).call(this, props));
 	
 	    _this.state = { value: props.value || '' };
+	
+	    _this.buttonLabel = props.buttonLabel;
+	    _this.kind = props.kind || "text";
 	    _this.setValue = props.setValue;
 	
 	    _this.handleChange = _this.handleChange.bind(_this);
@@ -27172,212 +27188,68 @@
 	      return _react2.default.createElement(
 	        'div',
 	        null,
-	        _react2.default.createElement('input', { style: input_style, type: 'text', value: this.state.value, onChange: this.handleChange }),
-	        _react2.default.createElement(SettingsButton, { onClick: this.handleSubmit, text: this.props.buttonLabel })
+	        _react2.default.createElement('input', { style: input_style, type: this.kind, value: this.state.value, onChange: this.handleChange }),
+	        _react2.default.createElement(SettingsButton, { onClick: this.handleSubmit, text: this.buttonLabel })
 	      );
 	    }
 	  }]);
 	
 	  return SettingInputBox;
 	}(_react2.default.Component);
+	
+	var SettingPasswordBox = exports.SettingPasswordBox = function (_React$Component2) {
+	  _inherits(SettingPasswordBox, _React$Component2);
+	
+	  function SettingPasswordBox(props) {
+	    _classCallCheck(this, SettingPasswordBox);
+	
+	    var _this2 = _possibleConstructorReturn(this, (SettingPasswordBox.__proto__ || Object.getPrototypeOf(SettingPasswordBox)).call(this, props));
+	
+	    _this2.state = { value: props.value || '' };
+	    _this2.setValue = props.setValue;
+	
+	    _this2.handleChange = _this2.handleChange.bind(_this2);
+	    _this2.handleSubmit = _this2.handleSubmit.bind(_this2);
+	    return _this2;
+	  }
+	
+	  _createClass(SettingPasswordBox, [{
+	    key: 'handleChange',
+	    value: function handleChange(event) {
+	      this.setState({ value: event.target.value });
+	    }
+	  }, {
+	    key: 'handleSubmit',
+	    value: function handleSubmit(event) {
+	      this.setValue(this.state.value);
+	      event.preventDefault();
+	    }
+	  }, {
+	    key: 'render',
+	    value: function render() {
+	      var input_style = {
+	        width: '100%'
+	      };
+	
+	      return _react2.default.createElement(
+	        'div',
+	        null,
+	        _react2.default.createElement('input', { style: input_style, type: 'password', value: this.state.value, onChange: this.handleChange }),
+	        _react2.default.createElement('input', { style: input_style, type: 'password', value: this.state.value, onChange: this.handleChange }),
+	        _react2.default.createElement(
+	          'div',
+	          null,
+	          _react2.default.createElement(SettingsButton, { onClick: this.handleSubmit, text: this.props.buttonLabel })
+	        )
+	      );
+	    }
+	  }]);
+	
+	  return SettingPasswordBox;
+	}(_react2.default.Component);
 
 /***/ },
 /* 230 */
-/*!*****************************************!*\
-  !*** ./wwwroot/components/appbanner.js ***!
-  \*****************************************/
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-	
-	var _react = __webpack_require__(/*! react */ 1);
-	
-	var _react2 = _interopRequireDefault(_react);
-	
-	var _style = __webpack_require__(/*! ./style */ 227);
-	
-	var _refreshfeedsbutton = __webpack_require__(/*! ./refreshfeedsbutton */ 231);
-	
-	var _refreshfeedsbutton2 = _interopRequireDefault(_refreshfeedsbutton);
-	
-	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 234);
-	
-	var _riverprogress2 = _interopRequireDefault(_riverprogress);
-	
-	var _riversetballoon = __webpack_require__(/*! ./riversetballoon */ 235);
-	
-	var _riversetballoon2 = _interopRequireDefault(_riversetballoon);
-	
-	var _usermenu = __webpack_require__(/*! ./usermenu */ 237);
-	
-	var _usermenu2 = _interopRequireDefault(_usermenu);
-	
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var BannerTitle = function BannerTitle(_ref) {
-	  var title = _ref.title;
-	
-	  var head_style = {
-	    position: 'absolute',
-	    top: 0, left: 0,
-	    height: _style.SIZE_BANNER_HEIGHT,
-	    paddingTop: _style.SIZE_BANNER_TITLE_PADDING_VERTICAL,
-	    paddingBottom: _style.SIZE_BANNER_TITLE_PADDING_VERTICAL,
-	    paddingLeft: _style.SIZE_BANNER_TITLE_PADDING_HORIZONTAL,
-	    fontSize: _style.SIZE_BANNER_TITLE_FONT,
-	
-	    display: 'inline-block',
-	    fontWeight: 'bold'
-	  };
-	
-	  return _react2.default.createElement(
-	    'div',
-	    { style: head_style },
-	    title
-	  );
-	};
-	
-	var Announcer = function Announcer(_ref2) {
-	  var message = _ref2.message;
-	
-	  var announcer_style = {
-	    position: 'absolute',
-	    top: 0,
-	    width: '100%',
-	    height: _style.SIZE_ANNOUNCER_HEIGHT,
-	    fontSize: _style.SIZE_ANNOUNCER_FONT,
-	    paddingTop: _style.SIZE_ANNOUNCER_PADDING_VERTICAL,
-	    paddingBottom: _style.SIZE_ANNOUNCER_PADDING_VERTICAL,
-	
-	    display: 'inline-block',
-	    textAlign: 'center'
-	  };
-	
-	  return _react2.default.createElement(
-	    'div',
-	    { style: announcer_style },
-	    _react2.default.createElement(
-	      'i',
-	      null,
-	      message
-	    )
-	  );
-	};
-	
-	var AppBanner = function AppBanner(_ref3) {
-	  var title = _ref3.title,
-	      load_progress = _ref3.load_progress;
-	
-	  var div_style = {
-	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR,
-	    height: _style.SIZE_BANNER_HEIGHT
-	  };
-	
-	  var title_button_style = {
-	    display: 'inline-block',
-	    float: 'right'
-	  };
-	
-	  return _react2.default.createElement(
-	    'div',
-	    null,
-	    _react2.default.createElement(
-	      'div',
-	      { style: div_style },
-	      _react2.default.createElement(Announcer, { message: load_progress.message }),
-	      _react2.default.createElement(BannerTitle, { title: title }),
-	      _react2.default.createElement(
-	        'div',
-	        { style: title_button_style },
-	        _react2.default.createElement(_usermenu2.default, null)
-	      ),
-	      _react2.default.createElement(
-	        'div',
-	        { style: title_button_style },
-	        _react2.default.createElement(_refreshfeedsbutton2.default, null)
-	      )
-	    ),
-	    _react2.default.createElement(_riverprogress2.default, {
-	      progress: load_progress.percent / 100,
-	      backgroundColor: _style.APP_BACKGROUND_COLOR
-	    }),
-	    _react2.default.createElement(_riversetballoon2.default, null)
-	  );
-	};
-	
-	exports.default = AppBanner;
-
-/***/ },
-/* 231 */
-/*!**************************************************!*\
-  !*** ./wwwroot/components/refreshfeedsbutton.js ***!
-  \**************************************************/
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-	
-	var _react = __webpack_require__(/*! react */ 1);
-	
-	var _react2 = _interopRequireDefault(_react);
-	
-	var _reactRedux = __webpack_require__(/*! react-redux */ 178);
-	
-	var _actions = __webpack_require__(/*! ../actions */ 224);
-	
-	var _style = __webpack_require__(/*! ./style */ 227);
-	
-	var _iconbutton = __webpack_require__(/*! ./iconbutton */ 232);
-	
-	var _iconbutton2 = _interopRequireDefault(_iconbutton);
-	
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var RefreshFeedsButtonBase = function RefreshFeedsButtonBase(_ref) {
-	  var loading = _ref.loading,
-	      onRefresh = _ref.onRefresh,
-	      user = _ref.user;
-	
-	  var onClick = loading ? function () {} : function () {
-	    return onRefresh(user);
-	  };
-	  var style = {
-	    color: loading ? _style.RIVER_TITLE_BACKGROUND_COLOR : _style.APP_TEXT_COLOR
-	  };
-	
-	  return _react2.default.createElement(
-	    'div',
-	    { style: style },
-	    _react2.default.createElement(_iconbutton2.default, { onClick: onClick, icon: 'fa-refresh', tip: 'Refresh all feeds.', tipPosition: 'bottomleft' })
-	  );
-	};
-	
-	var mapStateToProps = function mapStateToProps(state) {
-	  return {
-	    user: state.user,
-	    loading: state.loading
-	  };
-	};
-	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
-	  return {
-	    onRefresh: function onRefresh(user) {
-	      return dispatch((0, _actions.refreshAllFeeds)(user));
-	    }
-	  };
-	};
-	var RefreshFeedsButton = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(RefreshFeedsButtonBase);
-	
-	exports.default = RefreshFeedsButton;
-
-/***/ },
-/* 232 */
 /*!******************************************!*\
   !*** ./wwwroot/components/iconbutton.js ***!
   \******************************************/
@@ -27395,7 +27267,7 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 227);
 	
-	var _tooltip = __webpack_require__(/*! ./tooltip */ 233);
+	var _tooltip = __webpack_require__(/*! ./tooltip */ 231);
 	
 	var _tooltip2 = _interopRequireDefault(_tooltip);
 	
@@ -27433,7 +27305,7 @@
 	exports.default = IconButton;
 
 /***/ },
-/* 233 */
+/* 231 */
 /*!***************************************!*\
   !*** ./wwwroot/components/tooltip.js ***!
   \***************************************/
@@ -27576,6 +27448,201 @@
 	}(_react2.default.Component);
 	
 	exports.default = Tooltip;
+
+/***/ },
+/* 232 */
+/*!*****************************************!*\
+  !*** ./wwwroot/components/appbanner.js ***!
+  \*****************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _react = __webpack_require__(/*! react */ 1);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	var _style = __webpack_require__(/*! ./style */ 227);
+	
+	var _refreshfeedsbutton = __webpack_require__(/*! ./refreshfeedsbutton */ 233);
+	
+	var _refreshfeedsbutton2 = _interopRequireDefault(_refreshfeedsbutton);
+	
+	var _riverprogress = __webpack_require__(/*! ./riverprogress */ 234);
+	
+	var _riverprogress2 = _interopRequireDefault(_riverprogress);
+	
+	var _riversetballoon = __webpack_require__(/*! ./riversetballoon */ 235);
+	
+	var _riversetballoon2 = _interopRequireDefault(_riversetballoon);
+	
+	var _usermenu = __webpack_require__(/*! ./usermenu */ 237);
+	
+	var _usermenu2 = _interopRequireDefault(_usermenu);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var BannerTitle = function BannerTitle(_ref) {
+	  var title = _ref.title;
+	
+	  var head_style = {
+	    position: 'absolute',
+	    top: 0, left: 0,
+	    height: _style.SIZE_BANNER_HEIGHT,
+	    paddingTop: _style.SIZE_BANNER_TITLE_PADDING_VERTICAL,
+	    paddingBottom: _style.SIZE_BANNER_TITLE_PADDING_VERTICAL,
+	    paddingLeft: _style.SIZE_BANNER_TITLE_PADDING_HORIZONTAL,
+	    fontSize: _style.SIZE_BANNER_TITLE_FONT,
+	
+	    display: 'inline-block',
+	    fontWeight: 'bold'
+	  };
+	
+	  return _react2.default.createElement(
+	    'div',
+	    { style: head_style },
+	    title
+	  );
+	};
+	
+	var Announcer = function Announcer(_ref2) {
+	  var message = _ref2.message;
+	
+	  var announcer_style = {
+	    position: 'absolute',
+	    top: 0,
+	    width: '100%',
+	    height: _style.SIZE_ANNOUNCER_HEIGHT,
+	    fontSize: _style.SIZE_ANNOUNCER_FONT,
+	    paddingTop: _style.SIZE_ANNOUNCER_PADDING_VERTICAL,
+	    paddingBottom: _style.SIZE_ANNOUNCER_PADDING_VERTICAL,
+	
+	    display: 'inline-block',
+	    textAlign: 'center'
+	  };
+	
+	  return _react2.default.createElement(
+	    'div',
+	    { style: announcer_style },
+	    _react2.default.createElement(
+	      'i',
+	      null,
+	      message
+	    )
+	  );
+	};
+	
+	var AppBanner = function AppBanner(_ref3) {
+	  var title = _ref3.title,
+	      load_progress = _ref3.load_progress;
+	
+	  var div_style = {
+	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR,
+	    height: _style.SIZE_BANNER_HEIGHT
+	  };
+	
+	  var title_button_style = {
+	    display: 'inline-block',
+	    float: 'right'
+	  };
+	
+	  return _react2.default.createElement(
+	    'div',
+	    null,
+	    _react2.default.createElement(
+	      'div',
+	      { style: div_style },
+	      _react2.default.createElement(Announcer, { message: load_progress.message }),
+	      _react2.default.createElement(BannerTitle, { title: title }),
+	      _react2.default.createElement(
+	        'div',
+	        { style: title_button_style },
+	        _react2.default.createElement(_usermenu2.default, null)
+	      ),
+	      _react2.default.createElement(
+	        'div',
+	        { style: title_button_style },
+	        _react2.default.createElement(_refreshfeedsbutton2.default, null)
+	      )
+	    ),
+	    _react2.default.createElement(_riverprogress2.default, {
+	      progress: load_progress.percent / 100,
+	      backgroundColor: _style.APP_BACKGROUND_COLOR
+	    }),
+	    _react2.default.createElement(_riversetballoon2.default, null)
+	  );
+	};
+	
+	exports.default = AppBanner;
+
+/***/ },
+/* 233 */
+/*!**************************************************!*\
+  !*** ./wwwroot/components/refreshfeedsbutton.js ***!
+  \**************************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _react = __webpack_require__(/*! react */ 1);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	var _reactRedux = __webpack_require__(/*! react-redux */ 178);
+	
+	var _actions = __webpack_require__(/*! ../actions */ 224);
+	
+	var _style = __webpack_require__(/*! ./style */ 227);
+	
+	var _iconbutton = __webpack_require__(/*! ./iconbutton */ 230);
+	
+	var _iconbutton2 = _interopRequireDefault(_iconbutton);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var RefreshFeedsButtonBase = function RefreshFeedsButtonBase(_ref) {
+	  var loading = _ref.loading,
+	      onRefresh = _ref.onRefresh,
+	      user = _ref.user;
+	
+	  var onClick = loading ? function () {} : function () {
+	    return onRefresh(user);
+	  };
+	  var style = {
+	    color: loading ? _style.RIVER_TITLE_BACKGROUND_COLOR : _style.APP_TEXT_COLOR
+	  };
+	
+	  return _react2.default.createElement(
+	    'div',
+	    { style: style },
+	    _react2.default.createElement(_iconbutton2.default, { onClick: onClick, icon: 'fa-refresh', tip: 'Refresh all feeds.', tipPosition: 'bottomleft' })
+	  );
+	};
+	
+	var mapStateToProps = function mapStateToProps(state) {
+	  return {
+	    user: state.user,
+	    loading: state.loading
+	  };
+	};
+	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
+	  return {
+	    onRefresh: function onRefresh(user) {
+	      return dispatch((0, _actions.refreshAllFeeds)(user));
+	    }
+	  };
+	};
+	var RefreshFeedsButton = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(RefreshFeedsButtonBase);
+	
+	exports.default = RefreshFeedsButton;
 
 /***/ },
 /* 234 */
@@ -27800,7 +27867,7 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 227);
 	
-	var _iconbutton = __webpack_require__(/*! ./iconbutton */ 232);
+	var _iconbutton = __webpack_require__(/*! ./iconbutton */ 230);
 	
 	var _iconbutton2 = _interopRequireDefault(_iconbutton);
 	
@@ -28110,33 +28177,19 @@
 	
 	var _settingscontrols = __webpack_require__(/*! ./settingscontrols */ 229);
 	
-	var _tooltip = __webpack_require__(/*! ./tooltip */ 233);
+	var _tooltip = __webpack_require__(/*! ./tooltip */ 231);
 	
 	var _tooltip2 = _interopRequireDefault(_tooltip);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
-	var SettingsSectionTitle = function SettingsSectionTitle(_ref) {
-	  var text = _ref.text;
-	
-	  var style = {
-	    fontWeight: 'bold'
-	  };
-	
-	  return _react2.default.createElement(
-	    'div',
-	    { style: style },
-	    text
-	  );
-	};
-	
-	var AddFeedBox = function AddFeedBox(_ref2) {
-	  var addFeedToRiver = _ref2.addFeedToRiver;
+	var AddFeedBox = function AddFeedBox(_ref) {
+	  var addFeedToRiver = _ref.addFeedToRiver;
 	
 	  return _react2.default.createElement(
 	    'div',
 	    null,
-	    _react2.default.createElement(SettingsSectionTitle, { text: 'Add A New Site or Feed' }),
+	    _react2.default.createElement(_settingscontrols.SettingsSectionTitle, { text: 'Add A New Site or Feed' }),
 	    _react2.default.createElement(
 	      'p',
 	      null,
@@ -28146,10 +28199,10 @@
 	  );
 	};
 	
-	var DisplayModeButton = function DisplayModeButton(_ref3) {
-	  var text = _ref3.text,
-	      enabled = _ref3.enabled,
-	      click = _ref3.click;
+	var DisplayModeButton = function DisplayModeButton(_ref2) {
+	  var text = _ref2.text,
+	      enabled = _ref2.enabled,
+	      click = _ref2.click;
 	
 	  var butt = {
 	    width: 100,
@@ -28167,9 +28220,9 @@
 	  );
 	};
 	
-	var FeedDisplayModeBox = function FeedDisplayModeBox(_ref4) {
-	  var mode = _ref4.mode,
-	      setFeedMode = _ref4.setFeedMode;
+	var FeedDisplayModeBox = function FeedDisplayModeBox(_ref3) {
+	  var mode = _ref3.mode,
+	      setFeedMode = _ref3.setFeedMode;
 	
 	  var end_space = {
 	    width: 10,
@@ -28183,7 +28236,7 @@
 	  return _react2.default.createElement(
 	    'div',
 	    null,
-	    _react2.default.createElement(SettingsSectionTitle, { text: 'River Display Mode' }),
+	    _react2.default.createElement(_settingscontrols.SettingsSectionTitle, { text: 'River Display Mode' }),
 	    _react2.default.createElement(
 	      'p',
 	      null,
@@ -28221,14 +28274,14 @@
 	  );
 	};
 	
-	var RenameRiverBox = function RenameRiverBox(_ref5) {
-	  var name = _ref5.name,
-	      setName = _ref5.setName;
+	var RenameRiverBox = function RenameRiverBox(_ref4) {
+	  var name = _ref4.name,
+	      setName = _ref4.setName;
 	
 	  return _react2.default.createElement(
 	    'div',
 	    null,
-	    _react2.default.createElement(SettingsSectionTitle, { text: 'Rename This River' }),
+	    _react2.default.createElement(_settingscontrols.SettingsSectionTitle, { text: 'Rename This River' }),
 	    _react2.default.createElement(
 	      'p',
 	      null,
@@ -28238,13 +28291,13 @@
 	  );
 	};
 	
-	var DeleteRiverBox = function DeleteRiverBox(_ref6) {
-	  var deleteRiver = _ref6.deleteRiver;
+	var DeleteRiverBox = function DeleteRiverBox(_ref5) {
+	  var deleteRiver = _ref5.deleteRiver;
 	
 	  return _react2.default.createElement(
 	    'div',
 	    null,
-	    _react2.default.createElement(SettingsSectionTitle, { text: 'Remove This River' }),
+	    _react2.default.createElement(_settingscontrols.SettingsSectionTitle, { text: 'Remove This River' }),
 	    _react2.default.createElement(
 	      'p',
 	      null,
@@ -28254,9 +28307,9 @@
 	  );
 	};
 	
-	var RiverSource = function RiverSource(_ref7) {
-	  var source = _ref7.source,
-	      deleteSource = _ref7.deleteSource;
+	var RiverSource = function RiverSource(_ref6) {
+	  var source = _ref6.source,
+	      deleteSource = _ref6.deleteSource;
 	
 	  var timeStyle = {
 	    textAlign: 'right'
@@ -28303,9 +28356,9 @@
 	  );
 	};
 	
-	var RiverSourcesBox = function RiverSourcesBox(_ref8) {
-	  var sources = _ref8.sources,
-	      deleteSource = _ref8.deleteSource;
+	var RiverSourcesBox = function RiverSourcesBox(_ref7) {
+	  var sources = _ref7.sources,
+	      deleteSource = _ref7.deleteSource;
 	
 	  var pending_style = {
 	    textAlign: 'center'
@@ -28361,7 +28414,7 @@
 	  return _react2.default.createElement(
 	    'div',
 	    null,
-	    _react2.default.createElement(SettingsSectionTitle, { text: 'Feeds' }),
+	    _react2.default.createElement(_settingscontrols.SettingsSectionTitle, { text: 'Feeds' }),
 	    _react2.default.createElement(
 	      'p',
 	      null,
@@ -28398,16 +28451,16 @@
 	  );
 	};
 	
-	var RiverSettingsBase = function RiverSettingsBase(_ref9) {
-	  var index = _ref9.index,
-	      river = _ref9.river,
-	      user = _ref9.user,
-	      feedUrlChanged = _ref9.feedUrlChanged,
-	      addFeedToRiver = _ref9.addFeedToRiver,
-	      riverSetFeedMode = _ref9.riverSetFeedMode,
-	      deleteRiver = _ref9.deleteRiver,
-	      removeSource = _ref9.removeSource,
-	      setRiverName = _ref9.setRiverName;
+	var RiverSettingsBase = function RiverSettingsBase(_ref8) {
+	  var index = _ref8.index,
+	      river = _ref8.river,
+	      user = _ref8.user,
+	      feedUrlChanged = _ref8.feedUrlChanged,
+	      addFeedToRiver = _ref8.addFeedToRiver,
+	      riverSetFeedMode = _ref8.riverSetFeedMode,
+	      deleteRiver = _ref8.deleteRiver,
+	      removeSource = _ref8.removeSource,
+	      setRiverName = _ref8.setRiverName;
 	
 	  var style = {
 	    position: 'absolute',
@@ -28611,7 +28664,7 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 227);
 	
-	var _iconbutton = __webpack_require__(/*! ./iconbutton */ 232);
+	var _iconbutton = __webpack_require__(/*! ./iconbutton */ 230);
 	
 	var _iconbutton2 = _interopRequireDefault(_iconbutton);
 	

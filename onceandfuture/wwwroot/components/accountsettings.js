@@ -1,83 +1,93 @@
 import React from 'react';
+import { connect } from 'react-redux';
 import {
-  RIVER_TITLE_BACKGROUND_COLOR,
+  COLOR_VERY_LIGHT,
 
   Z_INDEX_ACCOUNT_SETTINGS,
 } from './style';
-import { SettingsButton } from './settingscontrols';
+import {
+  accountSettingsToggle,
+} from '../actions';
+import {
+  SettingInputBox,
+  SettingPasswordBox,
+  SettingsSectionTitle,
+} from './settingscontrols';
+import IconButton from './iconbutton';
 
-const AccountSettings = () => {
-  const fontSize = '18px';
+const HeaderBox = ({onClose}) => {
+  const style = {
+    position: "relative",
+  };
 
-  const inner_style = {
+  const h_style = {
+    margin: "0 0 10 0",
+  };
+
+  const b_style = {
+    position: "absolute",
+    top: 0, right: 0,
+  };
+
+  return <div style={style}>
+    <h2 style={h_style}>Account Settings</h2>
+    <div style={b_style}>
+      <IconButton tip="Close" icon="fa-window-close" onClick={onClose} />
+    </div>
+  </div>;
+}
+
+const ChangeEmailBox = ({address, setAddress}) => {
+  return (
+    <div>
+      <SettingsSectionTitle text="Change Email Address" />
+      <p>Change your email address.</p>
+      <SettingInputBox value={address} setValue={setAddress} buttonLabel='Change' />
+    </div>
+  );
+};
+
+const ChangePasswordBox = ({setPassword}) => {
+  return (
+    <div>
+      <SettingsSectionTitle text="Change Password" />
+      <p>Change your email password.</p>
+      <SettingPasswordBox setValue={setPassword} buttonLabel='Change' />
+    </div>
+  );
+};
+
+const AccountSettingsBase = ({onClose}) => {
+  const style = {
     width: 460,
     marginLeft: 'auto',
     marginRight: 'auto',
-    backgroundColor: RIVER_TITLE_BACKGROUND_COLOR,
-    paddingLeft: 5,
-    paddingRight: 5,
+    backgroundColor: COLOR_VERY_LIGHT,
+    padding: 10,
     border: "2px solid black",
-    fontSize: fontSize,
+    borderRadius: 10,
 
     zIndex: Z_INDEX_ACCOUNT_SETTINGS,
   };
 
-  const in_style = {
-    width: 215,
-    fontSize: fontSize,
-  };
-
-  const p_style = {
-    width: 215,
-    display: 'inline-block',
-  };
-
-  const p_l_style = Object.assign({}, p_style, {
-    textAlign: 'right',
-    paddingRight: 10,
-  });
-  const p_r_style = Object.assign({}, p_style, {
-    paddingLeft: 10,
-  });
-
-  const r_style = {
-    marginTop: 10,
-  };
-
-  const r_b_style = {
-    marginTop: 15,
-    marginBottom: 25,
-    paddingRight: 5,
-  };
-
-  return <div style={inner_style}>
-    <h2>Account Settings</h2>
-    <hr />
-    <div style={r_style}>
-      <div style={p_l_style}>Email Address:</div>
-      <div style={p_r_style}>
-        <input style={in_style} type="text" id="email" name="email" placeholder="Email Address" />
-      </div>
-    </div>
-    <div style={r_b_style}>
-      <SettingsButton text="Change Email Address" />
-    </div>
-    <div style={r_style}>
-      <div style={p_l_style}>Password:</div>
-      <div style={p_r_style}>
-        <input style={in_style} type="password" id="pw1" name="pw1" placeholder="Password" />
-      </div>
-    </div>
-    <div style={r_style}>
-      <div style={p_l_style}>Repeat Password:</div>
-      <div style={p_r_style}>
-        <input style={in_style} type="password" id="pw2" name="pw2" placeholder="Password" />
-      </div>
-    </div>
-    <div style={r_b_style}>
-      <SettingsButton text="Change Password" />
-    </div>
+  return <div style={style}>
+    <HeaderBox onClose={onClose} />
+    <ChangeEmailBox />
+    <ChangePasswordBox />
   </div>;
 };
+
+
+const mapStateToProps = (state) => {
+  return {
+  };
+};
+const mapDispatchToProps = (dispatch) => {
+  return {
+    onClose: () => dispatch(accountSettingsToggle()),
+  };
+};
+
+const AccountSettings = connect(mapStateToProps, mapDispatchToProps)(AccountSettingsBase);
 
 export default AccountSettings;
