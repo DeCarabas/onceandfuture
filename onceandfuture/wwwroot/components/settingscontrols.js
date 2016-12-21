@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   COLOR_DARK,
-  COLOR_DARK_GREY,
   COLOR_LIGHT_GREY,
   COLOR_VERY_DARK,
   COLOR_VERY_LIGHT_GREY,
