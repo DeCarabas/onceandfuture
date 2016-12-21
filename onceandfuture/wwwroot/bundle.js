@@ -26775,6 +26775,9 @@
 	    onSettingsClick = onHideSettings;
 	  }
 	
+	  var columns = rivers.map(function (r, i) {
+	    return _react2.default.createElement(RiverColumn, { index: i, key: 'r' + i });
+	  });
 	  return _react2.default.createElement(
 	    'div',
 	    null,
@@ -26790,9 +26793,7 @@
 	    _react2.default.createElement(
 	      'div',
 	      null,
-	      rivers.map(function (r, i) {
-	        return _react2.default.createElement(RiverColumn, { index: i, key: 'r' + i });
-	      })
+	      columns
 	    ),
 	    _react2.default.createElement(
 	      'div',

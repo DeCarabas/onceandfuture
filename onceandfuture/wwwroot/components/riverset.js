@@ -85,6 +85,7 @@ const RiverSetBase = ({
     onSettingsClick = onHideSettings;
   }
 
+  const columns = rivers.map((r, i) => <RiverColumn index={i} key={'r'+i} />);
   return <div>
     <div style={top_bar_style}>
       <AppBanner
@@ -93,9 +94,7 @@ const RiverSetBase = ({
         onSettingsClick={onSettingsClick}
         />
     </div>
-    <div>
-      {rivers.map((r, i) => <RiverColumn index={i} key={'r'+i} />)}
-    </div>
+    <div>{columns}</div>
     <div>
       <AddRiverButton
         index={rivers.length}
