@@ -23,9 +23,8 @@ import {
 function modalForRiver(river, index, dismiss, dispatch) {
   const style = {
     position: 'absolute',
-    top: SIZE_RIVER_MODAL_TOP,
+    top: SIZE_RIVER_MODAL_TOP, bottom: 0,
     width: '100%',
-    height: '100%',
   };
   const modal = river.modal || {};
   let control;

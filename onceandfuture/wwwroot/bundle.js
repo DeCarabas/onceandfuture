@@ -26930,9 +26930,6 @@
 	
 	var SIZE_RIVER_MODAL_TOP = exports.SIZE_RIVER_MODAL_TOP = SIZE_RIVER_TITLE_TOP_SPACER + SIZE_RIVER_TITLE_HEIGHT;
 	
-	// (account setting stuff)
-	
-	
 	// ---- Layers
 	var Z_INDEX_BASE = exports.Z_INDEX_BASE = 0;
 	var Z_INDEX_BANNER = exports.Z_INDEX_BANNER = 100;
@@ -28121,9 +28118,8 @@
 	function modalForRiver(river, index, dismiss, dispatch) {
 	  var style = {
 	    position: 'absolute',
-	    top: _style.SIZE_RIVER_MODAL_TOP,
-	    width: '100%',
-	    height: '100%'
+	    top: _style.SIZE_RIVER_MODAL_TOP, bottom: 0,
+	    width: '100%'
 	  };
 	  var modal = river.modal || {};
 	  var control = void 0;
