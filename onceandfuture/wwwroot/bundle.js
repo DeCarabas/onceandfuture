@@ -27053,6 +27053,7 @@
 	    marginRight: 'auto',
 	    backgroundColor: _style.COLOR_VERY_LIGHT,
 	    padding: 10,
+	    paddingBottom: 20,
 	    border: "2px solid black",
 	    borderRadius: 10,
 	
@@ -27129,26 +27130,44 @@
 	
 	var SettingsButton = exports.SettingsButton = function SettingsButton(_ref2) {
 	  var onClick = _ref2.onClick,
-	      text = _ref2.text;
+	      text = _ref2.text,
+	      _ref2$enabled = _ref2.enabled,
+	      enabled = _ref2$enabled === undefined ? true : _ref2$enabled;
 	
-	  var divStyle = {
+	  var div_style = {
 	    textAlign: 'right',
 	    marginTop: _style.SIZE_SPACER_HEIGHT
 	  };
-	  var style = {
-	    color: 'white',
-	    backgroundColor: _style.COLOR_DARK,
-	    padding: 3,
-	    border: '2px solid ' + _style.COLOR_VERY_DARK,
-	    cursor: 'pointer'
+	  var base_style = {
+	    padding: 3
 	  };
+	
+	  var style = void 0,
+	      handler = void 0;
+	  if (enabled) {
+	    style = Object.assign({}, base_style, {
+	      cursor: 'pointer',
+	      color: 'white',
+	      backgroundColor: _style.COLOR_DARK,
+	      border: '2px solid ' + _style.COLOR_VERY_DARK
+	    });
+	    handler = onClick;
+	  } else {
+	    style = Object.assign({}, base_style, {
+	      cursor: 'default',
+	      color: _style.COLOR_VERY_LIGHT_GREY,
+	      backgroundColor: _style.COLOR_LIGHT_GREY,
+	      border: '2px solid ' + _style.COLOR_LIGHT_GREY
+	    });
+	    handler = null;
+	  }
 	
 	  return _react2.default.createElement(
 	    'div',
-	    { style: divStyle },
+	    { style: div_style },
 	    _react2.default.createElement(
 	      'span',
-	      { style: style, onClick: onClick },
+	      { style: style, onClick: handler },
 	      text
 	    )
 	  );
@@ -27211,24 +27230,58 @@
 	
 	    var _this2 = _possibleConstructorReturn(this, (SettingPasswordBox.__proto__ || Object.getPrototypeOf(SettingPasswordBox)).call(this, props));
 	
-	    _this2.state = { value: props.value || '' };
+	    _this2.state = {
+	      value_first: '',
+	      value_second: ''
+	    };
 	    _this2.setValue = props.setValue;
 	
-	    _this2.handleChange = _this2.handleChange.bind(_this2);
+	    _this2.isValid = _this2.isValid.bind(_this2);
+	    _this2.handleChangeFirst = _this2.handleChangeFirst.bind(_this2);
+	    _this2.handleChangeSecond = _this2.handleChangeSecond.bind(_this2);
 	    _this2.handleSubmit = _this2.handleSubmit.bind(_this2);
 	    return _this2;
 	  }
 	
 	  _createClass(SettingPasswordBox, [{
-	    key: 'handleChange',
-	    value: function handleChange(event) {
-	      this.setState({ value: event.target.value });
+	    key: 'handleChangeFirst',
+	    value: function handleChangeFirst(event) {
+	      var new_state = Object.assign({}, this.state, {
+	        value_first: event.target.value
+	      });
+	      this.setState(new_state);
+	    }
+	  }, {
+	    key: 'handleChangeSecond',
+	    value: function handleChangeSecond(event) {
+	      var new_state = Object.assign({}, this.state, {
+	        value_second: event.target.value
+	      });
+	      this.setState(new_state);
 	    }
 	  }, {
 	    key: 'handleSubmit',
 	    value: function handleSubmit(event) {
-	      this.setValue(this.state.value);
-	      event.preventDefault();
+	      if (this.isValid()) {
+	        this.setValue(this.state.value);
+	        event.preventDefault();
+	      }
+	    }
+	  }, {
+	    key: 'invalidReason',
+	    value: function invalidReason() {
+	      if (this.state.value_first == '') {
+	        return '';
+	      } else if (this.state.value_first !== this.state.value_second) {
+	        return "The two passwords don't match.";
+	      } else {
+	        return null;
+	      }
+	    }
+	  }, {
+	    key: 'isValid',
+	    value: function isValid() {
+	      return this.invalidReason() === null;
 	    }
 	  }, {
 	    key: 'render',
@@ -27237,15 +27290,60 @@
 	        width: '100%'
 	      };
 	
+	      var input_second = Object.assign({}, input_style, {
+	        marginTop: _style.SIZE_SPACER_HEIGHT
+	      });
+	
+	      var button_pusher_style = {
+	        float: 'right'
+	      };
+	
+	      var validation_error_style = Object.assign({}, button_pusher_style, {
+	        color: 'red',
+	        paddingTop: 10,
+	        paddingRight: 5
+	      });
+	
 	      return _react2.default.createElement(
 	        'div',
 	        null,
-	        _react2.default.createElement('input', { style: input_style, type: 'password', value: this.state.value, onChange: this.handleChange }),
-	        _react2.default.createElement('input', { style: input_style, type: 'password', value: this.state.value, onChange: this.handleChange }),
+	        _react2.default.createElement('input', {
+	          style: input_style,
+	          type: 'password',
+	          placeholder: 'New Password Here!',
+	          value: this.state.value_first,
+	          onChange: this.handleChangeFirst
+	        }),
+	        _react2.default.createElement('input', {
+	          style: input_second,
+	          type: 'password',
+	          placeholder: 'New Password Again, Please!',
+	          value: this.state.value_second,
+	          onChange: this.handleChangeSecond
+	        }),
 	        _react2.default.createElement(
 	          'div',
 	          null,
-	          _react2.default.createElement(SettingsButton, { onClick: this.handleSubmit, text: this.props.buttonLabel })
+	          _react2.default.createElement(
+	            'div',
+	            { style: button_pusher_style },
+	            _react2.default.createElement(SettingsButton, {
+	              onClick: this.handleSubmit,
+	              text: this.props.buttonLabel,
+	              enabled: this.isValid()
+	            })
+	          ),
+	          _react2.default.createElement(
+	            'div',
+	            { style: validation_error_style },
+	            _react2.default.createElement(
+	              'span',
+	              null,
+	              this.invalidReason()
+	            )
+	          ),
+	          '\xA0',
+	          _react2.default.createElement('div', { style: { float: 'clear' } })
 	        )
 	      );
 	    }

@@ -69,6 +69,7 @@ const AccountSettingsBase = ({onClose}) => {
     marginRight: 'auto',
     backgroundColor: COLOR_VERY_LIGHT,
     padding: 10,
+    paddingBottom: 20,
     border: "2px solid black",
     borderRadius: 10,
 
