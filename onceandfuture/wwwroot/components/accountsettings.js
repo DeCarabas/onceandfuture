@@ -59,10 +59,8 @@ const ChangeEmailBox = ({email, emailState, setAddress}) => {
     };
     middlePart = <div style={style}>An unexpected error occurred. Please try again!</div>;
   } else {
-    console.log('YO BUDDY', email, emailState);
-    let validator = (value) => {
+    const validator = (value) => {
       // No message but not enabled.
-      console.log(email, emailState, value);
       if (value === email) { return ''; }
       if (emailState === 'SETTING') { return ''; }
 

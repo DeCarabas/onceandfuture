@@ -67,19 +67,8 @@ export class SettingInputBox extends React.Component {
     super(props);
     this.state = {value: props.value || ''};
 
-    this.buttonLabel = props.buttonLabel;
-    this.invalid_reason_callback = props.validator || (() => null);
-    this.kind = props.kind || "text";
-    this.setValue = props.setValue;
-
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
-  }
-
-  componentWillReceiveProps(nextProps) {
-    this.setState(Object.assign({}, this.state, {
-      value: nextProps.value,
-    }));
   }
 
   handleChange(event) {
@@ -87,12 +76,17 @@ export class SettingInputBox extends React.Component {
   }
 
   handleSubmit(event) {
-    this.setValue(this.state.value);
-    event.preventDefault();
+    if (this.isValid()) {
+      this.props.setValue(this.state.value);
+      event.preventDefault();
+    }
   }
 
   invalidReason() {
-    return this.invalid_reason_callback(this.state.value);
+    if (!this.props.validator) {
+      return null;
+    }
+    return this.props.validator(this.state.value);
   }
 
   isValid() {
@@ -105,10 +99,15 @@ export class SettingInputBox extends React.Component {
     };
 
     return <div>
-      <input style={input_style} type={this.kind} value={this.state.value} onChange={this.handleChange} />
+      <input
+        style={input_style}
+        type={this.props.kind}
+        value={this.state.value}
+        onChange={this.handleChange}
+      />
       <SettingsButton
         onClick={this.handleSubmit}
-        text={this.buttonLabel}
+        text={this.props.buttonLabel}
         error={this.invalidReason()}
         enabled={this.isValid()}
       />
@@ -123,9 +122,7 @@ export class SettingPasswordBox extends React.Component {
       value_first: '',
       value_second: '',
     };
-    this.setValue = props.setValue;
 
-    this.isValid = this.isValid.bind(this);
     this.handleChangeFirst = this.handleChangeFirst.bind(this);
     this.handleChangeSecond = this.handleChangeSecond.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
@@ -147,7 +144,7 @@ export class SettingPasswordBox extends React.Component {
 
   handleSubmit(event) {
     if (this.isValid()) {
-      this.setValue(this.state.value);
+      this.props.setValue(this.state.value);
       event.preventDefault();
     }
   }

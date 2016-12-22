@@ -27167,10 +27167,8 @@
 	      'An unexpected error occurred. Please try again!'
 	    );
 	  } else {
-	    console.log('YO BUDDY', email, emailState);
 	    var validator = function validator(value) {
 	      // No message but not enabled.
-	      console.log(email, emailState, value);
 	      if (value === email) {
 	        return '';
 	      }
@@ -27396,26 +27394,12 @@
 	
 	    _this.state = { value: props.value || '' };
 	
-	    _this.buttonLabel = props.buttonLabel;
-	    _this.invalid_reason_callback = props.validator || function () {
-	      return null;
-	    };
-	    _this.kind = props.kind || "text";
-	    _this.setValue = props.setValue;
-	
 	    _this.handleChange = _this.handleChange.bind(_this);
 	    _this.handleSubmit = _this.handleSubmit.bind(_this);
 	    return _this;
 	  }
 	
 	  _createClass(SettingInputBox, [{
-	    key: 'componentWillReceiveProps',
-	    value: function componentWillReceiveProps(nextProps) {
-	      this.setState(Object.assign({}, this.state, {
-	        value: nextProps.value
-	      }));
-	    }
-	  }, {
 	    key: 'handleChange',
 	    value: function handleChange(event) {
 	      this.setState({ value: event.target.value });
@@ -27423,13 +27407,18 @@
 	  }, {
 	    key: 'handleSubmit',
 	    value: function handleSubmit(event) {
-	      this.setValue(this.state.value);
-	      event.preventDefault();
+	      if (this.isValid()) {
+	        this.props.setValue(this.state.value);
+	        event.preventDefault();
+	      }
 	    }
 	  }, {
 	    key: 'invalidReason',
 	    value: function invalidReason() {
-	      return this.invalid_reason_callback(this.state.value);
+	      if (!this.props.validator) {
+	        return null;
+	      }
+	      return this.props.validator(this.state.value);
 	    }
 	  }, {
 	    key: 'isValid',
@@ -27446,10 +27435,15 @@
 	      return _react2.default.createElement(
 	        'div',
 	        null,
-	        _react2.default.createElement('input', { style: input_style, type: this.kind, value: this.state.value, onChange: this.handleChange }),
+	        _react2.default.createElement('input', {
+	          style: input_style,
+	          type: this.props.kind,
+	          value: this.state.value,
+	          onChange: this.handleChange
+	        }),
 	        _react2.default.createElement(SettingsButton, {
 	          onClick: this.handleSubmit,
-	          text: this.buttonLabel,
+	          text: this.props.buttonLabel,
 	          error: this.invalidReason(),
 	          enabled: this.isValid()
 	        })
@@ -27472,9 +27466,7 @@
 	      value_first: '',
 	      value_second: ''
 	    };
-	    _this2.setValue = props.setValue;
 	
-	    _this2.isValid = _this2.isValid.bind(_this2);
 	    _this2.handleChangeFirst = _this2.handleChangeFirst.bind(_this2);
 	    _this2.handleChangeSecond = _this2.handleChangeSecond.bind(_this2);
 	    _this2.handleSubmit = _this2.handleSubmit.bind(_this2);
@@ -27501,7 +27493,7 @@
 	    key: 'handleSubmit',
 	    value: function handleSubmit(event) {
 	      if (this.isValid()) {
-	        this.setValue(this.state.value);
+	        this.props.setValue(this.state.value);
 	        event.preventDefault();
 	      }
 	    }
