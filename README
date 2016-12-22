@@ -13,7 +13,6 @@ Todo:
 
 UI:
 - Account creation flow
-- Account settings view
 - Add/remove river sets
 - More/less UX is jarring. Fixing this, though, requires restricting the
   number of items that I can have in a river at once, at least initially.
