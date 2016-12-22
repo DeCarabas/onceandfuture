@@ -368,7 +368,6 @@ export function getEmailError(message) {
   };
 }
 
-
 export const SET_EMAIL_START = 'SET_EMAIL_START';
 export function setEmailStart() {
   return {
@@ -388,6 +387,28 @@ export const SET_EMAIL_ERROR = 'SET_EMAIL_ERROR';
 export function setEmailError(message) {
   return {
     type: SET_EMAIL_ERROR,
+    error: message,
+  };
+}
+
+export const SET_PASSWORD_START = 'SET_PASSWORD_START';
+export function setPasswordStart() {
+  return {
+    type: SET_PASSWORD_START,
+  };
+}
+
+export const SET_PASSWORD_SUCCESS = 'SET_PASSWORD_SUCCESS';
+export function setPasswordSuccess() {
+  return {
+    type: SET_PASSWORD_SUCCESS,
+  };
+}
+
+export const SET_PASSWORD_ERROR = 'SET_PASSWORD_ERROR';
+export function setPasswordError(message) {
+  return {
+    type: SET_PASSWORD_ERROR,
     error: message,
   };
 }
@@ -663,9 +684,19 @@ export function getEmail(user) {
 export function setEmail(user, email) {
   return xhrAction({
     verb: 'POST', url: '/api/v1/user/' + user + '/email',
-    msg: { email: email },
+    msg: { 'email': email },
     start: (dispatch) => dispatch(setEmailStart()),
     loaded: (dispatch) => dispatch(setEmailSuccess(email)),
     error: (dispatch, message) => dispatch(setEmailError(message)),
+  });
+}
+
+export function setPassword(user, password) {
+  return xhrAction({
+    verb: 'POST', url: '/api/v1/user/' + user + '/password',
+    msg: { 'password': password },
+    start: (dispatch) => dispatch(setPasswordStart()),
+    loaded: (dispatch) => dispatch(setPasswordSuccess()),
+    error: (dispatch, message) => dispatch(setPasswordError(message)),
   });
 }

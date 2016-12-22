@@ -52,6 +52,9 @@ import {
   SET_EMAIL_ERROR,
   SET_EMAIL_START,
   SET_EMAIL_SUCCESS,
+  SET_PASSWORD_ERROR,
+  SET_PASSWORD_START,
+  SET_PASSWORD_SUCCESS,
   SIGN_OUT_ERROR,
   USER_MENU_TOGGLE,
 
@@ -413,6 +416,21 @@ function state_account_settings(state = {visible: false}, action) {
       return Object.assign({}, state, {
         emailState: 'SET_ERROR',
         email: action.email,
+      });
+
+    case SET_PASSWORD_START:
+      return Object.assign({}, state, {
+        passwordState: 'SETTING',
+      });
+
+    case SET_PASSWORD_SUCCESS:
+      return Object.assign({}, state, {
+        passwordState: 'SUCCESS',
+      });
+
+    case SET_PASSWORD_ERROR:
+      return Object.assign({}, state, {
+        passwordState: 'SET_ERROR',
       });
 
     case USER_MENU_TOGGLE:

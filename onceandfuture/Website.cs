@@ -916,7 +916,7 @@
                 this.Password = password;
             }            
 
-            [JsonProperty("password")]
+            [JsonProperty("password", Required=Required.Always)]
             public string Password { get; }
         }
 
@@ -927,7 +927,7 @@
                 this.Email = email;
             }
 
-            [JsonProperty("email")]
+            [JsonProperty("email", Required = Required.Always)]
             public string Email { get; }
         }
     }

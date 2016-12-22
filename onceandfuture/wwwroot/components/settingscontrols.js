@@ -65,14 +65,26 @@ export const SettingsButton = ({onClick, text, error, enabled=true}) => {
 export class SettingInputBox extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {value: props.value || ''};
+    this.state = {
+      value: props.value || '',
+      transient_invalid: props.transientError,
+    };
 
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
   }
 
+  componentWillReceiveProps(props) {
+    this.setState(Object.assign({}, this.state, {
+      transient_invalid: props.transientError,
+    }));
+  }
+
   handleChange(event) {
-    this.setState({value: event.target.value});
+    this.setState(Object.assign({}, this.state, {
+      value: event.target.value,
+      transient_invalid: false,
+    }));
   }
 
   handleSubmit(event) {
@@ -83,10 +95,13 @@ export class SettingInputBox extends React.Component {
   }
 
   invalidReason() {
-    if (!this.props.validator) {
+    if (this.state.transient_invalid) {
+      return this.state.transient_invalid;
+    } else if (this.props.validator) {
+      return this.props.validator(this.state.value);
+    } else {
       return null;
     }
-    return this.props.validator(this.state.value);
   }
 
   isValid() {
@@ -115,52 +130,33 @@ export class SettingInputBox extends React.Component {
   }
 }
 
-export class SettingPasswordBox extends React.Component {
+export class SettingPasswordBox extends SettingInputBox {
   constructor(props) {
     super(props);
-    this.state = {
-      value_first: '',
+    this.state = Object.assign({}, this.state, {
+      value: '',
       value_second: '',
-    };
-
-    this.handleChangeFirst = this.handleChangeFirst.bind(this);
-    this.handleChangeSecond = this.handleChangeSecond.bind(this);
-    this.handleSubmit = this.handleSubmit.bind(this);
-  }
-
-  handleChangeFirst(event) {
-    const new_state = Object.assign({}, this.state, {
-      value_first: event.target.value,
     });
-    this.setState(new_state);
+
+    this.handleChangeSecond = this.handleChangeSecond.bind(this);
   }
 
   handleChangeSecond(event) {
     const new_state = Object.assign({}, this.state, {
       value_second: event.target.value,
+      transient_invalid: false,
     });
     this.setState(new_state);
   }
 
-  handleSubmit(event) {
-    if (this.isValid()) {
-      this.props.setValue(this.state.value);
-      event.preventDefault();
-    }
-  }
-
   invalidReason() {
-    if (this.state.value_first == '') {
+    if (this.state.value == '') {
       return '';
-    } else if (this.state.value_first !== this.state.value_second) {
+    } else if (this.state.value !== this.state.value_second) {
       return "The two passwords don't match.";
     } else {
-      return null;
+      return super.invalidReason();
     }
-  }
-
-  isValid() {
-    return this.invalidReason() === null;
   }
 
   render() {
@@ -177,8 +173,8 @@ export class SettingPasswordBox extends React.Component {
         style={input_style}
         type="password"
         placeholder="New Password Here!"
-        value={this.state.value_first}
-        onChange={this.handleChangeFirst}
+        value={this.state.value}
+        onChange={this.handleChange}
       />
       <input
         style={input_second}

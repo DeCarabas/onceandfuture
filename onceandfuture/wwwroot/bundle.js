@@ -457,6 +457,21 @@
 	        email: action.email
 	      });
 	
+	    case _actions.SET_PASSWORD_START:
+	      return Object.assign({}, state, {
+	        passwordState: 'SETTING'
+	      });
+	
+	    case _actions.SET_PASSWORD_SUCCESS:
+	      return Object.assign({}, state, {
+	        passwordState: 'SUCCESS'
+	      });
+	
+	    case _actions.SET_PASSWORD_ERROR:
+	      return Object.assign({}, state, {
+	        passwordState: 'SET_ERROR'
+	      });
+	
 	    case _actions.USER_MENU_TOGGLE:
 	    case _actions.REFRESH_ALL_FEEDS_START:
 	      return Object.assign({}, state, {
@@ -25972,7 +25987,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.RIVER_SET_FEED_MODE = exports.SET_EMAIL_ERROR = exports.SET_EMAIL_SUCCESS = exports.SET_EMAIL_START = exports.GET_EMAIL_ERROR = exports.GET_EMAIL_SUCCESS = exports.GET_EMAIL_START = exports.SIGN_OUT_ERROR = exports.USER_MENU_TOGGLE = exports.ACCOUNT_SETTINGS_TOGGLE = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
+	exports.RIVER_SET_FEED_MODE = exports.SET_PASSWORD_ERROR = exports.SET_PASSWORD_SUCCESS = exports.SET_PASSWORD_START = exports.SET_EMAIL_ERROR = exports.SET_EMAIL_SUCCESS = exports.SET_EMAIL_START = exports.GET_EMAIL_ERROR = exports.GET_EMAIL_SUCCESS = exports.GET_EMAIL_START = exports.SIGN_OUT_ERROR = exports.USER_MENU_TOGGLE = exports.ACCOUNT_SETTINGS_TOGGLE = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
 	exports.dropRiver = dropRiver;
 	exports.expandFeedUpdate = expandFeedUpdate;
 	exports.collapseFeedUpdate = collapseFeedUpdate;
@@ -26017,6 +26032,9 @@
 	exports.setEmailStart = setEmailStart;
 	exports.setEmailSuccess = setEmailSuccess;
 	exports.setEmailError = setEmailError;
+	exports.setPasswordStart = setPasswordStart;
+	exports.setPasswordSuccess = setPasswordSuccess;
+	exports.setPasswordError = setPasswordError;
 	exports.riverSetFeedMode = riverSetFeedMode;
 	exports.riverAddFeed = riverAddFeed;
 	exports.addRiver = addRiver;
@@ -26031,6 +26049,7 @@
 	exports.signOut = signOut;
 	exports.getEmail = getEmail;
 	exports.setEmail = setEmail;
+	exports.setPassword = setPassword;
 	
 	var _util = __webpack_require__(/*! ./util */ 223);
 	
@@ -26425,6 +26444,28 @@
 	  };
 	}
 	
+	var SET_PASSWORD_START = exports.SET_PASSWORD_START = 'SET_PASSWORD_START';
+	function setPasswordStart() {
+	  return {
+	    type: SET_PASSWORD_START
+	  };
+	}
+	
+	var SET_PASSWORD_SUCCESS = exports.SET_PASSWORD_SUCCESS = 'SET_PASSWORD_SUCCESS';
+	function setPasswordSuccess() {
+	  return {
+	    type: SET_PASSWORD_SUCCESS
+	  };
+	}
+	
+	var SET_PASSWORD_ERROR = exports.SET_PASSWORD_ERROR = 'SET_PASSWORD_ERROR';
+	function setPasswordError(message) {
+	  return {
+	    type: SET_PASSWORD_ERROR,
+	    error: message
+	  };
+	}
+	
 	function decodeError(xhr) {
 	  var errorMessage = xhr.statusText;
 	  try {
@@ -26716,7 +26757,7 @@
 	function setEmail(user, email) {
 	  return xhrAction({
 	    verb: 'POST', url: '/api/v1/user/' + user + '/email',
-	    msg: { email: email },
+	    msg: { 'email': email },
 	    start: function start(dispatch) {
 	      return dispatch(setEmailStart());
 	    },
@@ -26725,6 +26766,22 @@
 	    },
 	    error: function error(dispatch, message) {
 	      return dispatch(setEmailError(message));
+	    }
+	  });
+	}
+	
+	function setPassword(user, password) {
+	  return xhrAction({
+	    verb: 'POST', url: '/api/v1/user/' + user + '/password',
+	    msg: { 'password': password },
+	    start: function start(dispatch) {
+	      return dispatch(setPasswordStart());
+	    },
+	    loaded: function loaded(dispatch) {
+	      return dispatch(setPasswordSuccess());
+	    },
+	    error: function error(dispatch, message) {
+	      return dispatch(setPasswordError(message));
 	    }
 	  });
 	}
@@ -27183,6 +27240,8 @@
 	      return null;
 	    };
 	
+	    var transientError = emailState === 'SET_ERROR' ? 'An unexpected error occurred. Please try again.' : false;
+	
 	    middlePart = _react2.default.createElement(
 	      'div',
 	      null,
@@ -27195,7 +27254,8 @@
 	        value: email,
 	        setValue: setAddress,
 	        buttonLabel: 'Change Email',
-	        validator: validator
+	        validator: validator,
+	        transientError: transientError
 	      })
 	    );
 	  }
@@ -27209,7 +27269,16 @@
 	};
 	
 	var ChangePasswordBox = function ChangePasswordBox(_ref3) {
-	  var setPassword = _ref3.setPassword;
+	  var passwordState = _ref3.passwordState,
+	      setPassword = _ref3.setPassword;
+	
+	  var validator = function validator() {
+	    if (passwordState === 'SETTING') {
+	      return '';
+	    }
+	    return null;
+	  };
+	  var transientError = passwordState === 'SET_ERROR' ? 'An unexpected error occurred. Please try again.' : false;
 	
 	  return _react2.default.createElement(
 	    'div',
@@ -27220,7 +27289,12 @@
 	      null,
 	      'Change your email password.'
 	    ),
-	    _react2.default.createElement(_settingscontrols.SettingPasswordBox, { setValue: setPassword, buttonLabel: 'Change' })
+	    _react2.default.createElement(_settingscontrols.SettingPasswordBox, {
+	      setValue: setPassword,
+	      buttonLabel: 'Change Password',
+	      validator: validator,
+	      transientError: transientError
+	    })
 	  );
 	};
 	
@@ -27228,8 +27302,10 @@
 	  var user = _ref4.user,
 	      email = _ref4.email,
 	      emailState = _ref4.emailState,
+	      passwordState = _ref4.passwordState,
 	      onClose = _ref4.onClose,
-	      onSetAddress = _ref4.onSetAddress;
+	      onSetAddress = _ref4.onSetAddress,
+	      onSetPassword = _ref4.onSetPassword;
 	
 	  var style = {
 	    width: 460,
@@ -27247,12 +27323,15 @@
 	  var setAddress = function setAddress(email) {
 	    return onSetAddress(user, email);
 	  };
+	  var setPassword = function setPassword(password) {
+	    return onSetPassword(user, password);
+	  };
 	  return _react2.default.createElement(
 	    'div',
 	    { style: style },
 	    _react2.default.createElement(HeaderBox, { onClose: onClose }),
 	    _react2.default.createElement(ChangeEmailBox, { email: email, emailState: emailState, setAddress: setAddress }),
-	    _react2.default.createElement(ChangePasswordBox, null)
+	    _react2.default.createElement(ChangePasswordBox, { passwordState: passwordState, setPassword: setPassword })
 	  );
 	};
 	
@@ -27260,6 +27339,7 @@
 	  return {
 	    emailState: state.account_settings.emailState,
 	    email: state.account_settings.email,
+	    passwordState: state.account_settings.passwordState,
 	    user: state.user
 	  };
 	};
@@ -27270,6 +27350,9 @@
 	    },
 	    onSetAddress: function onSetAddress(user, email) {
 	      return dispatch((0, _actions.setEmail)(user, email));
+	    },
+	    onSetPassword: function onSetPassword(user, password) {
+	      return dispatch((0, _actions.setPassword)(user, password));
 	    }
 	  };
 	};
@@ -27291,6 +27374,8 @@
 	  value: true
 	});
 	exports.SettingPasswordBox = exports.SettingInputBox = exports.SettingsButton = exports.SettingsSectionTitle = undefined;
+	
+	var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 	
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 	
@@ -27392,7 +27477,10 @@
 	
 	    var _this = _possibleConstructorReturn(this, (SettingInputBox.__proto__ || Object.getPrototypeOf(SettingInputBox)).call(this, props));
 	
-	    _this.state = { value: props.value || '' };
+	    _this.state = {
+	      value: props.value || '',
+	      transient_invalid: props.transientError
+	    };
 	
 	    _this.handleChange = _this.handleChange.bind(_this);
 	    _this.handleSubmit = _this.handleSubmit.bind(_this);
@@ -27400,9 +27488,19 @@
 	  }
 	
 	  _createClass(SettingInputBox, [{
+	    key: 'componentWillReceiveProps',
+	    value: function componentWillReceiveProps(props) {
+	      this.setState(Object.assign({}, this.state, {
+	        transient_invalid: props.transientError
+	      }));
+	    }
+	  }, {
 	    key: 'handleChange',
 	    value: function handleChange(event) {
-	      this.setState({ value: event.target.value });
+	      this.setState(Object.assign({}, this.state, {
+	        value: event.target.value,
+	        transient_invalid: false
+	      }));
 	    }
 	  }, {
 	    key: 'handleSubmit',
@@ -27415,10 +27513,13 @@
 	  }, {
 	    key: 'invalidReason',
 	    value: function invalidReason() {
-	      if (!this.props.validator) {
+	      if (this.state.transient_invalid) {
+	        return this.state.transient_invalid;
+	      } else if (this.props.validator) {
+	        return this.props.validator(this.state.value);
+	      } else {
 	        return null;
 	      }
-	      return this.props.validator(this.state.value);
 	    }
 	  }, {
 	    key: 'isValid',
@@ -27454,64 +27555,42 @@
 	  return SettingInputBox;
 	}(_react2.default.Component);
 	
-	var SettingPasswordBox = exports.SettingPasswordBox = function (_React$Component2) {
-	  _inherits(SettingPasswordBox, _React$Component2);
+	var SettingPasswordBox = exports.SettingPasswordBox = function (_SettingInputBox) {
+	  _inherits(SettingPasswordBox, _SettingInputBox);
 	
 	  function SettingPasswordBox(props) {
 	    _classCallCheck(this, SettingPasswordBox);
 	
 	    var _this2 = _possibleConstructorReturn(this, (SettingPasswordBox.__proto__ || Object.getPrototypeOf(SettingPasswordBox)).call(this, props));
 	
-	    _this2.state = {
-	      value_first: '',
+	    _this2.state = Object.assign({}, _this2.state, {
+	      value: '',
 	      value_second: ''
-	    };
+	    });
 	
-	    _this2.handleChangeFirst = _this2.handleChangeFirst.bind(_this2);
 	    _this2.handleChangeSecond = _this2.handleChangeSecond.bind(_this2);
-	    _this2.handleSubmit = _this2.handleSubmit.bind(_this2);
 	    return _this2;
 	  }
 	
 	  _createClass(SettingPasswordBox, [{
-	    key: 'handleChangeFirst',
-	    value: function handleChangeFirst(event) {
-	      var new_state = Object.assign({}, this.state, {
-	        value_first: event.target.value
-	      });
-	      this.setState(new_state);
-	    }
-	  }, {
 	    key: 'handleChangeSecond',
 	    value: function handleChangeSecond(event) {
 	      var new_state = Object.assign({}, this.state, {
-	        value_second: event.target.value
+	        value_second: event.target.value,
+	        transient_invalid: false
 	      });
 	      this.setState(new_state);
-	    }
-	  }, {
-	    key: 'handleSubmit',
-	    value: function handleSubmit(event) {
-	      if (this.isValid()) {
-	        this.props.setValue(this.state.value);
-	        event.preventDefault();
-	      }
 	    }
 	  }, {
 	    key: 'invalidReason',
 	    value: function invalidReason() {
-	      if (this.state.value_first == '') {
+	      if (this.state.value == '') {
 	        return '';
-	      } else if (this.state.value_first !== this.state.value_second) {
+	      } else if (this.state.value !== this.state.value_second) {
 	        return "The two passwords don't match.";
 	      } else {
-	        return null;
+	        return _get(SettingPasswordBox.prototype.__proto__ || Object.getPrototypeOf(SettingPasswordBox.prototype), 'invalidReason', this).call(this);
 	      }
-	    }
-	  }, {
-	    key: 'isValid',
-	    value: function isValid() {
-	      return this.invalidReason() === null;
 	    }
 	  }, {
 	    key: 'render',
@@ -27531,8 +27610,8 @@
 	          style: input_style,
 	          type: 'password',
 	          placeholder: 'New Password Here!',
-	          value: this.state.value_first,
-	          onChange: this.handleChangeFirst
+	          value: this.state.value,
+	          onChange: this.handleChange
 	        }),
 	        _react2.default.createElement('input', {
 	          style: input_second,
@@ -27552,7 +27631,7 @@
 	  }]);
 	
 	  return SettingPasswordBox;
-	}(_react2.default.Component);
+	}(SettingInputBox);
 
 /***/ },
 /* 230 */

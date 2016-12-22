@@ -11,6 +11,7 @@ import {
 import {
   accountSettingsToggle,
   setEmail,
+  setPassword,
 } from '../actions';
 import {
   SettingInputBox,
@@ -71,6 +72,10 @@ const ChangeEmailBox = ({email, emailState, setAddress}) => {
       return null;
     };
 
+    const transientError = (emailState === 'SET_ERROR')
+      ? 'An unexpected error occurred. Please try again.'
+      : false;
+
     middlePart = <div>
       <p>Change your email address! Right here!</p>
       <SettingInputBox
@@ -78,6 +83,7 @@ const ChangeEmailBox = ({email, emailState, setAddress}) => {
         setValue={setAddress}
         buttonLabel='Change Email'
         validator={validator}
+        transientError={transientError}
       />
     </div>;
   }
@@ -90,17 +96,38 @@ const ChangeEmailBox = ({email, emailState, setAddress}) => {
   );
 };
 
-const ChangePasswordBox = ({setPassword}) => {
+const ChangePasswordBox = ({passwordState, setPassword}) => {
+  const validator = () => {
+    if (passwordState === 'SETTING') { return ''; }
+    return null;
+  };
+  const transientError = (passwordState === 'SET_ERROR')
+    ? 'An unexpected error occurred. Please try again.'
+    : false;
+
   return (
     <div>
       <SettingsSectionTitle text="Change Password" />
       <p>Change your email password.</p>
-      <SettingPasswordBox setValue={setPassword} buttonLabel='Change' />
+      <SettingPasswordBox
+        setValue={setPassword}
+        buttonLabel='Change Password'
+        validator={validator}
+        transientError={transientError}
+      />
     </div>
   );
 };
 
-const AccountSettingsBase = ({user, email, emailState, onClose, onSetAddress}) => {
+const AccountSettingsBase = ({
+  user,
+  email,
+  emailState,
+  passwordState,
+  onClose,
+  onSetAddress,
+  onSetPassword,
+}) => {
   const style = {
     width: 460,
     marginLeft: 'auto',
@@ -115,10 +142,11 @@ const AccountSettingsBase = ({user, email, emailState, onClose, onSetAddress}) =
   };
 
   const setAddress = (email) => onSetAddress(user, email);
+  const setPassword = (password) => onSetPassword(user, password);
   return <div style={style}>
     <HeaderBox onClose={onClose} />
     <ChangeEmailBox email={email} emailState={emailState} setAddress={setAddress} />
-    <ChangePasswordBox />
+    <ChangePasswordBox passwordState={passwordState} setPassword={setPassword} />
   </div>;
 };
 
@@ -127,6 +155,7 @@ const mapStateToProps = (state) => {
   return {
     emailState: state.account_settings.emailState,
     email: state.account_settings.email,
+    passwordState: state.account_settings.passwordState,
     user: state.user,
   };
 };
@@ -134,6 +163,7 @@ const mapDispatchToProps = (dispatch) => {
   return {
     onClose: () => dispatch(accountSettingsToggle()),
     onSetAddress: (user, email) => dispatch(setEmail(user, email)),
+    onSetPassword: (user, password) => dispatch(setPassword(user, password)),
   };
 };
 
