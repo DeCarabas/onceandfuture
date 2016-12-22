@@ -14,7 +14,7 @@ Todo:
 UI:
 - Account creation flow
 - Account settings view
-- Change email address option
+- Fix enable/disable state during email change (validator seems stuck)
 - Add/remove river sets
 - More/less UX is jarring. Fixing this, though, requires restricting the
   number of items that I can have in a river at once, at least initially.
@@ -34,6 +34,7 @@ Back-end Stuff:
 - Max request size
 - Limit on HTTP response sizes, strong timeouts
   - Remember that attackers dictate URLs.
+- Throttle login requests
 
 Tests:
 - Some known feed snapshots, check to make sure rivers match. (Make sure

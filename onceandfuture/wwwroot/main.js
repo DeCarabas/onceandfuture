@@ -49,6 +49,9 @@ import {
   REFRESH_ALL_FEEDS_SUCCESS,
   REFRESH_ALL_FEEDS_ERROR,
   REFRESH_ALL_FEEDS_PROGRESS,
+  SET_EMAIL_ERROR,
+  SET_EMAIL_START,
+  SET_EMAIL_SUCCESS,
   SIGN_OUT_ERROR,
   USER_MENU_TOGGLE,
 
@@ -393,6 +396,23 @@ function state_account_settings(state = {visible: false}, action) {
     case GET_EMAIL_ERROR:
       return Object.assign({}, state, {
         emailState: 'ERROR',
+      });
+
+    case SET_EMAIL_START:
+      return Object.assign({}, state, {
+        emailState: 'SETTING',
+      });
+
+    case SET_EMAIL_SUCCESS:
+      return Object.assign({}, state, {
+        emailState: 'SUCCESS',
+        email: action.email,
+      });
+
+    case SET_EMAIL_ERROR:
+      return Object.assign({}, state, {
+        emailState: 'SET_ERROR',
+        email: action.email,
       });
 
     case USER_MENU_TOGGLE:

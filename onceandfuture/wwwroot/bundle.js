@@ -440,6 +440,23 @@
 	        emailState: 'ERROR'
 	      });
 	
+	    case _actions.SET_EMAIL_START:
+	      return Object.assign({}, state, {
+	        emailState: 'SETTING'
+	      });
+	
+	    case _actions.SET_EMAIL_SUCCESS:
+	      return Object.assign({}, state, {
+	        emailState: 'SUCCESS',
+	        email: action.email
+	      });
+	
+	    case _actions.SET_EMAIL_ERROR:
+	      return Object.assign({}, state, {
+	        emailState: 'SET_ERROR',
+	        email: action.email
+	      });
+	
 	    case _actions.USER_MENU_TOGGLE:
 	    case _actions.REFRESH_ALL_FEEDS_START:
 	      return Object.assign({}, state, {
@@ -25955,7 +25972,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.RIVER_SET_FEED_MODE = exports.GET_EMAIL_ERROR = exports.GET_EMAIL_SUCCESS = exports.GET_EMAIL_START = exports.SIGN_OUT_ERROR = exports.USER_MENU_TOGGLE = exports.ACCOUNT_SETTINGS_TOGGLE = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
+	exports.RIVER_SET_FEED_MODE = exports.SET_EMAIL_ERROR = exports.SET_EMAIL_SUCCESS = exports.SET_EMAIL_START = exports.GET_EMAIL_ERROR = exports.GET_EMAIL_SUCCESS = exports.GET_EMAIL_START = exports.SIGN_OUT_ERROR = exports.USER_MENU_TOGGLE = exports.ACCOUNT_SETTINGS_TOGGLE = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
 	exports.dropRiver = dropRiver;
 	exports.expandFeedUpdate = expandFeedUpdate;
 	exports.collapseFeedUpdate = collapseFeedUpdate;
@@ -25997,6 +26014,9 @@
 	exports.getEmailStart = getEmailStart;
 	exports.getEmailSuccess = getEmailSuccess;
 	exports.getEmailError = getEmailError;
+	exports.setEmailStart = setEmailStart;
+	exports.setEmailSuccess = setEmailSuccess;
+	exports.setEmailError = setEmailError;
 	exports.riverSetFeedMode = riverSetFeedMode;
 	exports.riverAddFeed = riverAddFeed;
 	exports.addRiver = addRiver;
@@ -26010,6 +26030,7 @@
 	exports.setRiverOrder = setRiverOrder;
 	exports.signOut = signOut;
 	exports.getEmail = getEmail;
+	exports.setEmail = setEmail;
 	
 	var _util = __webpack_require__(/*! ./util */ 223);
 	
@@ -26381,6 +26402,29 @@
 	  };
 	}
 	
+	var SET_EMAIL_START = exports.SET_EMAIL_START = 'SET_EMAIL_START';
+	function setEmailStart() {
+	  return {
+	    type: SET_EMAIL_START
+	  };
+	}
+	
+	var SET_EMAIL_SUCCESS = exports.SET_EMAIL_SUCCESS = 'SET_EMAIL_SUCCESS';
+	function setEmailSuccess(email) {
+	  return {
+	    type: SET_EMAIL_SUCCESS,
+	    email: email
+	  };
+	}
+	
+	var SET_EMAIL_ERROR = exports.SET_EMAIL_ERROR = 'SET_EMAIL_ERROR';
+	function setEmailError(message) {
+	  return {
+	    type: SET_EMAIL_ERROR,
+	    error: message
+	  };
+	}
+	
 	function decodeError(xhr) {
 	  var errorMessage = xhr.statusText;
 	  try {
@@ -26665,6 +26709,22 @@
 	    },
 	    error: function error(dispatch, message) {
 	      dispatch(getEmailError(message));
+	    }
+	  });
+	}
+	
+	function setEmail(user, email) {
+	  return xhrAction({
+	    verb: 'POST', url: '/api/v1/user/' + user + '/email',
+	    msg: { email: email },
+	    start: function start(dispatch) {
+	      return dispatch(setEmailStart());
+	    },
+	    loaded: function loaded(dispatch) {
+	      return dispatch(setEmailSuccess(email));
+	    },
+	    error: function error(dispatch, message) {
+	      return dispatch(setEmailError(message));
 	    }
 	  });
 	}
@@ -27107,6 +27167,24 @@
 	      'An unexpected error occurred. Please try again!'
 	    );
 	  } else {
+	    console.log('YO BUDDY', email, emailState);
+	    var validator = function validator(value) {
+	      // No message but not enabled.
+	      console.log(email, emailState, value);
+	      if (value === email) {
+	        return '';
+	      }
+	      if (emailState === 'SETTING') {
+	        return '';
+	      }
+	
+	      if (!value || value.length == 0) {
+	        return 'Cannot have an empty address.';
+	      }
+	
+	      return null;
+	    };
+	
 	    middlePart = _react2.default.createElement(
 	      'div',
 	      null,
@@ -27115,7 +27193,12 @@
 	        null,
 	        'Change your email address! Right here!'
 	      ),
-	      _react2.default.createElement(_settingscontrols.SettingInputBox, { value: email, setValue: setAddress, buttonLabel: 'Change' })
+	      _react2.default.createElement(_settingscontrols.SettingInputBox, {
+	        value: email,
+	        setValue: setAddress,
+	        buttonLabel: 'Change Email',
+	        validator: validator
+	      })
 	    );
 	  }
 	
@@ -27144,9 +27227,11 @@
 	};
 	
 	var AccountSettingsBase = function AccountSettingsBase(_ref4) {
-	  var email = _ref4.email,
+	  var user = _ref4.user,
+	      email = _ref4.email,
 	      emailState = _ref4.emailState,
-	      onClose = _ref4.onClose;
+	      onClose = _ref4.onClose,
+	      onSetAddress = _ref4.onSetAddress;
 	
 	  var style = {
 	    width: 460,
@@ -27161,11 +27246,14 @@
 	    zIndex: _style2.Z_INDEX_ACCOUNT_SETTINGS
 	  };
 	
+	  var setAddress = function setAddress(email) {
+	    return onSetAddress(user, email);
+	  };
 	  return _react2.default.createElement(
 	    'div',
 	    { style: style },
 	    _react2.default.createElement(HeaderBox, { onClose: onClose }),
-	    _react2.default.createElement(ChangeEmailBox, { email: email, emailState: emailState }),
+	    _react2.default.createElement(ChangeEmailBox, { email: email, emailState: emailState, setAddress: setAddress }),
 	    _react2.default.createElement(ChangePasswordBox, null)
 	  );
 	};
@@ -27173,13 +27261,17 @@
 	var mapStateToProps = function mapStateToProps(state) {
 	  return {
 	    emailState: state.account_settings.emailState,
-	    email: state.account_settings.email
+	    email: state.account_settings.email,
+	    user: state.user
 	  };
 	};
 	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
 	  return {
 	    onClose: function onClose() {
 	      return dispatch((0, _actions.accountSettingsToggle)());
+	    },
+	    onSetAddress: function onSetAddress(user, email) {
+	      return dispatch((0, _actions.setEmail)(user, email));
 	    }
 	  };
 	};
@@ -27235,6 +27327,7 @@
 	var SettingsButton = exports.SettingsButton = function SettingsButton(_ref2) {
 	  var onClick = _ref2.onClick,
 	      text = _ref2.text,
+	      error = _ref2.error,
 	      _ref2$enabled = _ref2.enabled,
 	      enabled = _ref2$enabled === undefined ? true : _ref2$enabled;
 	
@@ -27242,7 +27335,14 @@
 	    textAlign: 'right',
 	    marginTop: _style.SIZE_SPACER_HEIGHT
 	  };
+	  var validation_error_style = Object.assign({
+	    color: 'red',
+	    display: 'inline-block',
+	    paddingRight: 5
+	  });
+	
 	  var base_style = {
+	    display: 'inline-block',
 	    padding: 3
 	  };
 	
@@ -27270,7 +27370,16 @@
 	    'div',
 	    { style: div_style },
 	    _react2.default.createElement(
-	      'span',
+	      'div',
+	      { style: validation_error_style },
+	      _react2.default.createElement(
+	        'span',
+	        null,
+	        error
+	      )
+	    ),
+	    _react2.default.createElement(
+	      'div',
 	      { style: style, onClick: handler },
 	      text
 	    )
@@ -27288,6 +27397,9 @@
 	    _this.state = { value: props.value || '' };
 	
 	    _this.buttonLabel = props.buttonLabel;
+	    _this.invalid_reason_callback = props.validator || function () {
+	      return null;
+	    };
 	    _this.kind = props.kind || "text";
 	    _this.setValue = props.setValue;
 	
@@ -27297,6 +27409,13 @@
 	  }
 	
 	  _createClass(SettingInputBox, [{
+	    key: 'componentWillReceiveProps',
+	    value: function componentWillReceiveProps(nextProps) {
+	      this.setState(Object.assign({}, this.state, {
+	        value: nextProps.value
+	      }));
+	    }
+	  }, {
 	    key: 'handleChange',
 	    value: function handleChange(event) {
 	      this.setState({ value: event.target.value });
@@ -27306,6 +27425,16 @@
 	    value: function handleSubmit(event) {
 	      this.setValue(this.state.value);
 	      event.preventDefault();
+	    }
+	  }, {
+	    key: 'invalidReason',
+	    value: function invalidReason() {
+	      return this.invalid_reason_callback(this.state.value);
+	    }
+	  }, {
+	    key: 'isValid',
+	    value: function isValid() {
+	      return this.invalidReason() === null;
 	    }
 	  }, {
 	    key: 'render',
@@ -27318,7 +27447,12 @@
 	        'div',
 	        null,
 	        _react2.default.createElement('input', { style: input_style, type: this.kind, value: this.state.value, onChange: this.handleChange }),
-	        _react2.default.createElement(SettingsButton, { onClick: this.handleSubmit, text: this.buttonLabel })
+	        _react2.default.createElement(SettingsButton, {
+	          onClick: this.handleSubmit,
+	          text: this.buttonLabel,
+	          error: this.invalidReason(),
+	          enabled: this.isValid()
+	        })
 	      );
 	    }
 	  }]);
@@ -27398,16 +27532,6 @@
 	        marginTop: _style.SIZE_SPACER_HEIGHT
 	      });
 	
-	      var button_pusher_style = {
-	        float: 'right'
-	      };
-	
-	      var validation_error_style = Object.assign({}, button_pusher_style, {
-	        color: 'red',
-	        paddingTop: 10,
-	        paddingRight: 5
-	      });
-	
 	      return _react2.default.createElement(
 	        'div',
 	        null,
@@ -27425,30 +27549,12 @@
 	          value: this.state.value_second,
 	          onChange: this.handleChangeSecond
 	        }),
-	        _react2.default.createElement(
-	          'div',
-	          null,
-	          _react2.default.createElement(
-	            'div',
-	            { style: button_pusher_style },
-	            _react2.default.createElement(SettingsButton, {
-	              onClick: this.handleSubmit,
-	              text: this.props.buttonLabel,
-	              enabled: this.isValid()
-	            })
-	          ),
-	          _react2.default.createElement(
-	            'div',
-	            { style: validation_error_style },
-	            _react2.default.createElement(
-	              'span',
-	              null,
-	              this.invalidReason()
-	            )
-	          ),
-	          '\xA0',
-	          _react2.default.createElement('div', { style: { float: 'clear' } })
-	        )
+	        _react2.default.createElement(SettingsButton, {
+	          onClick: this.handleSubmit,
+	          text: this.props.buttonLabel,
+	          enabled: this.isValid(),
+	          error: this.invalidReason()
+	        })
 	      );
 	    }
 	  }]);

@@ -781,7 +781,7 @@
         }
 
         [HttpGet("/api/v1/user/{user}/email")]
-        public async Task<IActionResult> PostGetEmail(string user)
+        public async Task<IActionResult> GetEmail(string user)
         {
             UserProfile profile = await this.profileStore.GetProfileFor(user);
             return Json(new

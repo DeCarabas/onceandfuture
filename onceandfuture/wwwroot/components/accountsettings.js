@@ -10,6 +10,7 @@ import {
 } from './style';
 import {
   accountSettingsToggle,
+  setEmail,
 } from '../actions';
 import {
   SettingInputBox,
@@ -58,9 +59,28 @@ const ChangeEmailBox = ({email, emailState, setAddress}) => {
     };
     middlePart = <div style={style}>An unexpected error occurred. Please try again!</div>;
   } else {
+    console.log('YO BUDDY', email, emailState);
+    let validator = (value) => {
+      // No message but not enabled.
+      console.log(email, emailState, value);
+      if (value === email) { return ''; }
+      if (emailState === 'SETTING') { return ''; }
+
+      if (!value || value.length == 0) {
+        return 'Cannot have an empty address.';
+      }
+
+      return null;
+    };
+
     middlePart = <div>
       <p>Change your email address! Right here!</p>
-      <SettingInputBox value={email} setValue={setAddress} buttonLabel='Change' />
+      <SettingInputBox
+        value={email}
+        setValue={setAddress}
+        buttonLabel='Change Email'
+        validator={validator}
+      />
     </div>;
   }
 
@@ -82,7 +102,7 @@ const ChangePasswordBox = ({setPassword}) => {
   );
 };
 
-const AccountSettingsBase = ({email, emailState, onClose}) => {
+const AccountSettingsBase = ({user, email, emailState, onClose, onSetAddress}) => {
   const style = {
     width: 460,
     marginLeft: 'auto',
@@ -96,9 +116,10 @@ const AccountSettingsBase = ({email, emailState, onClose}) => {
     zIndex: Z_INDEX_ACCOUNT_SETTINGS,
   };
 
+  const setAddress = (email) => onSetAddress(user, email);
   return <div style={style}>
     <HeaderBox onClose={onClose} />
-    <ChangeEmailBox email={email} emailState={emailState} />
+    <ChangeEmailBox email={email} emailState={emailState} setAddress={setAddress} />
     <ChangePasswordBox />
   </div>;
 };
@@ -108,11 +129,13 @@ const mapStateToProps = (state) => {
   return {
     emailState: state.account_settings.emailState,
     email: state.account_settings.email,
+    user: state.user,
   };
 };
 const mapDispatchToProps = (dispatch) => {
   return {
     onClose: () => dispatch(accountSettingsToggle()),
+    onSetAddress: (user, email) => dispatch(setEmail(user, email)),
   };
 };
 

@@ -368,6 +368,30 @@ export function getEmailError(message) {
   };
 }
 
+
+export const SET_EMAIL_START = 'SET_EMAIL_START';
+export function setEmailStart() {
+  return {
+    type: SET_EMAIL_START,
+  };
+}
+
+export const SET_EMAIL_SUCCESS = 'SET_EMAIL_SUCCESS';
+export function setEmailSuccess(email) {
+  return {
+    type: SET_EMAIL_SUCCESS,
+    email: email,
+  };
+}
+
+export const SET_EMAIL_ERROR = 'SET_EMAIL_ERROR';
+export function setEmailError(message) {
+  return {
+    type: SET_EMAIL_ERROR,
+    error: message,
+  };
+}
+
 function decodeError(xhr) {
   let  errorMessage = xhr.statusText;
   try
@@ -633,5 +657,15 @@ export function getEmail(user) {
     error: (dispatch, message) => {
       dispatch(getEmailError(message));
     },
+  });
+}
+
+export function setEmail(user, email) {
+  return xhrAction({
+    verb: 'POST', url: '/api/v1/user/' + user + '/email',
+    msg: { email: email },
+    start: (dispatch) => dispatch(setEmailStart()),
+    loaded: (dispatch) => dispatch(setEmailSuccess(email)),
+    error: (dispatch, message) => dispatch(setEmailError(message)),
   });
 }

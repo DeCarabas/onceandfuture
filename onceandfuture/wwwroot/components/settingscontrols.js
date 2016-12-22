@@ -17,12 +17,19 @@ export const SettingsSectionTitle = ({text}) => {
   return <div style={style}>{text}</div>;
 }
 
-export const SettingsButton = ({onClick, text, enabled=true}) => {
+export const SettingsButton = ({onClick, text, error, enabled=true}) => {
   const div_style = {
     textAlign: 'right',
     marginTop: SIZE_SPACER_HEIGHT,
   };
+  const validation_error_style = Object.assign({
+    color: 'red',
+    display: 'inline-block',
+    paddingRight: 5,
+  });
+
   const base_style = {
+    display: 'inline-block',
     padding: 3,
   };
 
@@ -46,8 +53,11 @@ export const SettingsButton = ({onClick, text, enabled=true}) => {
   }
 
   return (
-    <div style={div_style} >
-      <span style={style} onClick={handler}>{text}</span>
+    <div style={div_style}>
+      <div style={validation_error_style}>
+        <span>{error}</span>
+      </div>
+      <div style={style} onClick={handler}>{text}</div>
     </div>
   );
 };
@@ -58,11 +68,18 @@ export class SettingInputBox extends React.Component {
     this.state = {value: props.value || ''};
 
     this.buttonLabel = props.buttonLabel;
+    this.invalid_reason_callback = props.validator || (() => null);
     this.kind = props.kind || "text";
     this.setValue = props.setValue;
 
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
+  }
+
+  componentWillReceiveProps(nextProps) {
+    this.setState(Object.assign({}, this.state, {
+      value: nextProps.value,
+    }));
   }
 
   handleChange(event) {
@@ -74,6 +91,14 @@ export class SettingInputBox extends React.Component {
     event.preventDefault();
   }
 
+  invalidReason() {
+    return this.invalid_reason_callback(this.state.value);
+  }
+
+  isValid() {
+    return this.invalidReason() === null;
+  }
+
   render() {
     const input_style = {
       width: '100%',
@@ -81,7 +106,12 @@ export class SettingInputBox extends React.Component {
 
     return <div>
       <input style={input_style} type={this.kind} value={this.state.value} onChange={this.handleChange} />
-      <SettingsButton onClick={this.handleSubmit} text={this.buttonLabel} />
+      <SettingsButton
+        onClick={this.handleSubmit}
+        text={this.buttonLabel}
+        error={this.invalidReason()}
+        enabled={this.isValid()}
+      />
    </div>;
   }
 }
@@ -145,16 +175,6 @@ export class SettingPasswordBox extends React.Component {
       marginTop: SIZE_SPACER_HEIGHT,
     });
 
-    const button_pusher_style = {
-      float: 'right',
-    };
-
-    const validation_error_style = Object.assign({}, button_pusher_style, {
-      color: 'red',
-      paddingTop: 10,
-      paddingRight: 5,
-    });
-
     return <div>
       <input
         style={input_style}
@@ -170,20 +190,12 @@ export class SettingPasswordBox extends React.Component {
         value={this.state.value_second}
         onChange={this.handleChangeSecond}
       />
-      <div>
-        <div style={button_pusher_style}>
-          <SettingsButton
-            onClick={this.handleSubmit}
-            text={this.props.buttonLabel}
-            enabled={this.isValid()}
-          />
-        </div>
-        <div style={validation_error_style}>
-          <span>{this.invalidReason()}</span>
-        </div>
-        &nbsp;
-        <div style={{float: 'clear'}} />
-      </div>
+      <SettingsButton
+        onClick={this.handleSubmit}
+        text={this.props.buttonLabel}
+        enabled={this.isValid()}
+        error={this.invalidReason()}
+      />
    </div>;
   }
 }
