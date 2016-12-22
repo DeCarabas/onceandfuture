@@ -423,11 +423,29 @@
 	      return Object.assign({}, state, {
 	        visible: !state.visible
 	      });
+	
+	    case _actions.GET_EMAIL_START:
+	      return Object.assign({}, state, {
+	        emailState: 'PENDING'
+	      });
+	
+	    case _actions.GET_EMAIL_SUCCESS:
+	      return Object.assign({}, state, {
+	        emailState: 'SUCCESS',
+	        email: action.email
+	      });
+	
+	    case _actions.GET_EMAIL_ERROR:
+	      return Object.assign({}, state, {
+	        emailState: 'ERROR'
+	      });
+	
 	    case _actions.USER_MENU_TOGGLE:
 	    case _actions.REFRESH_ALL_FEEDS_START:
 	      return Object.assign({}, state, {
 	        visible: false
 	      });
+	
 	    default:
 	      return state;
 	  }
@@ -25937,7 +25955,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.RIVER_SET_FEED_MODE = exports.SIGN_OUT_ERROR = exports.USER_MENU_TOGGLE = exports.ACCOUNT_SETTINGS_TOGGLE = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
+	exports.RIVER_SET_FEED_MODE = exports.GET_EMAIL_ERROR = exports.GET_EMAIL_SUCCESS = exports.GET_EMAIL_START = exports.SIGN_OUT_ERROR = exports.USER_MENU_TOGGLE = exports.ACCOUNT_SETTINGS_TOGGLE = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
 	exports.dropRiver = dropRiver;
 	exports.expandFeedUpdate = expandFeedUpdate;
 	exports.collapseFeedUpdate = collapseFeedUpdate;
@@ -25976,6 +25994,9 @@
 	exports.accountSettingsToggle = accountSettingsToggle;
 	exports.userMenuToggle = userMenuToggle;
 	exports.signOutError = signOutError;
+	exports.getEmailStart = getEmailStart;
+	exports.getEmailSuccess = getEmailSuccess;
+	exports.getEmailError = getEmailError;
 	exports.riverSetFeedMode = riverSetFeedMode;
 	exports.riverAddFeed = riverAddFeed;
 	exports.addRiver = addRiver;
@@ -25988,6 +26009,7 @@
 	exports.riverSetName = riverSetName;
 	exports.setRiverOrder = setRiverOrder;
 	exports.signOut = signOut;
+	exports.getEmail = getEmail;
 	
 	var _util = __webpack_require__(/*! ./util */ 223);
 	
@@ -26304,8 +26326,18 @@
 	
 	var ACCOUNT_SETTINGS_TOGGLE = exports.ACCOUNT_SETTINGS_TOGGLE = 'ACCOUNT_SETTINGS_TOGGLE';
 	function accountSettingsToggle() {
-	  return {
-	    type: ACCOUNT_SETTINGS_TOGGLE
+	  return function thunk(dispatch, getState) {
+	    var state = getState();
+	    var accountSettings = state.account_settings;
+	    var isSuccess = accountSettings && accountSettings.emailState === 'SUCCESS';
+	    var isVisible = accountSettings && accountSettings.visible;
+	    if (!isSuccess && !isVisible) {
+	      dispatch(getEmail(state.user));
+	    }
+	
+	    dispatch({
+	      type: ACCOUNT_SETTINGS_TOGGLE
+	    });
 	  };
 	}
 	
@@ -26322,6 +26354,30 @@
 	    type: SIGN_OUT_ERROR,
 	    user: user,
 	    error: error
+	  };
+	}
+	
+	var GET_EMAIL_START = exports.GET_EMAIL_START = 'GET_EMAIL_START';
+	function getEmailStart() {
+	  return {
+	    type: GET_EMAIL_START
+	  };
+	}
+	
+	var GET_EMAIL_SUCCESS = exports.GET_EMAIL_SUCCESS = 'GET_EMAIL_SUCCESS';
+	function getEmailSuccess(email, emailVerified) {
+	  return {
+	    type: GET_EMAIL_SUCCESS,
+	    email: email,
+	    emailVerified: emailVerified
+	  };
+	}
+	
+	var GET_EMAIL_ERROR = exports.GET_EMAIL_ERROR = 'GET_EMAIL_ERROR';
+	function getEmailError(message) {
+	  return {
+	    type: GET_EMAIL_ERROR,
+	    error: message
 	  };
 	}
 	
@@ -26594,6 +26650,21 @@
 	    },
 	    error: function error(dispatch, message) {
 	      dispatch(signOutError(user, message));
+	    }
+	  });
+	}
+	
+	function getEmail(user) {
+	  return xhrAction({
+	    url: '/api/v1/user/' + user + '/email',
+	    start: function start(dispatch) {
+	      dispatch(getEmailStart());
+	    },
+	    loaded_json: function loaded_json(dispatch, result) {
+	      dispatch(getEmailSuccess(result.email, result.emailVerified));
+	    },
+	    error: function error(dispatch, message) {
+	      dispatch(getEmailError(message));
 	    }
 	  });
 	}
@@ -26962,7 +27033,7 @@
 	
 	var _reactRedux = __webpack_require__(/*! react-redux */ 178);
 	
-	var _style = __webpack_require__(/*! ./style */ 227);
+	var _style2 = __webpack_require__(/*! ./style */ 227);
 	
 	var _actions = __webpack_require__(/*! ../actions */ 224);
 	
@@ -26979,7 +27050,7 @@
 	
 	  var style = {
 	    position: "relative",
-	    height: _style.SIZE_BANNER_HEIGHT
+	    height: _style2.SIZE_BANNER_HEIGHT
 	  };
 	
 	  var h_style = {
@@ -27010,19 +27081,49 @@
 	};
 	
 	var ChangeEmailBox = function ChangeEmailBox(_ref2) {
-	  var address = _ref2.address,
+	  var email = _ref2.email,
+	      emailState = _ref2.emailState,
 	      setAddress = _ref2.setAddress;
+	
+	  var middlePart = void 0;
+	  if (emailState === 'PENDING') {
+	    var style = {
+	      textAlign: 'center',
+	      padding: _style2.SIZE_SPACER_HEIGHT
+	    };
+	    middlePart = _react2.default.createElement(
+	      'div',
+	      { style: style },
+	      '(Fetching, please wait.)'
+	    );
+	  } else if (emailState === 'ERROR') {
+	    var _style = {
+	      textAlign: 'center',
+	      padding: _style2.SIZE_SPACER_HEIGHT
+	    };
+	    middlePart = _react2.default.createElement(
+	      'div',
+	      { style: _style },
+	      'An unexpected error occurred. Please try again!'
+	    );
+	  } else {
+	    middlePart = _react2.default.createElement(
+	      'div',
+	      null,
+	      _react2.default.createElement(
+	        'p',
+	        null,
+	        'Change your email address! Right here!'
+	      ),
+	      _react2.default.createElement(_settingscontrols.SettingInputBox, { value: email, setValue: setAddress, buttonLabel: 'Change' })
+	    );
+	  }
 	
 	  return _react2.default.createElement(
 	    'div',
 	    null,
 	    _react2.default.createElement(_settingscontrols.SettingsSectionTitle, { text: 'Change Email Address' }),
-	    _react2.default.createElement(
-	      'p',
-	      null,
-	      'Change your email address.'
-	    ),
-	    _react2.default.createElement(_settingscontrols.SettingInputBox, { value: address, setValue: setAddress, buttonLabel: 'Change' })
+	    middlePart
 	  );
 	};
 	
@@ -27043,32 +27144,37 @@
 	};
 	
 	var AccountSettingsBase = function AccountSettingsBase(_ref4) {
-	  var onClose = _ref4.onClose;
+	  var email = _ref4.email,
+	      emailState = _ref4.emailState,
+	      onClose = _ref4.onClose;
 	
 	  var style = {
 	    width: 460,
 	    marginLeft: 'auto',
 	    marginRight: 'auto',
-	    backgroundColor: _style.COLOR_VERY_LIGHT,
+	    backgroundColor: _style2.COLOR_VERY_LIGHT,
 	    padding: 10,
 	    paddingBottom: 20,
 	    border: "2px solid black",
 	    borderRadius: 10,
 	
-	    zIndex: _style.Z_INDEX_ACCOUNT_SETTINGS
+	    zIndex: _style2.Z_INDEX_ACCOUNT_SETTINGS
 	  };
 	
 	  return _react2.default.createElement(
 	    'div',
 	    { style: style },
 	    _react2.default.createElement(HeaderBox, { onClose: onClose }),
-	    _react2.default.createElement(ChangeEmailBox, null),
+	    _react2.default.createElement(ChangeEmailBox, { email: email, emailState: emailState }),
 	    _react2.default.createElement(ChangePasswordBox, null)
 	  );
 	};
 	
 	var mapStateToProps = function mapStateToProps(state) {
-	  return {};
+	  return {
+	    emailState: state.account_settings.emailState,
+	    email: state.account_settings.email
+	  };
 	};
 	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
 	  return {

@@ -21,6 +21,9 @@ import {
   COLLAPSE_FEED_UPDATE,
   SHOW_RIVER_SETTINGS,
   HIDE_RIVER_SETTINGS,
+  GET_EMAIL_ERROR,
+  GET_EMAIL_START,
+  GET_EMAIL_SUCCESS,
   REMOVE_RIVER_ERROR,
   REMOVE_RIVER_START,
   REMOVE_RIVER_SUCCESS,
@@ -375,11 +378,29 @@ function state_account_settings(state = {visible: false}, action) {
       return Object.assign({}, state, {
         visible: !state.visible,
       });
+
+    case GET_EMAIL_START:
+      return Object.assign({}, state, {
+        emailState: 'PENDING',
+      });
+
+    case GET_EMAIL_SUCCESS:
+      return Object.assign({}, state, {
+        emailState: 'SUCCESS',
+        email: action.email,
+      });
+
+    case GET_EMAIL_ERROR:
+      return Object.assign({}, state, {
+        emailState: 'ERROR',
+      });
+
     case USER_MENU_TOGGLE:
     case REFRESH_ALL_FEEDS_START:
       return Object.assign({}, state, {
         visible: false,
       });
+
     default:
       return state;
   }

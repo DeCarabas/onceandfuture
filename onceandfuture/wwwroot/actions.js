@@ -313,8 +313,18 @@ export function riverSetNameError(index, river, new_name, error) {
 
 export const ACCOUNT_SETTINGS_TOGGLE = 'ACCOUNT_SETTINGS_TOGGLE';
 export function accountSettingsToggle() {
-  return {
-    type: ACCOUNT_SETTINGS_TOGGLE,
+  return function thunk(dispatch, getState) {
+    const state = getState();
+    const accountSettings = state.account_settings;
+    const isSuccess = accountSettings && accountSettings.emailState === 'SUCCESS';
+    const isVisible = accountSettings && accountSettings.visible;
+    if (!isSuccess && !isVisible) {
+      dispatch(getEmail(state.user));
+    }
+
+    dispatch({
+      type: ACCOUNT_SETTINGS_TOGGLE,
+    });
   };
 }
 
@@ -331,6 +341,30 @@ export function signOutError(user, error) {
     type: SIGN_OUT_ERROR,
     user: user,
     error: error,
+  };
+}
+
+export const GET_EMAIL_START = 'GET_EMAIL_START';
+export function getEmailStart() {
+  return {
+    type: GET_EMAIL_START,
+  };
+}
+
+export const GET_EMAIL_SUCCESS = 'GET_EMAIL_SUCCESS';
+export function getEmailSuccess(email, emailVerified) {
+  return {
+    type: GET_EMAIL_SUCCESS,
+    email: email,
+    emailVerified: emailVerified,
+  };
+}
+
+export const GET_EMAIL_ERROR = 'GET_EMAIL_ERROR';
+export function getEmailError(message) {
+  return {
+    type: GET_EMAIL_ERROR,
+    error: message,
   };
 }
 
@@ -583,6 +617,21 @@ export function signOut(user) {
     },
     error: (dispatch, message) => {
       dispatch(signOutError(user, message));
+    },
+  });
+}
+
+export function getEmail(user) {
+  return xhrAction({
+    url: '/api/v1/user/' + user + '/email',
+    start: (dispatch) => {
+      dispatch(getEmailStart());
+    },
+    loaded_json: (dispatch, result) => {
+      dispatch(getEmailSuccess(result.email, result.emailVerified));
+    },
+    error: (dispatch, message) => {
+      dispatch(getEmailError(message));
     },
   });
 }

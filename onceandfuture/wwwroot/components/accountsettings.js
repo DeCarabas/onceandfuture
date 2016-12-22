@@ -4,6 +4,7 @@ import {
   COLOR_VERY_LIGHT,
 
   SIZE_BANNER_HEIGHT,
+  SIZE_SPACER_HEIGHT,
 
   Z_INDEX_ACCOUNT_SETTINGS,
 } from './style';
@@ -42,12 +43,31 @@ const HeaderBox = ({onClose}) => {
   </div>;
 }
 
-const ChangeEmailBox = ({address, setAddress}) => {
+const ChangeEmailBox = ({email, emailState, setAddress}) => {
+  let middlePart;
+  if (emailState === 'PENDING') {
+    const style = {
+      textAlign: 'center',
+      padding: SIZE_SPACER_HEIGHT,
+    };
+    middlePart = <div style={style}>(Fetching, please wait.)</div>;
+  } else if (emailState === 'ERROR') {
+    const style = {
+      textAlign: 'center',
+      padding: SIZE_SPACER_HEIGHT,
+    };
+    middlePart = <div style={style}>An unexpected error occurred. Please try again!</div>;
+  } else {
+    middlePart = <div>
+      <p>Change your email address! Right here!</p>
+      <SettingInputBox value={email} setValue={setAddress} buttonLabel='Change' />
+    </div>;
+  }
+
   return (
     <div>
       <SettingsSectionTitle text="Change Email Address" />
-      <p>Change your email address.</p>
-      <SettingInputBox value={address} setValue={setAddress} buttonLabel='Change' />
+      {middlePart}
     </div>
   );
 };
@@ -62,7 +82,7 @@ const ChangePasswordBox = ({setPassword}) => {
   );
 };
 
-const AccountSettingsBase = ({onClose}) => {
+const AccountSettingsBase = ({email, emailState, onClose}) => {
   const style = {
     width: 460,
     marginLeft: 'auto',
@@ -78,7 +98,7 @@ const AccountSettingsBase = ({onClose}) => {
 
   return <div style={style}>
     <HeaderBox onClose={onClose} />
-    <ChangeEmailBox />
+    <ChangeEmailBox email={email} emailState={emailState} />
     <ChangePasswordBox />
   </div>;
 };
@@ -86,6 +106,8 @@ const AccountSettingsBase = ({onClose}) => {
 
 const mapStateToProps = (state) => {
   return {
+    emailState: state.account_settings.emailState,
+    email: state.account_settings.email,
   };
 };
 const mapDispatchToProps = (dispatch) => {
