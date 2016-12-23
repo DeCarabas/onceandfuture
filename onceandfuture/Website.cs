@@ -934,6 +934,8 @@
 
     public class HealthController : Controller
     {
+        static HealthReport cachedReport;
+
         readonly Func<Task<HealthResult>>[] HealthChecks;
         readonly UserProfileStore profileStore;
         readonly RiverFeedStore feedStore;
@@ -1093,8 +1095,10 @@
 
         async Task<HealthReport> CheckHealth()
         {
+            if (cachedReport != null) { return cachedReport; }
             HealthResult[] results = await Task.WhenAll(from check in HealthChecks select check());
-            return new HealthReport(results);
+            cachedReport = new HealthReport(results);
+            return cachedReport;
         }
 
         class HealthReport

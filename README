@@ -22,7 +22,6 @@ UI:
 - When removing a feed, remove from sources.
 
 Back-end Stuff:
-- Cache health check results; currently pinging the QA instance very hard.
 - Cancellation tokens everywhere
 - Single HttpClient (or factory) everywhere
 - Measure things:
