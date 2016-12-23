@@ -25,6 +25,7 @@ function modalForRiver(river, index, dismiss, dispatch) {
     position: 'absolute',
     top: SIZE_RIVER_MODAL_TOP, bottom: 0,
     width: '100%',
+    overflowY: 'auto',
   };
   const modal = river.modal || {};
   let control;
@@ -32,7 +33,7 @@ function modalForRiver(river, index, dismiss, dispatch) {
     case 'loading': control = <RiverProgress percent={modal.percent} />; break;
     case 'settings': control = <RiverSettings river={river} index={index} />; break;
     case 'bubble': control = <RiverBalloon info={modal.info}  dismiss={dismiss} dispatchAction={dispatch} />; break;
-    default: control = <span />; break;
+    default: return <span />;
   }
   return <div style={style}>
     {control}
@@ -95,8 +96,8 @@ const RiverBase = ({
         onShowSettings={onShowSettings(index, river)}
         onHideSettings={onHideSettings(index)}
       />
-      {modal}
       <RiverUpdates river={river} index={index} />
+      {modal}
     </div>
   );
 };

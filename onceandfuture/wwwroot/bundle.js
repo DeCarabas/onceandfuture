@@ -27287,7 +27287,7 @@
 	    _react2.default.createElement(
 	      'p',
 	      null,
-	      'Change your email password.'
+	      'Change your password by entering your new password below. Enter it twice, to make sure you can remember it later!'
 	    ),
 	    _react2.default.createElement(_settingscontrols.SettingPasswordBox, {
 	      setValue: setPassword,
@@ -28403,7 +28403,8 @@
 	  var style = {
 	    position: 'absolute',
 	    top: _style.SIZE_RIVER_MODAL_TOP, bottom: 0,
-	    width: '100%'
+	    width: '100%',
+	    overflowY: 'auto'
 	  };
 	  var modal = river.modal || {};
 	  var control = void 0;
@@ -28415,7 +28416,7 @@
 	    case 'bubble':
 	      control = _react2.default.createElement(_riverballoon2.default, { info: modal.info, dismiss: dismiss, dispatchAction: dispatch });break;
 	    default:
-	      control = _react2.default.createElement('span', null);break;
+	      return _react2.default.createElement('span', null);
 	  }
 	  return _react2.default.createElement(
 	    'div',
@@ -28487,8 +28488,8 @@
 	      onShowSettings: onShowSettings(index, river),
 	      onHideSettings: onHideSettings(index)
 	    }),
-	    modal,
-	    _react2.default.createElement(_riverupdates2.default, { river: river, index: index })
+	    _react2.default.createElement(_riverupdates2.default, { river: river, index: index }),
+	    modal
 	  );
 	};
 	

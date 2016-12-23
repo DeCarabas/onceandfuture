@@ -108,7 +108,8 @@ const ChangePasswordBox = ({passwordState, setPassword}) => {
   return (
     <div>
       <SettingsSectionTitle text="Change Password" />
-      <p>Change your email password.</p>
+      <p>Change your password by entering your new password below. Enter it
+      twice, to make sure you can remember it later!</p>
       <SettingPasswordBox
         setValue={setPassword}
         buttonLabel='Change Password'
