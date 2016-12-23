@@ -95,9 +95,7 @@ export class SettingInputBox extends React.Component {
   }
 
   invalidReason() {
-    if (this.state.transient_invalid) {
-      return this.state.transient_invalid;
-    } else if (this.props.validator) {
+    if (this.props.validator) {
       return this.props.validator(this.state.value);
     } else {
       return null;
@@ -113,6 +111,7 @@ export class SettingInputBox extends React.Component {
       width: '100%',
     };
 
+    const errorText = this.state.transient_invalid || this.invalidReason();
     return <div>
       <input
         style={input_style}
@@ -123,7 +122,7 @@ export class SettingInputBox extends React.Component {
       <SettingsButton
         onClick={this.handleSubmit}
         text={this.props.buttonLabel}
-        error={this.invalidReason()}
+        error={errorText}
         enabled={this.isValid()}
       />
    </div>;
@@ -168,6 +167,7 @@ export class SettingPasswordBox extends SettingInputBox {
       marginTop: SIZE_SPACER_HEIGHT,
     });
 
+    const errorText = this.state.transient_invalid || this.invalidReason();
     return <div>
       <input
         style={input_style}
@@ -187,7 +187,7 @@ export class SettingPasswordBox extends SettingInputBox {
         onClick={this.handleSubmit}
         text={this.props.buttonLabel}
         enabled={this.isValid()}
-        error={this.invalidReason()}
+        error={errorText}
       />
    </div>;
   }

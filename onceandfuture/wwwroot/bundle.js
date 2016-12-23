@@ -27513,9 +27513,7 @@
 	  }, {
 	    key: 'invalidReason',
 	    value: function invalidReason() {
-	      if (this.state.transient_invalid) {
-	        return this.state.transient_invalid;
-	      } else if (this.props.validator) {
+	      if (this.props.validator) {
 	        return this.props.validator(this.state.value);
 	      } else {
 	        return null;
@@ -27533,6 +27531,7 @@
 	        width: '100%'
 	      };
 	
+	      var errorText = this.state.transient_invalid || this.invalidReason();
 	      return _react2.default.createElement(
 	        'div',
 	        null,
@@ -27545,7 +27544,7 @@
 	        _react2.default.createElement(SettingsButton, {
 	          onClick: this.handleSubmit,
 	          text: this.props.buttonLabel,
-	          error: this.invalidReason(),
+	          error: errorText,
 	          enabled: this.isValid()
 	        })
 	      );
@@ -27603,6 +27602,7 @@
 	        marginTop: _style.SIZE_SPACER_HEIGHT
 	      });
 	
+	      var errorText = this.state.transient_invalid || this.invalidReason();
 	      return _react2.default.createElement(
 	        'div',
 	        null,
@@ -27624,7 +27624,7 @@
 	          onClick: this.handleSubmit,
 	          text: this.props.buttonLabel,
 	          enabled: this.isValid(),
-	          error: this.invalidReason()
+	          error: errorText
 	        })
 	      );
 	    }
