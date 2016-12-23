@@ -122,6 +122,24 @@
             return sequences.SelectMany(x => x);
         }
 
+        public static HttpClient CreateHttpClient(bool allowRedirect = true)
+        {
+            var handler = new HttpClientHandler
+            {
+                AllowAutoRedirect = allowRedirect,
+                AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip,
+                MaxRequestContentBufferSize = 10 * 1024 * 1024, // 10MB
+                UseCookies = false,
+                UseDefaultCredentials = false,
+            };
+
+            HttpClient client = new HttpClient(handler, true);
+            client.Timeout = TimeSpan.FromSeconds(15);
+            client.MaxResponseContentBufferSize = 10 * 1024 * 1024; // 10MB
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
+            return client;
+        }
+
         public static string HashString(string input)
         {
             byte[] hash = SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(input));
@@ -1171,13 +1189,15 @@
 
             return baseTime + jitter;
         }
+
+
     }
 
     class ThumbnailExtractor
     {
         readonly RiverThumbnailStore thumbnailStore = new RiverThumbnailStore();
 
-        static readonly HttpClient client;
+        static readonly HttpClient client = Util.CreateHttpClient();
         static readonly MemoryCache imageCache;
 
         static readonly string[] BadThumbnails = new string[]
@@ -1198,9 +1218,6 @@
 
         static ThumbnailExtractor()
         {
-            client = new HttpClient();
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
-
             imageCache = new MemoryCache("ThumbMemoryCache", new NameValueCollection
             {
                 { "cacheMemoryLimitMegabytes", "100" },
@@ -1641,7 +1658,7 @@
     public class RiverFeedParser
     {
         readonly ThumbnailExtractor thumbnailExtractor = new ThumbnailExtractor();
-        static readonly HttpClient client;
+        static readonly HttpClient client = Util.CreateHttpClient(allowRedirect: false);
 
         static readonly Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>> FeedElements =
             new Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>>
@@ -1692,15 +1709,6 @@
 
                 { XNames.Media.Content, (ri, xe) => HandleThumbnail(ri, xe) },
         };
-
-        static RiverFeedParser()
-        {
-            HttpClientHandler httpClientHandler = new HttpClientHandler();
-            httpClientHandler.AllowAutoRedirect = false;
-
-            client = new HttpClient(httpClientHandler, false);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
-        }
 
         public async Task<River> FetchAndUpdateRiver(RiverFeedStore feedStore, Uri uri)
         {
@@ -2171,7 +2179,7 @@
 
     public static class FeedDetector
     {
-        static HttpClient client;
+        static HttpClient client = Util.CreateHttpClient();
         static HashSet<string> FeedMimeTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "application/rss+xml",
@@ -2188,12 +2196,6 @@
         {
             ".rss", ".rdf", ".xml", ".atom",
         };
-
-        static FeedDetector()
-        {
-            client = new HttpClient();
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
-        }
 
         public static async Task<IList<Uri>> GetFeedUrls(
             string originUrl,

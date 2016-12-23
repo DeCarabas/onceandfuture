@@ -22,7 +22,6 @@ UI:
 - When removing a feed, remove from sources.
 
 Back-end Stuff:
-- Single HttpClient (or factory) everywhere
 - Measure things:
   - Number of concurrent HTTP connections
   - Latencies of various things
