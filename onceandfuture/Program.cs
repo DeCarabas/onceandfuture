@@ -126,7 +126,7 @@
             if (args["noload"].Flag)
             {
                 var cleanRiver = new River(metadata: new RiverFeedMeta(originUrl: feedUrl));
-                river = new RiverFeedParser().UpdateAsync(cleanRiver, CancellationToken.None).Result;
+                river = new RiverFeedParser().UpdateAsync(cleanRiver).Result;
             }
             else
             {
@@ -212,7 +212,7 @@
 
             Console.WriteLine("Refreshing {0}...", feedUrl);
             Stopwatch loadTimer = Stopwatch.StartNew();
-            parser.FetchAndUpdateRiver(feedStore, feedUrl, CancellationToken.None).Wait();
+            parser.FetchAndUpdateRiver(feedStore, feedUrl).Wait();
             Console.WriteLine("Refreshed {0} in {1}", feedUrl, loadTimer.Elapsed);
             return 0;
         }
@@ -231,8 +231,7 @@
 
             UserProfile profile = subscriptionStore.GetProfileFor(user).Result;
             var tasks = from rd in profile.Rivers
-                        select parser.RefreshAggregateRiverWithFeeds(
-                            rd.Id, rd.Feeds, aggregateStore, feedStore, CancellationToken.None);
+                        select parser.RefreshAggregateRiverWithFeeds(rd.Id, rd.Feeds, aggregateStore, feedStore);
             Task.WhenAll(tasks).Wait();
 
             Console.WriteLine("Refreshed {0} rivers in {1}", profile.Rivers.Count, loadTimer.Elapsed);
@@ -248,7 +247,7 @@
             // Check feed.
             var parser = new RiverFeedParser();
             var feedStore = new RiverFeedStore();
-            River feedRiver = parser.FetchAndUpdateRiver(feedStore, new Uri(feed), CancellationToken.None).Result;
+            River feedRiver = parser.FetchAndUpdateRiver(feedStore, new Uri(feed)).Result;
             if (feedRiver.Metadata.LastStatus < (HttpStatusCode)200 ||
                 feedRiver.Metadata.LastStatus >= (HttpStatusCode)400)
             {

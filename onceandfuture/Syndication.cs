@@ -1159,7 +1159,7 @@
             if (iwe.Message.Contains("The remote name could not be resolved")) { return false; }
             if (iwe.Message.Contains("The server committed a protocol violation")) { return false; }
             if (iwe.Message.Contains("SecureChannelFailure")) { return false; }
-            return true;  
+            return true;
         }
 
         static TimeSpan ExponentialRetryTimeWithJitter(int retryAttempt)
@@ -1208,14 +1208,14 @@
             });
         }
 
-        public async Task<RiverItem[]> LoadItemThumbnailsAsync(Uri baseUri, RiverItem[] items, CancellationToken token)
+        public async Task<RiverItem[]> LoadItemThumbnailsAsync(Uri baseUri, RiverItem[] items)
         {
             Stopwatch loadTimer = Stopwatch.StartNew();
             Log.BeginLoadThumbnails(baseUri);
             Task<RiverItem>[] itemTasks = new Task<RiverItem>[items.Length];
             for (int i = 0; i < itemTasks.Length; i++)
             {
-                itemTasks[i] = GetItemThumbnailAsync(baseUri, items[i], token);
+                itemTasks[i] = GetItemThumbnailAsync(baseUri, items[i]);
             }
 
             RiverItem[] newItems = await Task.WhenAll(itemTasks);
@@ -1231,7 +1231,7 @@
             return new HtmlParser().Parse(htmlText);
         }
 
-        async Task<RiverItem> GetItemThumbnailAsync(Uri baseUri, RiverItem item, CancellationToken token)
+        async Task<RiverItem> GetItemThumbnailAsync(Uri baseUri, RiverItem item)
         {
             Uri itemLink = Util.Rebase(item.Link, baseUri);
             ImageData sourceImage = null;
@@ -1245,8 +1245,7 @@
                 {
                     sourceImage = await FetchThumbnailAsync(
                         new ImageUrl { Kind = "EmbeddedThumb", Uri = turl },
-                        baseUrl,
-                        token);
+                        baseUrl);
                     if (sourceImage != null)
                     {
                         Log.FoundThumbnail(baseUrl, turl, "EmbeddedThumb");
@@ -1262,12 +1261,12 @@
                 if (xe != null)
                 {
                     Uri soupBase = Util.TryParseAbsoluteUrl(xe.BaseUri, baseUri) ?? itemLink ?? baseUri;
-                    sourceImage = await FindThumbnailInSoupAsync(soupBase, SoupFromElement(soups[i]), token);
+                    sourceImage = await FindThumbnailInSoupAsync(soupBase, SoupFromElement(soups[i]));
                 }
             }
             if (sourceImage == null && itemLink != null)
             {
-                sourceImage = await FindImageAsync(itemLink, token);
+                sourceImage = await FindImageAsync(itemLink);
             }
 
             if (sourceImage == null) { return item; }
@@ -1293,14 +1292,13 @@
             }
         }
 
-        static async Task<ImageData> FindImageAsync(Uri uri, CancellationToken cancellationToken)
+        static async Task<ImageData> FindImageAsync(Uri uri)
         {
             try
             {
                 HttpResponseMessage response = await Policies.HttpPolicy.ExecuteAsync(
-                    (ct) => client.GetAsync(uri, ct),
-                    new Dictionary<string, object> { { "uri", uri } },
-                    cancellationToken);
+                    () => client.GetAsync(uri),
+                    new Dictionary<string, object> { { "uri", uri } });
                 using (response)
                 {
                     if (!response.IsSuccessStatusCode)
@@ -1313,7 +1311,7 @@
                     if (mediaType.Contains("image"))
                     {
                         var iu = new ImageUrl { Uri = uri, Kind = "Direct" };
-                        return await FetchThumbnailAsync(iu, uri, cancellationToken);
+                        return await FetchThumbnailAsync(iu, uri);
                     }
 
                     if (mediaType.Contains("html"))
@@ -1323,7 +1321,7 @@
                             var parser = new HtmlParser();
                             IHtmlDocument document = await parser.ParseAsync(stream);
 
-                            return await FindThumbnailInSoupAsync(uri, document, cancellationToken);
+                            return await FindThumbnailInSoupAsync(uri, document);
                         }
                     }
                 }
@@ -1344,8 +1342,7 @@
             return null;
         }
 
-        static async Task<ImageData> FindThumbnailInSoupAsync(
-            Uri baseUrl, IHtmlDocument document, CancellationToken cancellationToken)
+        static async Task<ImageData> FindThumbnailInSoupAsync(Uri baseUrl, IHtmlDocument document)
         {
             // These get preferential treatment; if we find them then great otherwise we have to search the whole doc.
             // (Note that they also still have to pass the URL filter.)
@@ -1359,7 +1356,7 @@
             if (easyUri != null)
             {
                 Log.FoundThumbnail(baseUrl, easyUri.Uri, easyUri.Kind);
-                return await FetchThumbnailAsync(easyUri, baseUrl, cancellationToken);
+                return await FetchThumbnailAsync(easyUri, baseUrl);
             }
 
             IEnumerable<Uri> distinctSrc =
@@ -1377,7 +1374,7 @@
             var potentialThumbnails = new Task<ImageData>[imageUrls.Length];
             for (int i = 0; i < potentialThumbnails.Length; i++)
             {
-                potentialThumbnails[i] = FetchThumbnailAsync(imageUrls[i], baseUrl, cancellationToken);
+                potentialThumbnails[i] = FetchThumbnailAsync(imageUrls[i], baseUrl);
             }
 
             ImageData[] images = await Task.WhenAll(potentialThumbnails);
@@ -1486,16 +1483,13 @@
         static readonly TimeSpan ErrorCacheLifetime = TimeSpan.FromSeconds(30);
         static readonly TimeSpan SuccessCacheLifetime = TimeSpan.FromHours(1);
 
-        static async Task<ImageData> FetchThumbnailAsync(
-            ImageUrl imageUrl,
-            Uri referrer,
-            CancellationToken cancellationToken)
+        static async Task<ImageData> FetchThumbnailAsync(ImageUrl imageUrl, Uri referrer)
         {
             try
             {
                 // N.B.: We put the whole bit of cache logic in here because somebody might succeed or fail altogether
                 //       while we wait on retries.
-                return await Policies.HttpPolicy.ExecuteAsync(async (ct) =>
+                return await Policies.HttpPolicy.ExecuteAsync(async () =>
                 {
                     object cachedObject = imageCache.Get(imageUrl.Uri.AbsoluteUri);
                     if (cachedObject is string)
@@ -1512,7 +1506,7 @@
                     var request = new HttpRequestMessage(HttpMethod.Get, imageUrl.Uri);
                     if (referrer != null) { request.Headers.Referrer = referrer; }
 
-                    HttpResponseMessage response = await client.SendAsync(request, ct);
+                    HttpResponseMessage response = await client.SendAsync(request);
 
                     if (!response.IsSuccessStatusCode)
                     {
@@ -1541,8 +1535,7 @@
                     }
 
                 },
-                    new Dictionary<string, object> { { "uri", imageUrl.Uri } },
-                    cancellationToken);
+                new Dictionary<string, object> { { "uri", imageUrl.Uri } });
             }
             catch (TaskCanceledException tce)
             {
@@ -1709,22 +1702,19 @@
             client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
         }
 
-        public async Task<River> FetchAndUpdateRiver(
-            RiverFeedStore feedStore,
-            Uri uri,
-            CancellationToken cancellationToken)
+        public async Task<River> FetchAndUpdateRiver(RiverFeedStore feedStore, Uri uri)
         {
             River river = await feedStore.LoadRiverForFeed(uri);
             if ((river.Metadata.LastStatus != HttpStatusCode.MovedPermanently) &&
                 (river.Metadata.LastStatus != HttpStatusCode.Gone))
             {
-                river = await UpdateAsync(river, cancellationToken);
+                river = await UpdateAsync(river);
                 await feedStore.WriteRiver(uri, river);
             }
 
             if (river.Metadata.LastStatus == HttpStatusCode.MovedPermanently)
             {
-                return await FetchAndUpdateRiver(feedStore, river.Metadata.OriginUrl, cancellationToken);
+                return await FetchAndUpdateRiver(feedStore, river.Metadata.OriginUrl);
             }
 
             return river;
@@ -1734,8 +1724,7 @@
             string id,
             IList<Uri> feedUrls,
             AggregateRiverStore aggregateStore,
-            RiverFeedStore feedStore,
-            CancellationToken cancellationToken)
+            RiverFeedStore feedStore)
         {
             Stopwatch aggregateTimer = Stopwatch.StartNew();
 
@@ -1751,7 +1740,7 @@
             var parser = new RiverFeedParser();
             River[] rivers = await Task.WhenAll(
                 from url in feedUrls
-                select parser.FetchAndUpdateRiver(feedStore, url, cancellationToken));
+                select parser.FetchAndUpdateRiver(feedStore, url));
             Log.Get().Information("{id}: Pulled {riverCount} rivers", id, rivers.Length);
 
             List<RiverFeed> newFeeds = new List<RiverFeed>();
@@ -1790,13 +1779,12 @@
             return newRiver;
         }
 
-        public async Task<River> UpdateAsync(River river, CancellationToken cancellationToken)
+        public async Task<River> UpdateAsync(River river)
         {
             FetchResult fetchResult = await FetchAsync(
                 river.Metadata.OriginUrl,
                 river.Metadata.Etag,
-                river.Metadata.LastModified,
-                cancellationToken
+                river.Metadata.LastModified
             );
 
             var updatedFeeds = river.UpdatedFeeds;
@@ -1818,8 +1806,7 @@
                         newItems[i] = Rebase(newItems[i], baseUri);
                     }
 
-                    newItems = await this.thumbnailExtractor.LoadItemThumbnailsAsync(
-                        baseUri, newItems, cancellationToken);
+                    newItems = await this.thumbnailExtractor.LoadItemThumbnailsAsync(baseUri, newItems);
                     feed = feed.With(items: newItems);
                     updatedFeeds = river.UpdatedFeeds.With(feeds: river.UpdatedFeeds.Feeds.Insert(0, feed));
                 }
@@ -1843,12 +1830,7 @@
             );
         }
 
-        static async Task<FetchResult> FetchAsync(
-            Uri uri,
-            string etag,
-            DateTimeOffset? lastModified,
-            CancellationToken cancellationToken
-        )
+        static async Task<FetchResult> FetchAsync(Uri uri, string etag, DateTimeOffset? lastModified)
         {
             Stopwatch loadTimer = Stopwatch.StartNew();
             try
@@ -1859,16 +1841,15 @@
                 Uri requestUri = uri;
                 for (int i = 0; i < 30; i++)
                 {
-                    response = await Policies.HttpPolicy.ExecuteAsync((ct) =>
-                    {
-                        var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
-                        if (etag != null) { request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag)); }
-                        request.Headers.IfModifiedSince = lastModified;
+                    response = await Policies.HttpPolicy.ExecuteAsync(() =>
+                        {
+                            var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+                            if (etag != null) { request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag)); }
+                            request.Headers.IfModifiedSince = lastModified;
 
-                        return client.SendAsync(request, ct);
-                    },
-                        new Dictionary<string, object> { { "uri", requestUri } },
-                        cancellationToken);
+                            return client.SendAsync(request);
+                        },
+                        new Dictionary<string, object> { { "uri", requestUri } });
 
                     if ((response.StatusCode != HttpStatusCode.TemporaryRedirect) &&
                         (response.StatusCode != HttpStatusCode.Found) &&
@@ -1962,7 +1943,6 @@
             }
             catch (TaskCanceledException)
             {
-                if (cancellationToken.IsCancellationRequested) { throw; }
                 Log.FeedTimeout(uri, loadTimer);
                 return new FetchResult(
                     feed: null,
@@ -2217,7 +2197,6 @@
 
         public static async Task<IList<Uri>> GetFeedUrls(
             string originUrl,
-            CancellationToken cancellationToken = default(CancellationToken),
             bool findAll = false)
         {
             var allUrls = new List<Uri>();
@@ -2225,7 +2204,7 @@
 
             // Maybe... maybe this one is a feed?
             Log.FindFeedCheckingBase(baseUri);
-            string data = await GetFeedData(baseUri, cancellationToken);
+            string data = await GetFeedData(baseUri);
             if (LooksLikeFeed(data))
             {
                 Log.FindFeedBaseWasFeed(baseUri);
@@ -2252,7 +2231,7 @@
                 }
             }
 
-            await FilterUrlsByFeed(linkUrls, cancellationToken);
+            await FilterUrlsByFeed(linkUrls);
             if (linkUrls.Count > 0)
             {
                 Log.FindFeedFoundLinkElements(baseUri, linkUrls);
@@ -2283,7 +2262,7 @@
             Log.FindFeedFoundSomeAnchors(baseUri, localGuesses, remoteGuesses);
 
             // (Consider ones on the same domain first.)
-            await FilterUrlsByFeed(localGuesses, cancellationToken);
+            await FilterUrlsByFeed(localGuesses);
             if (localGuesses.Count > 0)
             {
                 Log.FindFeedsFoundLocalGuesses(baseUri, localGuesses);
@@ -2292,7 +2271,7 @@
                 if (!findAll) { return localGuesses; }
             }
 
-            await FilterUrlsByFeed(remoteGuesses, cancellationToken);
+            await FilterUrlsByFeed(remoteGuesses);
             if (remoteGuesses.Count > 0)
             {
                 Log.FindFeedsFoundRemoteGuesses(baseUri, remoteGuesses);
@@ -2302,7 +2281,7 @@
             }
 
             List<Uri> randomGuesses = FeedNames.Select(s => new Uri(baseUri, s)).ToList();
-            await FilterUrlsByFeed(randomGuesses, cancellationToken);
+            await FilterUrlsByFeed(randomGuesses);
             if (randomGuesses.Count > 0)
             {
                 Log.FindFeedsFoundRandomGuesses(baseUri, randomGuesses);
@@ -2336,12 +2315,11 @@
             return parsedUri;
         }
 
-        static async Task<string> GetFeedData(Uri url, CancellationToken cancellationToken)
+        static async Task<string> GetFeedData(Uri url)
         {
             HttpResponseMessage response = await Policies.HttpPolicy.ExecuteAsync(
-                (ct) => client.GetAsync(url, ct),
-                new Dictionary<string, object> { { "uri", url } },
-                cancellationToken);
+                () => client.GetAsync(url),
+                new Dictionary<string, object> { { "uri", url } });
             using (response)
             {
                 if (!response.IsSuccessStatusCode)
@@ -2383,20 +2361,20 @@
             return 0;
         }
 
-        static async Task FilterUrlsByFeed(List<Uri> linkUrls, CancellationToken cancellationToken)
+        static async Task FilterUrlsByFeed(List<Uri> linkUrls)
         {
-            bool[] results = await Task.WhenAll(linkUrls.Select(u => IsFeed(u, cancellationToken)));
+            bool[] results = await Task.WhenAll(linkUrls.Select(u => IsFeed(u)));
             for (int i = linkUrls.Count - 1; i >= 0; i--)
             {
                 if (!results[i]) { linkUrls.RemoveAt(i); }
             }
         }
 
-        static async Task<bool> IsFeed(Uri url, CancellationToken cancellationToken)
+        static async Task<bool> IsFeed(Uri url)
         {
             try
             {
-                string data = await GetFeedData(url, cancellationToken);
+                string data = await GetFeedData(url);
                 return LooksLikeFeed(data);
             }
             catch (FindFeedException)

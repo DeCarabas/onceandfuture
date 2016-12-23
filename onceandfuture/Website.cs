@@ -553,7 +553,7 @@
                 for (int i = 0; i < feeds.Length; i++)
                 {
                     feedTasks[i] = this.feedParser
-                        .FetchAndUpdateRiver(this.feedStore, feeds[i], HttpContext.RequestAborted)
+                        .FetchAndUpdateRiver(this.feedStore, feeds[i])
                         .ContinueWith(fetchCallback);
                 }
                 await Task.WhenAll(feedTasks);
@@ -567,8 +567,7 @@
                             riverDef.Id,
                             riverDef.Feeds,
                             this.aggregateStore,
-                            this.feedStore,
-                            HttpContext.RequestAborted
+                            this.feedStore
                         )
                         .ContinueWith(fetchCallback);
                 }
@@ -663,7 +662,7 @@
         public async Task<IActionResult> AddRiverSource(string user, string id)
         {
             var requestBody = await ReadRequest<AddFeedRequest>();
-            IList<Uri> feedUrls = await FeedDetector.GetFeedUrls(requestBody.Url, HttpContext.RequestAborted);
+            IList<Uri> feedUrls = await FeedDetector.GetFeedUrls(requestBody.Url);
             if (feedUrls.Count == 0) { throw FaultException.NoFeed(requestBody.Url); }
 
             Uri feedUrl = feedUrls[0];
@@ -679,7 +678,7 @@
                 await this.profileStore.SaveProfileFor(user, newProfile);
 
                 await feedParser.RefreshAggregateRiverWithFeeds(
-                    newRiver.Id, new[] { feedUrl }, this.aggregateStore, this.feedStore, HttpContext.RequestAborted);
+                    newRiver.Id, new[] { feedUrl }, this.aggregateStore, this.feedStore);
 
                 river = newRiver;
             }
