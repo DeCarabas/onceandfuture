@@ -28,6 +28,19 @@ cd /app
 /opt/mono/bin/mono /opt/mono/nuget.exe restore -SolutionDirectory ..
 /opt/mono/bin/xbuild
 
+# Rebuild the webpack thingy all optimized and stuff.
+# apt-get install -y -q nodejs
+# npm install
+# node ./node-modules/webpack/bin/webpack.js \
+#   --output-path wwwroot \
+#   --output-filename bundle.js \
+#   --entry ./wwwroot/main.js \
+#   --optimize-minimize \
+#   --optimize-occurrance-order \
+#   --optimize-dedup
+# apt-get remove -q -y nodejs
+# rm -rf ./node-modules/
+
 # Static? Need to work out how to bundle all mono dependencies too.
 # /opt/mono/bin/mkbundle --deps --simple ./bin/Debug/onceandfuture.exe ./bin/Debug/*.dll
 
