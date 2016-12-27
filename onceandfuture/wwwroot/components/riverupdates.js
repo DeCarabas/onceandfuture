@@ -1,13 +1,13 @@
 import React from 'react';
 import RiverFeedUpdate from './riverfeedupdate';
 import { update_key } from '../util';
+import { StickyContainer } from './sticky';
 
 const RiverUpdates = ({river, index}) => {
   const TOP_SPACE = 65;
   const SIDE_PADDING = 3;
 
   let style = {
-    maxHeight: '100%',
     overflowX: 'hidden',
     overflowY: 'auto',
     position: 'absolute',
@@ -18,10 +18,15 @@ const RiverUpdates = ({river, index}) => {
   };
 
   let update_nodes = (river.updates || []).map(
-    u => <RiverFeedUpdate update={u} mode={river.mode} river_index={index} key={update_key(u)} />
+    u => <RiverFeedUpdate
+        update={u}
+        mode={river.mode}
+        river_index={index}
+        key={update_key(u)}
+      />
   );
 
-  return <div style={style}>{update_nodes}</div>;
+  return <StickyContainer style={style}>{update_nodes}</StickyContainer>;
 };
 
 export default RiverUpdates;

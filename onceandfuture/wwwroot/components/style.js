@@ -31,7 +31,7 @@ export const SANS_FONTS = [
 export const RIVER_TITLE_FONT_SIZE = 24;
 export const ITEM_TITLE_FONT_SIZE = 18;
 export const TEXT_FONT_SIZE = 12;
-export const UPDATE_TITLE_FONT_SIZE = 12;
+export const UPDATE_TITLE_FONT_SIZE = 14;
 
 export const ICON_FONT_SIZE = 18;
 

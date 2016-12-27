@@ -27060,7 +27060,7 @@
 	var RIVER_TITLE_FONT_SIZE = exports.RIVER_TITLE_FONT_SIZE = 24;
 	var ITEM_TITLE_FONT_SIZE = exports.ITEM_TITLE_FONT_SIZE = 18;
 	var TEXT_FONT_SIZE = exports.TEXT_FONT_SIZE = 12;
-	var UPDATE_TITLE_FONT_SIZE = exports.UPDATE_TITLE_FONT_SIZE = 12;
+	var UPDATE_TITLE_FONT_SIZE = exports.UPDATE_TITLE_FONT_SIZE = 14;
 	
 	var ICON_FONT_SIZE = exports.ICON_FONT_SIZE = 18;
 	
@@ -27490,17 +27490,12 @@
 	  _createClass(SettingInputBox, [{
 	    key: 'componentWillReceiveProps',
 	    value: function componentWillReceiveProps(props) {
-	      this.setState(Object.assign({}, this.state, {
-	        transient_invalid: props.transientError
-	      }));
+	      this.setState({ transient_invalid: props.transientError });
 	    }
 	  }, {
 	    key: 'handleChange',
 	    value: function handleChange(event) {
-	      this.setState(Object.assign({}, this.state, {
-	        value: event.target.value,
-	        transient_invalid: false
-	      }));
+	      this.setState({ value: event.target.value, transient_invalid: false });
 	    }
 	  }, {
 	    key: 'handleSubmit',
@@ -27574,11 +27569,7 @@
 	  _createClass(SettingPasswordBox, [{
 	    key: 'handleChangeSecond',
 	    value: function handleChangeSecond(event) {
-	      var new_state = Object.assign({}, this.state, {
-	        value_second: event.target.value,
-	        transient_invalid: false
-	      });
-	      this.setState(new_state);
+	      this.setState({ value_second: event.target.value, transient_invalid: false });
 	    }
 	  }, {
 	    key: 'invalidReason',
@@ -29173,6 +29164,8 @@
 	
 	var _util = __webpack_require__(/*! ../util */ 223);
 	
+	var _sticky = __webpack_require__(/*! ./sticky */ 249);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var RiverUpdates = function RiverUpdates(_ref) {
@@ -29183,7 +29176,6 @@
 	  var SIDE_PADDING = 3;
 	
 	  var style = {
-	    maxHeight: '100%',
 	    overflowX: 'hidden',
 	    overflowY: 'auto',
 	    position: 'absolute',
@@ -29194,11 +29186,16 @@
 	  };
 	
 	  var update_nodes = (river.updates || []).map(function (u) {
-	    return _react2.default.createElement(_riverfeedupdate2.default, { update: u, mode: river.mode, river_index: index, key: (0, _util.update_key)(u) });
+	    return _react2.default.createElement(_riverfeedupdate2.default, {
+	      update: u,
+	      mode: river.mode,
+	      river_index: index,
+	      key: (0, _util.update_key)(u)
+	    });
 	  });
 	
 	  return _react2.default.createElement(
-	    'div',
+	    _sticky.StickyContainer,
 	    { style: style },
 	    update_nodes
 	  );
@@ -29356,30 +29353,37 @@
 	
 	var _reltime2 = _interopRequireDefault(_reltime);
 	
+	var _sticky = __webpack_require__(/*! ./sticky */ 249);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var RiverFeedUpdateTitle = function RiverFeedUpdateTitle(_ref) {
 	  var update = _ref.update;
 	
 	  var style = {
-	    fontSize: _style.UPDATE_TITLE_FONT_SIZE
+	    fontSize: _style.UPDATE_TITLE_FONT_SIZE,
+	    background: _style.RIVER_COLUMN_BACKGROUND_COLOR
 	  };
 	  return _react2.default.createElement(
 	    'div',
-	    { style: style },
+	    null,
 	    _react2.default.createElement('hr', null),
 	    _react2.default.createElement(
-	      'div',
-	      { style: { float: 'right' } },
-	      'Updated ',
-	      _react2.default.createElement(_reltime2.default, { time: update.whenLastUpdate })
-	    ),
-	    _react2.default.createElement(
-	      _riverlink2.default,
-	      { href: update.websiteUrl },
-	      update.feedTitle
-	    ),
-	    _react2.default.createElement('div', { style: { float: 'clear', marginBottom: 10 } })
+	      _sticky.StickyTitle,
+	      { style: style },
+	      _react2.default.createElement(
+	        'div',
+	        { style: { float: 'right' } },
+	        'Updated ',
+	        _react2.default.createElement(_reltime2.default, { time: update.whenLastUpdate })
+	      ),
+	      _react2.default.createElement(
+	        _riverlink2.default,
+	        { href: update.websiteUrl },
+	        update.feedTitle
+	      ),
+	      _react2.default.createElement('div', { style: { float: 'clear', paddingBottom: 10 } })
+	    )
 	  );
 	};
 	
@@ -29546,6 +29550,227 @@
 	};
 	
 	exports.default = RiverItemThumbnail;
+
+/***/ },
+/* 249 */
+/*!**************************************!*\
+  !*** ./wwwroot/components/sticky.js ***!
+  \**************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	exports.StickyTitle = exports.StickyContainer = undefined;
+	
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+	
+	var _react = __webpack_require__(/*! react */ 1);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+	
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+	
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+	
+	function findChild(childs, offset) {
+	  var min = 0;
+	  var max = childs.length - 1;
+	  while (min <= max) {
+	    var index = min + Math.floor((max - min) / 2);
+	    var child = childs[index];
+	    var indexOffset = child.getOffsetTop();
+	    if (indexOffset === offset) {
+	      return child;
+	    } else if (indexOffset > offset) {
+	      max = index - 1;
+	    } else {
+	      min = index + 1;
+	    }
+	  }
+	
+	  if (max < 0) {
+	    return null;
+	  }
+	  return childs[max];
+	}
+	
+	var StickyContainer = exports.StickyContainer = function (_React$Component) {
+	  _inherits(StickyContainer, _React$Component);
+	
+	  function StickyContainer(props) {
+	    _classCallCheck(this, StickyContainer);
+	
+	    var _this = _possibleConstructorReturn(this, (StickyContainer.__proto__ || Object.getPrototypeOf(StickyContainer)).call(this, props));
+	
+	    _this.state = { scrollTop: 0, titles: [], sorted: true };
+	    _this.handleScroll = _this.handleScroll.bind(_this);
+	    return _this;
+	  }
+	
+	  _createClass(StickyContainer, [{
+	    key: 'getChildContext',
+	    value: function getChildContext() {
+	      return { stickyContainer: this };
+	    }
+	  }, {
+	    key: 'childDidMount',
+	    value: function childDidMount(child) {
+	      var _this2 = this;
+	
+	      this.setState(function (prevState) {
+	        var newTitles = [].concat(prevState.titles, child);
+	        return _this2.handleUpdate(newTitles);
+	      });
+	    }
+	  }, {
+	    key: 'childDidUpdate',
+	    value: function childDidUpdate() {
+	      var _this3 = this;
+	
+	      this.setState(function (prevState) {
+	        return _this3.handleUpdate(prevState.titles);
+	      });
+	    }
+	  }, {
+	    key: 'handleUpdate',
+	    value: function handleUpdate(newTitles) {
+	      newTitles.sort(function (a, b) {
+	        return a.getOffsetTop() - b.getOffsetTop();
+	      });
+	      return { titles: newTitles };
+	    }
+	  }, {
+	    key: 'childWillUnmount',
+	    value: function childWillUnmount(child) {
+	      var _this4 = this;
+	
+	      return this.setState(function (prevState) {
+	        var index = _this4.state.titles.findIndex(function (c) {
+	          return c === child;
+	        });
+	        if (index >= 0) {
+	          var newTitles = Array.from(prevState.titles);
+	          newTitles.splice(index, 1);
+	          return { titles: newTitles };
+	        } else {
+	          return {};
+	        }
+	      });
+	    }
+	  }, {
+	    key: 'handleScroll',
+	    value: function handleScroll(event) {
+	      var _this5 = this;
+	
+	      this.lastScrollPosition = event.target.scrollTop;
+	      if (!this.ticking) {
+	        window.requestAnimationFrame(function () {
+	          _this5.setState({ scrollTop: _this5.lastScrollPosition });
+	          _this5.ticking = false;
+	        });
+	      }
+	      this.ticking = true;
+	    }
+	  }, {
+	    key: 'render',
+	    value: function render() {
+	      var stuck = findChild(this.state.titles, this.state.scrollTop);
+	      var stuckChild = null;
+	      if (stuck) {
+	        stuckChild = _react2.default.createElement(
+	          'div',
+	          { style: stuck.props.style },
+	          stuck.props.children
+	        );
+	      }
+	
+	      var pinstyle = Object.assign({}, this.props.style, {
+	        bottom: undefined,
+	        height: 'auto'
+	      });
+	
+	      return _react2.default.createElement(
+	        'div',
+	        null,
+	        _react2.default.createElement(
+	          'div',
+	          { style: this.props.style, onScroll: this.handleScroll },
+	          this.props.children
+	        ),
+	        _react2.default.createElement(
+	          'div',
+	          { style: pinstyle },
+	          stuckChild
+	        )
+	      );
+	    }
+	  }]);
+	
+	  return StickyContainer;
+	}(_react2.default.Component);
+	
+	StickyContainer.childContextTypes = {
+	  stickyContainer: _react2.default.PropTypes.object
+	};
+	
+	var StickyTitle = exports.StickyTitle = function (_React$Component2) {
+	  _inherits(StickyTitle, _React$Component2);
+	
+	  function StickyTitle(props) {
+	    _classCallCheck(this, StickyTitle);
+	
+	    var _this6 = _possibleConstructorReturn(this, (StickyTitle.__proto__ || Object.getPrototypeOf(StickyTitle)).call(this, props));
+	
+	    _this6.gotElement = function (element) {
+	      _this6.placeholder = element;
+	    };
+	    return _this6;
+	  }
+	
+	  _createClass(StickyTitle, [{
+	    key: 'componentDidMount',
+	    value: function componentDidMount() {
+	      this.context.stickyContainer.childDidMount(this);
+	    }
+	  }, {
+	    key: 'componentWillUnmount',
+	    value: function componentWillUnmount() {
+	      this.context.stickyContainer.childWillUnmount(this);
+	    }
+	  }, {
+	    key: 'componentDidUpdate',
+	    value: function componentDidUpdate() {
+	      this.context.stickyContainer.childDidUpdate(this);
+	    }
+	  }, {
+	    key: 'getOffsetTop',
+	    value: function getOffsetTop() {
+	      return this.placeholder.offsetTop;
+	    }
+	  }, {
+	    key: 'render',
+	    value: function render() {
+	      return _react2.default.createElement(
+	        'div',
+	        { ref: this.gotElement, style: this.props.style },
+	        this.props.children
+	      );
+	    }
+	  }]);
+	
+	  return StickyTitle;
+	}(_react2.default.Component);
+	
+	StickyTitle.contextTypes = {
+	  stickyContainer: _react2.default.PropTypes.object
+	};
 
 /***/ }
 /******/ ]);
