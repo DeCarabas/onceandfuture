@@ -75,16 +75,11 @@ export class SettingInputBox extends React.Component {
   }
 
   componentWillReceiveProps(props) {
-    this.setState(Object.assign({}, this.state, {
-      transient_invalid: props.transientError,
-    }));
+    this.setState({transient_invalid: props.transientError});
   }
 
   handleChange(event) {
-    this.setState(Object.assign({}, this.state, {
-      value: event.target.value,
-      transient_invalid: false,
-    }));
+    this.setState({value: event.target.value, transient_invalid: false});
   }
 
   handleSubmit(event) {
@@ -141,11 +136,7 @@ export class SettingPasswordBox extends SettingInputBox {
   }
 
   handleChangeSecond(event) {
-    const new_state = Object.assign({}, this.state, {
-      value_second: event.target.value,
-      transient_invalid: false,
-    });
-    this.setState(new_state);
+    this.setState({value_second: event.target.value, transient_invalid: false});
   }
 
   invalidReason() {
