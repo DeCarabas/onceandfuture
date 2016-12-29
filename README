@@ -9,8 +9,6 @@ we got.
 Todo:
 =======
 
-- Refresh is super slow on the docker image.
-
 UI:
 - Account creation flow
 - Recover lost password flow

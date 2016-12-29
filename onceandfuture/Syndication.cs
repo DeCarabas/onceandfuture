@@ -954,14 +954,14 @@
             MemoryStream stream = new MemoryStream();
             using (Image source = Image.FromStream(new MemoryStream(image)))
             {
-                source.Save(stream, ImageFormat.Png);
+                source.Save(stream, Policies.ThumbnailCodec, Policies.ThumbnailEncoderParameters);
             }
 
             stream.Position = 0;
             byte[] hash = SHA1.Create().ComputeHash(stream);
-            string fileName = Convert.ToBase64String(hash).Replace('/', '-') + ".png";
+            string fileName = Convert.ToBase64String(hash).Replace('/', '-') + ".jpg";
 
-            await this.blobStore.PutObject(fileName, "image/png", stream);
+            await this.blobStore.PutObject(fileName, "image/jpeg", stream);
             return this.blobStore.GetObjectUri(fileName);
         }
     }
@@ -1144,9 +1144,11 @@
             int left, right, top, bottom;
             CropSquare(values, width, height, out left, out top, out right, out bottom);
 
-            var destPixelFormat = PixelFormat.Format32bppArgb; // image.PixelFormat;
-            //if ((destPixelFormat & PixelFormat.Indexed) != 0) { destPixelFormat = PixelFormat.Format32bppArgb; }
+            // Don't enlarge, it adds nothing.
+            int sourceWidth = right - left;
+            if (sourceWidth < targetSize) { targetSize = sourceWidth; }
 
+            var destPixelFormat = PixelFormat.Format32bppArgb; // image.PixelFormat;
             var destRect = new Rectangle(0, 0, targetSize, targetSize);
             var destImage = new Bitmap(targetSize, targetSize, destPixelFormat);
 
@@ -1189,11 +1191,18 @@
                 sleepDurationProvider: ExponentialRetryTimeWithJitter,
                 onRetry: (exc, ts, cnt, ctxt) => Log.HttpRetry(exc, ts, cnt, ctxt));
 
-        public static readonly JsonSerializerSettings SerializerSettings = new JsonSerializerSettings
-        {
-            DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate,
-            Formatting = Newtonsoft.Json.Formatting.None,
-        };
+        public static readonly JsonSerializerSettings SerializerSettings = 
+            new JsonSerializerSettings
+            {
+                DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate,
+                Formatting = Newtonsoft.Json.Formatting.None,
+            };
+
+        public static readonly ImageCodecInfo ThumbnailCodec = 
+            ImageCodecInfo.GetImageEncoders().Single(enc => enc.MimeType == "image/jpeg");
+
+        public static readonly EncoderParameters ThumbnailEncoderParameters =
+            MakeEncoderParameters(new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 75L));
 
         static bool ValidateHttpRequestException(HttpRequestException hre)
         {
@@ -1219,6 +1228,17 @@
             var jitter = TimeSpan.FromMilliseconds(random.Next(-jitterInterval, jitterInterval));
 
             return baseTime + jitter;
+        }
+
+        static EncoderParameters MakeEncoderParameters(params EncoderParameter[] encoderParams)
+        {
+            int length = encoderParams?.Length ?? 0;
+            var result = new EncoderParameters(length);
+            for (int i = 0; i < length; i++)
+            {
+                result.Param[i] = encoderParams[i];
+            }
+            return result;
         }
     }
 
@@ -1327,7 +1347,7 @@
         {
             using (var ss = new MemoryStream(sourceImage.Data))
             using (var src = (Bitmap)Image.FromStream(ss))
-            using (var dst = EntropyCropper.Crop(src, 400))
+            using (var dst = EntropyCropper.Crop(src, 312))
             using (var ds = new MemoryStream())
             {
                 dst.Save(ds, ImageFormat.Png);

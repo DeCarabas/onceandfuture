@@ -75,7 +75,7 @@
                     ContentType = type,
                     InputStream = stream,
                 });
-                Log.PutObjectComplete(this.bucket, name, type, timer);
+                Log.PutObjectComplete(this.bucket, name, type, timer, stream);
             }
             catch (AmazonS3Exception e)
             {

@@ -4,6 +4,7 @@
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.IO;
     using System.Net;
     using System.Net.Http;
     using System.Runtime.CompilerServices;
@@ -215,11 +216,11 @@
                 exception, "HTTP error detected from {url}, retry {retry} after {ts}", url, retryCount, timespan);
         }
 
-        public static void PutObjectComplete(string bucket, string name, string type, Stopwatch timer)
+        public static void PutObjectComplete(string bucket, string name, string type, Stopwatch timer, Stream stream)
         {
             Get().Verbose(
-                "Put Object: {bucket}/{name} ({type}) in {elapsed}ms",
-                bucket, name, type, timer.ElapsedMilliseconds
+                "Put Object: {bucket}/{name} ({type}, {len} bytes) in {elapsed}ms",
+                bucket, name, type, stream.Length, timer.ElapsedMilliseconds
             );
         }
 
