@@ -140,9 +140,11 @@
             return client;
         }
 
-        public static string HashString(string input)
+        public static string HashString(string input) => HashBytes(Encoding.UTF8.GetBytes(input));
+
+        public static string HashBytes(byte[] input)
         {
-            byte[] hash = SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(input));
+            byte[] hash = SHA1.Create().ComputeHash(input);
             return Convert.ToBase64String(hash).Replace('/', '-');
         }
 
@@ -794,7 +796,8 @@
             DateTimeOffset? lastModified = null,
             HttpStatusCode? lastStatus = null,
             string owner = null,
-            string mode = null)
+            string mode = null,
+            string next = null)
         {
             Name = name;
             OriginUrl = originUrl;
@@ -804,6 +807,7 @@
             LastStatus = lastStatus ?? HttpStatusCode.OK;
             Owner = owner;
             Mode = mode;
+            Next = next;
         }
 
         public RiverFeedMeta With(
@@ -814,7 +818,8 @@
             DateTimeOffset? lastModified = null,
             HttpStatusCode? lastStatus = null,
             string owner = null,
-            string mode = null)
+            string mode = null,
+            string next = null)
         {
             return new RiverFeedMeta(
                 name ?? Name,
@@ -824,7 +829,8 @@
                 lastModified ?? LastModified,
                 lastStatus ?? LastStatus,
                 owner ?? Owner,
-                mode ?? Mode);
+                mode ?? Mode,
+                next ?? Next);
         }
 
         [JsonProperty(PropertyName = "name")]
@@ -850,6 +856,9 @@
 
         [JsonProperty(PropertyName = "mode")]
         public string Mode { get; }
+
+        [JsonProperty(PropertyName = "next")]
+        public string Next { get; }
     }
 
     public class UpdatedFeeds
@@ -906,6 +915,22 @@
             return river;
         }
         public Task WriteRiver(Uri uri, River river) => WriteDocument(uri, river);
+    }
+
+    public class RiverArchiveStore
+    {
+        readonly BlobStore blobStore = new BlobStore("onceandfuture");
+
+        public async Task<string> WriteRiverArchive(River oldRiver)
+        {
+            byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(oldRiver, Policies.SerializerSettings));
+            string id = Util.HashBytes(data);
+            using (var memoryStream = new MemoryStream(data))
+            {
+                await this.blobStore.PutObject(id, "application/json", memoryStream);
+            }
+            return id;
+        }
     }
 
     public class AggregateRiverStore : DocumentStore<string, River>
@@ -1119,8 +1144,8 @@
             int left, right, top, bottom;
             CropSquare(values, width, height, out left, out top, out right, out bottom);
 
-            var destPixelFormat = image.PixelFormat;
-            if ((destPixelFormat & PixelFormat.Indexed) != 0) { destPixelFormat = PixelFormat.Format32bppArgb; }
+            var destPixelFormat = PixelFormat.Format32bppArgb; // image.PixelFormat;
+            //if ((destPixelFormat & PixelFormat.Indexed) != 0) { destPixelFormat = PixelFormat.Format32bppArgb; }
 
             var destRect = new Rectangle(0, 0, targetSize, targetSize);
             var destImage = new Bitmap(targetSize, targetSize, destPixelFormat);
@@ -1164,6 +1189,12 @@
                 sleepDurationProvider: ExponentialRetryTimeWithJitter,
                 onRetry: (exc, ts, cnt, ctxt) => Log.HttpRetry(exc, ts, cnt, ctxt));
 
+        public static readonly JsonSerializerSettings SerializerSettings = new JsonSerializerSettings
+        {
+            DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate,
+            Formatting = Newtonsoft.Json.Formatting.None,
+        };
+
         static bool ValidateHttpRequestException(HttpRequestException hre)
         {
             var iwe = hre.InnerException as WebException;
@@ -1189,8 +1220,6 @@
 
             return baseTime + jitter;
         }
-
-
     }
 
     class ThumbnailExtractor
@@ -1657,7 +1686,12 @@
 
     public class RiverFeedParser
     {
-        readonly ThumbnailExtractor thumbnailExtractor = new ThumbnailExtractor();
+        /// <summaryThe number of updates to have in a river before archiving.</summary>
+        const int UpdateLimit = 40;
+
+        /// <summary>The number of updates to send to the archive.</summary>
+        const int UpdateSize = 20;
+
         static readonly HttpClient client = Util.CreateHttpClient(allowRedirect: false);
 
         static readonly Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>> FeedElements =
@@ -1710,33 +1744,63 @@
                 { XNames.Media.Content, (ri, xe) => HandleThumbnail(ri, xe) },
         };
 
-        public async Task<River> FetchAndUpdateRiver(RiverFeedStore feedStore, Uri uri)
+        readonly AggregateRiverStore aggregateStore = new AggregateRiverStore();
+        readonly RiverArchiveStore archiveStore = new RiverArchiveStore();
+        readonly RiverFeedStore feedStore = new RiverFeedStore();
+        readonly ThumbnailExtractor thumbnailExtractor = new ThumbnailExtractor();
+
+        public async Task<River> FetchAndUpdateRiver(Uri uri)
         {
             River river = await feedStore.LoadRiverForFeed(uri);
             if ((river.Metadata.LastStatus != HttpStatusCode.MovedPermanently) &&
                 (river.Metadata.LastStatus != HttpStatusCode.Gone))
             {
                 river = await UpdateAsync(river);
-                await feedStore.WriteRiver(uri, river);
+                await WriteRiver(uri, river);
             }
 
             if (river.Metadata.LastStatus == HttpStatusCode.MovedPermanently)
             {
-                return await FetchAndUpdateRiver(feedStore, river.Metadata.OriginUrl);
+                return await FetchAndUpdateRiver(river.Metadata.OriginUrl);
             }
 
             return river;
         }
 
-        public async Task<River> RefreshAggregateRiverWithFeeds(
-            string id,
-            IList<Uri> feedUrls,
-            AggregateRiverStore aggregateStore,
-            RiverFeedStore feedStore)
+        async Task<River> WriteRiver(Uri uri, River river)
+        {
+            river = await MaybeArchiveRiver(uri.AbsoluteUri, river);
+            await feedStore.WriteRiver(uri, river);
+            return river;
+        }
+
+        async Task<River> MaybeArchiveRiver(string id, River river)
+        {
+            if (river.UpdatedFeeds.Feeds.Count > UpdateLimit)
+            {
+                Log.SplittingFeed(id, river);
+                ImmutableList<RiverFeed> feeds = river.UpdatedFeeds.Feeds;
+                IEnumerable<RiverFeed> oldFeeds = feeds.Skip(UpdateSize);
+                IEnumerable<RiverFeed> newFeeds = feeds.Take(UpdateSize);
+
+                River oldRiver = river.With(updatedFeeds: river.UpdatedFeeds.With(feeds: oldFeeds));
+                string archiveKey = await this.archiveStore.WriteRiverArchive(oldRiver);
+                Log.WroteArchive(id, river, archiveKey);
+
+                river = river.With(
+                    updatedFeeds: river.UpdatedFeeds.With(feeds: newFeeds),
+                    metadata: river.Metadata.With(next: archiveKey)
+                );
+            }
+
+            return river;
+        }
+
+        public async Task<River> RefreshAggregateRiverWithFeeds(string id, IList<Uri> feedUrls)
         {
             Stopwatch aggregateTimer = Stopwatch.StartNew();
 
-            Log.Get().Information("{id}: Loading aggregate");
+            Log.Get().Information("{id}: Loading aggregate", id);
             River river = await aggregateStore.LoadAggregate(id);
 
             Log.Get().Information("{id}: Refreshing aggregate with {feedUrlCount} feeds", id, feedUrls.Count);
@@ -1746,9 +1810,7 @@
             Log.Get().Information("{id}: Last updated @ {lastUpdated}", id, lastUpdated);
 
             var parser = new RiverFeedParser();
-            River[] rivers = await Task.WhenAll(
-                from url in feedUrls
-                select parser.FetchAndUpdateRiver(feedStore, url));
+            River[] rivers = await Task.WhenAll(from url in feedUrls select parser.FetchAndUpdateRiver(url));
             Log.Get().Information("{id}: Pulled {riverCount} rivers", id, rivers.Length);
 
             List<RiverFeed> newFeeds = new List<RiverFeed>();
@@ -1780,6 +1842,9 @@
             Log.Get().Information("{id}: Resulted in {riverCount} new feeds", id, newFeeds.Count);
             var newRiver = river.With(
                 updatedFeeds: river.UpdatedFeeds.With(feeds: newFeeds.Concat(river.UpdatedFeeds.Feeds)));
+
+            newRiver = await MaybeArchiveRiver(id, newRiver);
+
             Log.Get().Information("{id}: Updating aggregate", id);
             await aggregateStore.WriteAggregate(id, newRiver);
 

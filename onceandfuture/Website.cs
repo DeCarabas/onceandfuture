@@ -553,7 +553,7 @@
                 for (int i = 0; i < feeds.Length; i++)
                 {
                     feedTasks[i] = this.feedParser
-                        .FetchAndUpdateRiver(this.feedStore, feeds[i])
+                        .FetchAndUpdateRiver(feeds[i])
                         .ContinueWith(fetchCallback);
                 }
                 await Task.WhenAll(feedTasks);
@@ -563,12 +563,7 @@
                 {
                     RiverDefinition riverDef = profile.Rivers[i];
                     riverTasks[i] = this.feedParser
-                        .RefreshAggregateRiverWithFeeds(
-                            riverDef.Id,
-                            riverDef.Feeds,
-                            this.aggregateStore,
-                            this.feedStore
-                        )
+                        .RefreshAggregateRiverWithFeeds(riverDef.Id, riverDef.Feeds)
                         .ContinueWith(fetchCallback);
                 }
 
@@ -676,9 +671,7 @@
                 RiverDefinition newRiver = river.With(feeds: river.Feeds.Add(feedUrl));
                 UserProfile newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
                 await this.profileStore.SaveProfileFor(user, newProfile);
-
-                await feedParser.RefreshAggregateRiverWithFeeds(
-                    newRiver.Id, new[] { feedUrl }, this.aggregateStore, this.feedStore);
+                await feedParser.RefreshAggregateRiverWithFeeds(newRiver.Id, new[] { feedUrl });
 
                 river = newRiver;
             }

@@ -87,12 +87,6 @@
 
     public abstract class DocumentStore<TDocumentID, TDocument>
     {
-        readonly static JsonSerializerSettings SerializerSettings = new JsonSerializerSettings
-        {
-            DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate,
-            Formatting = Newtonsoft.Json.Formatting.None,
-        };
-
         readonly BlobStore blobStore;
 
         protected DocumentStore(BlobStore blobStore)
@@ -113,14 +107,14 @@
             using (var reader = new StreamReader(memoryStream, Encoding.UTF8))
             {
                 string text = reader.ReadToEnd();
-                return JsonConvert.DeserializeObject<TDocument>(text, SerializerSettings);
+                return JsonConvert.DeserializeObject<TDocument>(text, Policies.SerializerSettings);
             }
         }
 
         protected async Task WriteDocument(TDocumentID docid, TDocument document)
         {
             string id = GetObjectID(docid);
-            byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(document, SerializerSettings));
+            byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(document, Policies.SerializerSettings));
             using (var memoryStream = new MemoryStream(data))
             {
                 await this.blobStore.PutObject(id, "application/json", memoryStream);

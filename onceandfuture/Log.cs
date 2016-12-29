@@ -319,5 +319,11 @@
         {
             Get().Debug("{base}: Found {count} URIs in total.", baseUri.AbsoluteUri, allUrls.Count);
         }
+
+        public static void WroteArchive(string id, River river, string archiveKey) =>
+            Get().Information("{id}: Wrote archive at {archiveKey}", id, archiveKey);
+
+        public static void SplittingFeed(string id, River river) =>
+            Get().Verbose("{id}: Splitting feed with {count} items in it...", id, river.UpdatedFeeds.Feeds.Count);
     }
 }
