@@ -3,6 +3,7 @@
     using System;
     using System.Diagnostics;
     using System.IO;
+    using System.IO.Compression;
     using System.Text;
     using System.Threading.Tasks;
     using Amazon;
@@ -12,6 +13,8 @@
 
     public class BlobStore
     {
+        const string OriginalLength = "x-amz-meta-original-length";
+
         readonly string bucket;
         readonly AmazonS3Client client;
 
@@ -38,14 +41,31 @@
             {
                 using (GetObjectResponse response = await this.client.GetObjectAsync(this.bucket, name))
                 {
-                    byte[] data = new byte[response.ResponseStream.Length];
-                    int cursor = 0;
-                    while (cursor != data.Length)
+                    long length = response.ResponseStream.Length;
+                    string ol = response.Metadata[OriginalLength];
+                    if(!String.IsNullOrWhiteSpace(ol))
                     {
-                        int read = await response.ResponseStream.ReadAsync(data, cursor, data.Length - cursor);
-                        if (read == 0) { break; }
-                        cursor += read;
+                        length = long.Parse(ol);
                     }
+
+                    byte[] data = new byte[length];
+                    if (response.Headers.ContentEncoding == "gzip")
+                    {
+                        var targetStream = new MemoryStream(data);
+                        var sourceStream = new GZipStream(response.ResponseStream, CompressionMode.Decompress);
+                        await sourceStream.CopyToAsync(targetStream);
+                    }
+                    else
+                    {
+                        int cursor = 0;
+                        while (cursor != data.Length)
+                        {
+                            int read = await response.ResponseStream.ReadAsync(data, cursor, data.Length - cursor);
+                            if (read == 0) { break; }
+                            cursor += read;
+                        }
+                    }
+
                     Log.GetObjectComplete(this.bucket, name, timer);
                     return data;
                 }
@@ -62,19 +82,37 @@
             }
         }
 
-        public async Task PutObject(string name, string type, Stream stream)
+        public async Task PutObject(string name, string type, MemoryStream stream, bool compress = false)
         {
             Stopwatch timer = Stopwatch.StartNew();
             try
             {
-                await this.client.PutObjectAsync(new PutObjectRequest
+                string encoding = null;
+                Stream sourceStream = stream;
+                if (compress)
+                {
+                    var tempStream = new MemoryStream();
+                    using (var compressStream = new GZipStream(tempStream, CompressionMode.Compress, leaveOpen: true))
+                    {
+                        stream.CopyTo(compressStream);
+                    }
+                    tempStream.Position = 0;
+                    sourceStream = tempStream;
+                    encoding = "gzip";
+                }
+
+                var request = new PutObjectRequest
                 {
                     AutoCloseStream = false,
                     BucketName = this.bucket,
                     Key = name,
                     ContentType = type,
-                    InputStream = stream,
-                });
+                    InputStream = sourceStream,
+                };
+                request.Headers.ContentEncoding = encoding;
+                request.Metadata.Add(OriginalLength, stream.Length.ToString());
+                
+                await this.client.PutObjectAsync(request);
                 Log.PutObjectComplete(this.bucket, name, type, timer, stream);
             }
             catch (AmazonS3Exception e)
