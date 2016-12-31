@@ -1347,12 +1347,18 @@
 	 * will remain to ensure logic does not differ in production.
 	 */
 	
-	function invariant(condition, format, a, b, c, d, e, f) {
-	  if (process.env.NODE_ENV !== 'production') {
+	var validateFormat = function validateFormat(format) {};
+	
+	if (process.env.NODE_ENV !== 'production') {
+	  validateFormat = function validateFormat(format) {
 	    if (format === undefined) {
 	      throw new Error('invariant requires an error message argument');
 	    }
-	  }
+	  };
+	}
+	
+	function invariant(condition, format, a, b, c, d, e, f) {
+	  validateFormat(format);
 	
 	  if (!condition) {
 	    var error;
@@ -23905,8 +23911,7 @@
 	    if (value == null) {
 	        return value === undefined ? undefinedTag : nullTag;
 	    }
-	    value = Object(value);
-	    return symToStringTag && symToStringTag in value ? getRawTag(value) : objectToString(value);
+	    return symToStringTag && symToStringTag in Object(value) ? getRawTag(value) : objectToString(value);
 	}
 	
 	module.exports = baseGetTag;
@@ -29164,7 +29169,7 @@
 	
 	var _util = __webpack_require__(/*! ../util */ 223);
 	
-	var _sticky = __webpack_require__(/*! ./sticky */ 249);
+	var _sticky = __webpack_require__(/*! ./sticky */ 246);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
@@ -29230,7 +29235,7 @@
 	
 	var _riverfeedupdatetitle2 = _interopRequireDefault(_riverfeedupdatetitle);
 	
-	var _riveritem = __webpack_require__(/*! ./riveritem */ 246);
+	var _riveritem = __webpack_require__(/*! ./riveritem */ 247);
 	
 	var _riveritem2 = _interopRequireDefault(_riveritem);
 	
@@ -29353,7 +29358,7 @@
 	
 	var _reltime2 = _interopRequireDefault(_reltime);
 	
-	var _sticky = __webpack_require__(/*! ./sticky */ 249);
+	var _sticky = __webpack_require__(/*! ./sticky */ 246);
 	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
@@ -29391,168 +29396,6 @@
 
 /***/ },
 /* 246 */
-/*!*****************************************!*\
-  !*** ./wwwroot/components/riveritem.js ***!
-  \*****************************************/
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-	
-	var _react = __webpack_require__(/*! react */ 1);
-	
-	var _react2 = _interopRequireDefault(_react);
-	
-	var _riveritemtitle = __webpack_require__(/*! ./riveritemtitle */ 247);
-	
-	var _riveritemtitle2 = _interopRequireDefault(_riveritemtitle);
-	
-	var _riveritemthumbnail = __webpack_require__(/*! ./riveritemthumbnail */ 248);
-	
-	var _riveritemthumbnail2 = _interopRequireDefault(_riveritemthumbnail);
-	
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var RiverItem = function RiverItem(_ref) {
-	  var item = _ref.item,
-	      _ref$mode = _ref.mode,
-	      mode = _ref$mode === undefined ? 'auto' : _ref$mode;
-	
-	  var style = {
-	    border: "1px solid AAA",
-	    overflow: 'auto'
-	  };
-	
-	  return _react2.default.createElement(
-	    'div',
-	    { style: style },
-	    _react2.default.createElement(_riveritemtitle2.default, { item: item }),
-	    _react2.default.createElement('div', { style: { float: 'clear' } }),
-	    _react2.default.createElement(_riveritemthumbnail2.default, { item: item, mode: mode }),
-	    _react2.default.createElement(
-	      'p',
-	      null,
-	      item.body
-	    ),
-	    _react2.default.createElement('div', { style: { float: 'clear' } })
-	  );
-	};
-	
-	exports.default = RiverItem;
-
-/***/ },
-/* 247 */
-/*!**********************************************!*\
-  !*** ./wwwroot/components/riveritemtitle.js ***!
-  \**********************************************/
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-	
-	var _react = __webpack_require__(/*! react */ 1);
-	
-	var _react2 = _interopRequireDefault(_react);
-	
-	var _style = __webpack_require__(/*! ./style */ 227);
-	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 241);
-	
-	var _riverlink2 = _interopRequireDefault(_riverlink);
-	
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var RiverItemTitle = function RiverItemTitle(_ref) {
-	  var item = _ref.item;
-	
-	  var style = {
-	    fontSize: _style.ITEM_TITLE_FONT_SIZE
-	  };
-	  var titleText = item.title || item.pubDate;
-	  return _react2.default.createElement(
-	    _riverlink2.default,
-	    { href: item.link },
-	    _react2.default.createElement(
-	      'span',
-	      { style: style },
-	      titleText
-	    )
-	  );
-	};
-	
-	exports.default = RiverItemTitle;
-
-/***/ },
-/* 248 */
-/*!**************************************************!*\
-  !*** ./wwwroot/components/riveritemthumbnail.js ***!
-  \**************************************************/
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-	
-	var _react = __webpack_require__(/*! react */ 1);
-	
-	var _react2 = _interopRequireDefault(_react);
-	
-	var _style = __webpack_require__(/*! ./style */ 227);
-	
-	var _util = __webpack_require__(/*! ../util */ 223);
-	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 241);
-	
-	var _riverlink2 = _interopRequireDefault(_riverlink);
-	
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	var RiverItemThumbnail = function RiverItemThumbnail(_ref) {
-	  var item = _ref.item,
-	      _ref$mode = _ref.mode,
-	      mode = _ref$mode === undefined ? 'auto' : _ref$mode;
-	
-	  var thumb = item.thumbnail;
-	  if (thumb) {
-	    var imgstyle = {
-	      width: 100,
-	      height: 100,
-	      marginTop: 10,
-	      marginLeft: 3,
-	      marginRight: 3,
-	      marginBottom: 3
-	    };
-	    if (mode === 'text' || mode === 'auto' && (item.body || '').length > 100) {
-	      imgstyle.float = 'right';
-	      imgstyle.width = 100;
-	      imgstyle.height = 100;
-	    } else {
-	      imgstyle.width = _style.FULL_IMAGE_WIDTH;
-	      imgstyle.height = _style.FULL_IMAGE_WIDTH;
-	    }
-	
-	    return _react2.default.createElement(
-	      _riverlink2.default,
-	      { href: item.link },
-	      _react2.default.createElement('img', { style: imgstyle, src: (0, _util.make_full_url)(thumb.url) })
-	    );
-	  } else {
-	    return _react2.default.createElement('span', null);
-	  }
-	};
-	
-	exports.default = RiverItemThumbnail;
-
-/***/ },
-/* 249 */
 /*!**************************************!*\
   !*** ./wwwroot/components/sticky.js ***!
   \**************************************/
@@ -29771,6 +29614,168 @@
 	StickyTitle.contextTypes = {
 	  stickyContainer: _react2.default.PropTypes.object
 	};
+
+/***/ },
+/* 247 */
+/*!*****************************************!*\
+  !*** ./wwwroot/components/riveritem.js ***!
+  \*****************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _react = __webpack_require__(/*! react */ 1);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	var _riveritemtitle = __webpack_require__(/*! ./riveritemtitle */ 248);
+	
+	var _riveritemtitle2 = _interopRequireDefault(_riveritemtitle);
+	
+	var _riveritemthumbnail = __webpack_require__(/*! ./riveritemthumbnail */ 249);
+	
+	var _riveritemthumbnail2 = _interopRequireDefault(_riveritemthumbnail);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var RiverItem = function RiverItem(_ref) {
+	  var item = _ref.item,
+	      _ref$mode = _ref.mode,
+	      mode = _ref$mode === undefined ? 'auto' : _ref$mode;
+	
+	  var style = {
+	    border: "1px solid AAA",
+	    overflow: 'auto'
+	  };
+	
+	  return _react2.default.createElement(
+	    'div',
+	    { style: style },
+	    _react2.default.createElement(_riveritemtitle2.default, { item: item }),
+	    _react2.default.createElement('div', { style: { float: 'clear' } }),
+	    _react2.default.createElement(_riveritemthumbnail2.default, { item: item, mode: mode }),
+	    _react2.default.createElement(
+	      'p',
+	      null,
+	      item.body
+	    ),
+	    _react2.default.createElement('div', { style: { float: 'clear' } })
+	  );
+	};
+	
+	exports.default = RiverItem;
+
+/***/ },
+/* 248 */
+/*!**********************************************!*\
+  !*** ./wwwroot/components/riveritemtitle.js ***!
+  \**********************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _react = __webpack_require__(/*! react */ 1);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	var _style = __webpack_require__(/*! ./style */ 227);
+	
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 241);
+	
+	var _riverlink2 = _interopRequireDefault(_riverlink);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var RiverItemTitle = function RiverItemTitle(_ref) {
+	  var item = _ref.item;
+	
+	  var style = {
+	    fontSize: _style.ITEM_TITLE_FONT_SIZE
+	  };
+	  var titleText = item.title || item.pubDate;
+	  return _react2.default.createElement(
+	    _riverlink2.default,
+	    { href: item.link },
+	    _react2.default.createElement(
+	      'span',
+	      { style: style },
+	      titleText
+	    )
+	  );
+	};
+	
+	exports.default = RiverItemTitle;
+
+/***/ },
+/* 249 */
+/*!**************************************************!*\
+  !*** ./wwwroot/components/riveritemthumbnail.js ***!
+  \**************************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _react = __webpack_require__(/*! react */ 1);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	var _style = __webpack_require__(/*! ./style */ 227);
+	
+	var _util = __webpack_require__(/*! ../util */ 223);
+	
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 241);
+	
+	var _riverlink2 = _interopRequireDefault(_riverlink);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var RiverItemThumbnail = function RiverItemThumbnail(_ref) {
+	  var item = _ref.item,
+	      _ref$mode = _ref.mode,
+	      mode = _ref$mode === undefined ? 'auto' : _ref$mode;
+	
+	  var thumb = item.thumbnail;
+	  if (thumb) {
+	    var imgstyle = {
+	      width: 100,
+	      height: 100,
+	      marginTop: 10,
+	      marginLeft: 3,
+	      marginRight: 3,
+	      marginBottom: 3
+	    };
+	    if (mode === 'text' || mode === 'auto' && (item.body || '').length > 100) {
+	      imgstyle.float = 'right';
+	      imgstyle.width = 100;
+	      imgstyle.height = 100;
+	    } else {
+	      imgstyle.width = _style.FULL_IMAGE_WIDTH;
+	      imgstyle.height = _style.FULL_IMAGE_WIDTH;
+	    }
+	
+	    return _react2.default.createElement(
+	      _riverlink2.default,
+	      { href: item.link },
+	      _react2.default.createElement('img', { style: imgstyle, src: (0, _util.make_full_url)(thumb.url) })
+	    );
+	  } else {
+	    return _react2.default.createElement('span', null);
+	  }
+	};
+	
+	exports.default = RiverItemThumbnail;
 
 /***/ }
 /******/ ]);

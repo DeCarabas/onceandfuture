@@ -40,13 +40,8 @@ tar xf $NODE_VERSION.tar.xz
 cd /app
 NODE_BIN_PATH=/tmp/nodejs/$NODE_VERSION/bin
 env PATH=$PATH:$NODE_BIN_PATH $NODE_BIN_PATH/npm install
-env PATH=$PATH:$NODE_BIN_PATH NODE_ENV=production $NODE_BIN_PATH/node ./node_modules/webpack/bin/webpack.js \
-  --output-path wwwroot \
-  --output-filename bundle.js \
-  --entry ./wwwroot/main.js \
-  --optimize-minimize \
-  --optimize-occurrance-order \
-  --optimize-dedup
+env PATH=$PATH:$NODE_BIN_PATH $NODE_BIN_PATH/node ./node_modules/webpack/bin/webpack.js \
+    --config webpack.production.config.js
 rm -rf ./node_modules/
 rm -rf /tmp/nodejs
 

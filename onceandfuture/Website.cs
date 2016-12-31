@@ -906,7 +906,7 @@
             public SetPasswordRequest(string password)
             {
                 this.Password = password;
-            }            
+            }
 
             [JsonProperty("password", Required=Required.Always)]
             public string Password { get; }
@@ -1216,10 +1216,7 @@
             string[] args = new[]
             {
                 Path.Combine("node_modules", "webpack", "bin", "webpack.js"),
-                "-d --watch",
-                "--output-path wwwroot",
-                "--output-filename bundle.js",
-                "--entry ./wwwroot/main.js",
+                "--watch",
             };
 
             var startinfo = new ProcessStartInfo()
