@@ -11,7 +11,7 @@ apt-get update -q
 apt-get dist-upgrade -y -q
 
 # Go fetch dotnet 1.1.0, and extract the parts we need.
-apt-get install -y -q curl
+apt-get install -y -q curl xz-utils
 mkdir /tmp/dotnet
 cd /tmp/dotnet
 
@@ -28,21 +28,27 @@ cd /app
 /opt/mono/bin/mono /opt/mono/nuget.exe restore -SolutionDirectory ..
 /opt/mono/bin/xbuild
 
-# Rebuild the webpack thingy all optimized and stuff.
-# apt-get install -y -q nodejs
-# npm install
-# node ./node-modules/webpack/bin/webpack.js \
-#   --output-path wwwroot \
-#   --output-filename bundle.js \
-#   --entry ./wwwroot/main.js \
-#   --optimize-minimize \
-#   --optimize-occurrance-order \
-#   --optimize-dedup
-# apt-get remove -q -y nodejs
-# rm -rf ./node-modules/
+# # Static? Need to work out how to bundle all mono dependencies too.
+# # /opt/mono/bin/mkbundle --deps --simple ./bin/Debug/onceandfuture.exe ./bin/Debug/*.dll
 
-# Static? Need to work out how to bundle all mono dependencies too.
-# /opt/mono/bin/mkbundle --deps --simple ./bin/Debug/onceandfuture.exe ./bin/Debug/*.dll
+# The checked-in bundle is debug; generate the production JS.
+NODE_VERSION=node-v6.9.2-linux-x64
+mkdir /tmp/nodejs
+cd /tmp/nodejs
+curl -SL https://nodejs.org/dist/v6.9.2/$NODE_VERSION.tar.xz -o $NODE_VERSION.tar.xz
+tar xf $NODE_VERSION.tar.xz
+cd /app
+NODE_BIN_PATH=/tmp/nodejs/$NODE_VERSION/bin
+env PATH=$PATH:$NODE_BIN_PATH $NODE_BIN_PATH/npm install
+env PATH=$PATH:$NODE_BIN_PATH NODE_ENV=production $NODE_BIN_PATH/node ./node_modules/webpack/bin/webpack.js \
+  --output-path wwwroot \
+  --output-filename bundle.js \
+  --entry ./wwwroot/main.js \
+  --optimize-minimize \
+  --optimize-occurrance-order \
+  --optimize-dedup
+rm -rf ./node_modules/
+rm -rf /tmp/nodejs
 
 # CLEANUP
 cd /app
@@ -60,6 +66,6 @@ rm -rf /opt/mono/lib/mono/xbuild/
 rm -rf /opt/mono/lib/mono/xbuild-frameworks/
 rm -rf /opt/mono/lib/*.a
 
-apt-get remove -q -y curl
+apt-get remove -q -y curl xz-utils
 apt-get autoremove -y
 rm -rf /var/lib/apt/lists/*
