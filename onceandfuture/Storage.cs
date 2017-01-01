@@ -155,7 +155,7 @@
             byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(document, Policies.SerializerSettings));
             using (var memoryStream = new MemoryStream(data))
             {
-                await this.blobStore.PutObject(id, "application/json", memoryStream);
+                await this.blobStore.PutObject(id, "application/json", memoryStream, compress: true);
             }
         }
     }
