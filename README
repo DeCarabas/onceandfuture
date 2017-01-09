@@ -30,6 +30,7 @@ Back-end Stuff:
   - Remember that attackers dictate URLs.
 - Throttle login requests
 - Send email
+- Refresh is *still so slow*.
 
 Tests:
 - Some known feed snapshots, check to make sure rivers match. (Make sure
