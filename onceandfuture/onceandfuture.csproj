@@ -525,4 +525,9 @@
   <ProjectExtensions>
     <VisualStudio AllowExistingFolder="true" />
   </ProjectExtensions>
+  <Target Name="AfterBuild">
+    <Copy Condition="'$(OS)' != 'Unix'"  
+          SourceFiles="..\packages\libuv.1.9.0\runtimes\win7-x86\native\libuv.dll" 
+          DestinationFolder="$(OutputPath)" />
+  </Target>
 </Project>
