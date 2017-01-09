@@ -546,8 +546,17 @@
                 };
                 Func<Task<River>, River> fetchCallback = t => { sendProgress(); return t.Result; };
 
-                // Kick off...
-                sendProgress();
+                // A background thread, which will keep the connection going...
+                bool stopPinging = false;
+                Func<Task> backgroundThread = async () =>
+                {
+                    while(!stopPinging)
+                    {
+                        sendProgress();
+                        await Task.Delay(TimeSpan.FromSeconds(1));
+                    }
+                };
+                Task pingTask = backgroundThread();
 
                 // Refresh all of the feeds...
                 for (int i = 0; i < feeds.Length; i++)
@@ -568,6 +577,12 @@
                 }
 
                 rivers = await Task.WhenAll(riverTasks);
+
+                // Now we can stop pinging.
+                stopPinging = true;
+                await pingTask;
+
+                // And done.
                 writer.WriteLine("100|Done.");
                 writer.Flush();
             }
