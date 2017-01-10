@@ -77,7 +77,7 @@
                 {
                     Console.WriteLine(Options.GetHelp(parsedArgs.Verb));
                     return 0;
-                }
+                }                
 
                 // Global configuration.
                 var logLevel = (LogEventLevel)Math.Max((int)(LogEventLevel.Error - parsedArgs["verbose"].Count), 0);

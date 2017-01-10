@@ -41,6 +41,5 @@ namespace tests
 
             CollectionAssert.AreEqual(firstObject, actualObject);
         }
-
     }
 }

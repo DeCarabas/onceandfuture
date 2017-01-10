@@ -213,7 +213,9 @@
             object url;
             context.TryGetValue("uri", out url);
             Get().Warning(
-                exception, "HTTP error detected from {url}, retry {retry} after {ts}", url, retryCount, timespan);
+                exception, 
+                "HTTP error detected from {url}, sleeping {ts} before retry {retry}", 
+                url, timespan, retryCount);
         }
 
         public static void PutObjectComplete(string bucket, string name, string type, Stopwatch timer, Stream stream)

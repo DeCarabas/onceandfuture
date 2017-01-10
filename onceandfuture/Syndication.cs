@@ -17,7 +17,6 @@
     using System.Runtime.InteropServices;
     using System.Security.Cryptography;
     using System.Text;
-    using System.Threading;
     using System.Threading.Tasks;
     using System.Xml;
     using System.Xml.Linq;
@@ -122,24 +121,6 @@
             return sequences.SelectMany(x => x);
         }
 
-        public static HttpClient CreateHttpClient(bool allowRedirect = true)
-        {
-            var handler = new HttpClientHandler
-            {
-                AllowAutoRedirect = allowRedirect,
-                AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip,
-                MaxRequestContentBufferSize = 10 * 1024 * 1024, // 10MB
-                UseCookies = false,
-                UseDefaultCredentials = false,
-            };
-
-            HttpClient client = new HttpClient(handler, true);
-            client.Timeout = TimeSpan.FromSeconds(15);
-            client.MaxResponseContentBufferSize = 10 * 1024 * 1024; // 10MB
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
-            return client;
-        }
-
         public static string HashString(string input) => HashBytes(Encoding.UTF8.GetBytes(input));
 
         public static string HashBytes(byte[] input)
@@ -226,7 +207,6 @@
             if (!result.IsAbsoluteUri) { return null; }
             return result;
         }
-
 
         public static Uri Rebase(Uri link, Uri baseUri)
         {
@@ -1191,18 +1171,37 @@
                 sleepDurationProvider: ExponentialRetryTimeWithJitter,
                 onRetry: (exc, ts, cnt, ctxt) => Log.HttpRetry(exc, ts, cnt, ctxt));
 
-        public static readonly JsonSerializerSettings SerializerSettings = 
+        public static readonly JsonSerializerSettings SerializerSettings =
             new JsonSerializerSettings
             {
                 DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate,
                 Formatting = Newtonsoft.Json.Formatting.None,
             };
 
-        public static readonly ImageCodecInfo ThumbnailCodec = 
+        public static readonly ImageCodecInfo ThumbnailCodec =
             ImageCodecInfo.GetImageEncoders().Single(enc => enc.MimeType == "image/jpeg");
 
         public static readonly EncoderParameters ThumbnailEncoderParameters =
             MakeEncoderParameters(new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 75L));
+
+        public static HttpClient CreateHttpClient(bool allowRedirect = true)
+        {
+            const int TenMegabytes = 10 * 1024 * 1024;
+            var handler = new HttpClientHandler
+            {
+                AllowAutoRedirect = allowRedirect,
+                AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip,
+                MaxRequestContentBufferSize = TenMegabytes,
+                UseCookies = false,
+                UseDefaultCredentials = false,
+            };            
+
+            HttpClient client = new HttpClient(handler, true);
+            client.Timeout = TimeSpan.FromSeconds(15);
+            client.MaxResponseContentBufferSize = TenMegabytes;
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
+            return client;
+        }
 
         static bool ValidateHttpRequestException(HttpRequestException hre)
         {
@@ -1222,7 +1221,8 @@
 
         static TimeSpan ExponentialRetryTimeWithJitter(int retryAttempt)
         {
-            var baseTime = TimeSpan.FromSeconds(Math.Pow(3, retryAttempt));
+            // var baseTime = TimeSpan.FromSeconds(Math.Pow(3, retryAttempt));
+            var baseTime = TimeSpan.FromSeconds(5);
 
             int jitterInterval = (int)(baseTime.TotalMilliseconds / 2.0);
             var jitter = TimeSpan.FromMilliseconds(random.Next(-jitterInterval, jitterInterval));
@@ -1246,7 +1246,7 @@
     {
         readonly RiverThumbnailStore thumbnailStore = new RiverThumbnailStore();
 
-        static readonly HttpClient client = Util.CreateHttpClient();
+        static readonly HttpClient client = Policies.CreateHttpClient();
         static readonly MemoryCache imageCache;
 
         static readonly string[] BadThumbnails = new string[]
@@ -1712,7 +1712,7 @@
         /// <summary>The number of updates to send to the archive.</summary>
         const int UpdateSize = 20;
 
-        static readonly HttpClient client = Util.CreateHttpClient(allowRedirect: false);
+        static readonly HttpClient client = Policies.CreateHttpClient(allowRedirect: false);
 
         static readonly Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>> FeedElements =
             new Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>>
@@ -2264,7 +2264,7 @@
 
     public static class FeedDetector
     {
-        static HttpClient client = Util.CreateHttpClient();
+        static HttpClient client = Policies.CreateHttpClient();
         static HashSet<string> FeedMimeTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "application/rss+xml",
