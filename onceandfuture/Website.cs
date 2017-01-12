@@ -490,120 +490,24 @@
         {
             UserProfile profile = await this.profileStore.GetProfileFor(user);
 
-            River[] rivers;
-            Response.StatusCode = (int)HttpStatusCode.OK;
-            Response.ContentType = "application/octet-stream";
-            using (var writer = new StreamWriter(Response.Body, Encoding.UTF8))
+            Uri[] feeds = profile.Rivers.SelectMany(rd => rd.Feeds).Distinct().ToArray();
+            Task<River>[] feedTasks = UpdateAllFeeds(feeds);
+            Task<River>[] riverTasks = RefreshAllAggregates(user, profile, Task.WhenAll(feedTasks));
+
+            List<Task> allTasks = new List<Task>(feedTasks.Length + riverTasks.Length);
+            List<string> allDescriptions = new List<String>(allTasks.Count);
+            for (int i = 0; i < feedTasks.Length; i++)
             {
-                // Set up for the progress.
-                var syncRoot = new object();
-                Tuple<int, string> lastProgress = Tuple.Create(0, "");
-                Uri[] feeds = profile.Rivers.SelectMany(rd => rd.Feeds).Distinct().ToArray();
-                Task<River>[] feedTasks = new Task<River>[feeds.Length];
-                Task<River>[] riverTasks = new Task<River>[profile.Rivers.Count];
-
-                Action sendProgress = () =>
-                {
-                    lock (syncRoot)
-                    {
-                        float total = feedTasks.Length + riverTasks.Length;
-                        float finished = 0;
-                        for (int i = 0; i < feedTasks.Length; i++)
-                        {
-                            if (feedTasks[i]?.IsCompleted ?? false) { finished += 1; }
-                        }
-                        for (int i = 0; i < riverTasks.Length; i++)
-                        {
-                            if (riverTasks[i]?.IsCompleted ?? false) { finished += 1; }
-                        }
-                        int pct = Math.Max((int)(100.0f * finished / total), 1);
-
-                        string waitingFor = null;
-                        for (int i = 0; i < feeds.Length && waitingFor == null; i++)
-                        {
-                            if (feedTasks[i] == null || !feedTasks[i].IsCompleted)
-                            {
-                                waitingFor = "Fetching: " + feeds[i].AbsoluteUri;
-                            }
-                        }
-                        for (int i = 0; i < profile.Rivers.Count && waitingFor == null; i++)
-                        {
-                            if (riverTasks[i] == null || !riverTasks[i].IsCompleted)
-                            {
-                                waitingFor = "Refreshing: " + profile.Rivers[i].Name;
-                            }
-                        }
-                        if (waitingFor == null) { waitingFor = "Done."; }
-
-                        Tuple<int, string> progress = Tuple.Create(pct, waitingFor);
-                        if (progress != lastProgress)
-                        {
-                            writer.WriteLine("{0}|{1}", progress.Item1, progress.Item2);
-                            writer.Flush();
-                            lastProgress = progress;
-                        }
-                    }
-                };
-                Func<Task<River>, River> fetchCallback = t => { sendProgress(); return t.Result; };
-
-                // A background thread, which will keep the connection going...
-                bool stopPinging = false;
-                Func<Task> backgroundThread = async () =>
-                {
-                    while(!stopPinging)
-                    {
-                        sendProgress();
-                        await Task.Delay(TimeSpan.FromSeconds(1));
-                    }
-                };
-                Task pingTask = backgroundThread();
-
-                // Refresh all of the feeds...
-                for (int i = 0; i < feeds.Length; i++)
-                {
-                    feedTasks[i] = this.feedParser
-                        .FetchAndUpdateRiver(feeds[i])
-                        .ContinueWith(fetchCallback);
-                }
-                await Task.WhenAll(feedTasks);
-
-                // Then all of the rivers...
-                for (int i = 0; i < profile.Rivers.Count; i++)
-                {
-                    RiverDefinition riverDef = profile.Rivers[i];
-                    riverTasks[i] = this.feedParser
-                        .RefreshAggregateRiverWithFeeds(riverDef.Id, riverDef.Feeds)
-                        .ContinueWith(fetchCallback);
-                }
-
-                rivers = await Task.WhenAll(riverTasks);
-
-                // Now we can stop pinging.
-                stopPinging = true;
-                await pingTask;
-
-                // And done.
-                writer.WriteLine("100|Done.");
-                writer.Flush();
+                allTasks.Add(feedTasks[i]);
+                allDescriptions.Add(String.Format("Fetching feed {0}...", feeds[i].AbsoluteUri));
+            }
+            for (int i = 0; i < riverTasks.Length; i++)
+            {
+                allTasks.Add(riverTasks[i]);
+                allDescriptions.Add(String.Format("Updating river {0}...", profile.Rivers[i].Name));
             }
 
-            // Make sure owner is filled in for these rivers.
-            List<Task> saveTasks = null;
-            for (int i = 0; i < rivers.Length; i++)
-            {
-                if (rivers[i].Metadata.Owner == null)
-                {
-                    if (saveTasks == null) { saveTasks = new List<Task>(); }
-                    var newRiver = rivers[i].With(metadata: rivers[i].Metadata.With(owner: user));
-                    saveTasks.Add(aggregateStore.WriteAggregate(profile.Rivers[i].Id, newRiver));
-                }
-            }
-            if (saveTasks != null)
-            {
-                await Task.WhenAll(saveTasks);
-            }
-
-            return new EmptyResult();
+            return new RefreshStatusActionResult(allTasks.ToArray(), allDescriptions.ToArray());
         }
 
         [HttpPost("/api/v1/user/{user}/signout")]
@@ -793,8 +697,8 @@
             UserProfile profile = await this.profileStore.GetProfileFor(user);
             return Json(new
             {
-                email=profile.Email,
-                emailVerified=profile.EmailVerified,
+                email = profile.Email,
+                emailVerified = profile.EmailVerified,
             });
         }
 
@@ -864,6 +768,40 @@
             return river;
         }
 
+        async Task<River> RefreshAggregate(string owner, RiverDefinition riverDef, Task feedsTask)
+        {
+            await feedsTask;
+            River river = await this.feedParser.RefreshAggregateRiverWithFeeds(riverDef.Id, riverDef.Feeds);
+            if (river.Metadata.Owner == null)
+            {
+                var newRiver = river.With(metadata: river.Metadata.With(owner: owner));
+                await this.aggregateStore.WriteAggregate(riverDef.Id, newRiver);
+                river = newRiver;
+            }
+            return river;
+        }
+
+        Task<River>[] RefreshAllAggregates(string user, UserProfile profile, Task feedsTask)
+        {
+            var riverTasks = new Task<River>[profile.Rivers.Count];
+            for (int i = 0; i < profile.Rivers.Count; i++)
+            {
+                RiverDefinition riverDef = profile.Rivers[i];
+                riverTasks[i] = RefreshAggregate(user, riverDef, feedsTask);
+            }
+            return riverTasks;
+        }
+
+        Task<River>[] UpdateAllFeeds(Uri[] feeds)
+        {
+            Task<River>[] feedTasks = new Task<River>[feeds.Length];
+            for (int i = 0; i < feeds.Length; i++)
+            {
+                feedTasks[i] = this.feedParser.FetchAndUpdateRiver(feeds[i]);
+            }
+            return feedTasks;
+        }
+
         public class AddFeedRequest
         {
             public AddFeedRequest(string url) { Url = url; }
@@ -923,7 +861,7 @@
                 this.Password = password;
             }
 
-            [JsonProperty("password", Required=Required.Always)]
+            [JsonProperty("password", Required = Required.Always)]
             public string Password { get; }
         }
 
@@ -936,6 +874,85 @@
 
             [JsonProperty("email", Required = Required.Always)]
             public string Email { get; }
+        }
+
+        class RefreshStatusActionResult : IActionResult
+        {
+            readonly Task[] tasks;
+            readonly string[] descriptions;
+            readonly SemaphoreSlim semaphore = new SemaphoreSlim(0);
+
+            public RefreshStatusActionResult(Task[] tasks, string[] descriptions)
+            {
+                this.tasks = tasks;
+                this.descriptions = descriptions;
+
+                var callback = new Action<Task>(this.OnTaskCompleted);
+                for (int i = 0; i < this.tasks.Length; i++)
+                {
+                    this.tasks[i].ContinueWith(callback);
+                }
+            }
+
+            bool AllComplete => this.tasks.All(t => t?.IsCompleted ?? false);
+
+            int GetCompletionPercent()
+            {
+                float total = this.tasks.Length;
+                if (total == 0) { return 100; }
+
+                float complete = 0.0f;
+                for (int i = 0; i < this.tasks.Length; i++)
+                {
+                    if (this.tasks[i]?.IsCompleted ?? false) { complete += 1.0f; }
+                }
+                return (int)Math.Max(100.0f * complete / total, 1.0f);
+            }
+
+            string GetStatusMessage()
+            {
+                for (int i = 0; i < this.tasks.Length; i++)
+                {
+                    if (!this.tasks[i]?.IsCompleted ?? false) { return this.descriptions[i]; }
+                }
+                return "Done.";
+            }
+
+            void OnTaskCompleted(Task task)
+            {
+                semaphore.Release();
+            }
+
+            async Task UpdateProgress(TextWriter writer)
+            {
+                int progress = GetCompletionPercent();
+                string message = GetStatusMessage();
+                await WriteProgress(writer, progress, message);
+            }
+
+            async Task WriteProgress(TextWriter writer, int progress, string message)
+            {
+                await writer.WriteLineAsync(String.Format("{0}|{1}", progress, message));
+                await writer.FlushAsync();
+            }
+
+            public async Task ExecuteResultAsync(ActionContext context)
+            {
+                context.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                context.HttpContext.Response.ContentType = "application/octet-stream";
+                using (var writer = new StreamWriter(context.HttpContext.Response.Body, Encoding.UTF8))
+                {
+                    while (!AllComplete)
+                    {
+                        // Wait for progress to come in, or one second, whichever comes first.
+                        await this.semaphore.WaitAsync(TimeSpan.FromSeconds(1), context.HttpContext.RequestAborted);
+                        await UpdateProgress(writer);
+                    }
+
+                    // One last update, make sure the 100% gets sent.
+                    await UpdateProgress(writer);
+                }
+            }
         }
     }
 
