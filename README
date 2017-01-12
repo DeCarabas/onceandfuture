@@ -18,6 +18,8 @@ UI:
 - Import/export OPML
 - Font size for bubbles is wrong.
 - When removing a feed, remove from sources.
+- Force line breaks on titles (they are very long when they have urls)
+- Hook progress to adding feed, including idle ping
 
 Back-end Stuff:
 - Measure things:
