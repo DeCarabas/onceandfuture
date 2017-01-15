@@ -9,6 +9,7 @@
     using System.Linq;
     using System.Net;
     using System.Runtime.InteropServices;
+    using System.Security.Cryptography;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -122,6 +123,87 @@
         }
     }
 
+    public sealed class SecretToken : IEquatable<SecretToken>
+    {
+        const int cookieSize = 32;
+        static readonly SecretToken empty = new SecretToken(Array.Empty<byte>());
+        static readonly ScryptEncoder encoder = new ScryptEncoder();
+        static readonly RNGCryptoServiceProvider randomGenerator = new RNGCryptoServiceProvider();
+
+        readonly byte[] bytes;
+
+        SecretToken(byte[] bytes)
+        {
+            if (bytes == null) { throw new ArgumentNullException(nameof(bytes)); }
+            this.bytes = bytes;
+        }
+
+        public static SecretToken Empty => empty;
+
+        public static SecretToken Create()
+        {
+            byte[] bytes = new byte[cookieSize];
+            randomGenerator.GetBytes(bytes);
+            return new SecretToken(bytes);
+        }
+
+        public static bool TryParse(string input, out SecretToken token)
+        {
+            token = null;
+            try
+            {
+                token = new SecretToken(Convert.FromBase64String(input));
+                return true;
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
+        }
+
+        public string Encrypt()
+        {
+            if (this.bytes.Length == 0) { return String.Empty; }
+            return encoder.Encode(this.ToString());
+        }
+
+        public bool Equals(SecretToken other)
+        {
+            if (Object.ReferenceEquals(other, null)) { return false; }
+            if (other.bytes.Length != this.bytes.Length) { return false; }
+            for (int i = 0; i < this.bytes.Length; i++)
+            {
+                if (other.bytes[i] != this.bytes[i]) { return false; }
+            }
+            return true;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as SecretToken);
+        }
+
+        public bool EqualsEncrypted(string encrypted)
+        {
+            if (this.bytes.Length == 0) { return false; }
+            if (String.IsNullOrEmpty(encrypted)) { return false; }
+            return encoder.Compare(ToString(), encrypted);
+        }
+
+        public override int GetHashCode() => (int)Murmur3.Hash32(this.bytes);
+
+        public override string ToString() => Convert.ToBase64String(this.bytes) ?? String.Empty;
+
+        public static bool operator ==(SecretToken a, SecretToken b)
+        {
+            if (Object.ReferenceEquals(a, null) && Object.ReferenceEquals(b, null)) { return true; }
+            if (Object.ReferenceEquals(a, null)) { return false; }
+            return a.Equals(b);
+        }
+
+        public static bool operator !=(SecretToken a, SecretToken b) => !(a == b);
+    }
+
     public class AuthenticationManager
     {
         const string CookieName = "onceandfuture-feed";
@@ -138,29 +220,27 @@
             this.profileStore = profileStore;
         }
 
-        bool ParseCookie(string cookie, out string user, out Guid token)
+        bool ParseCookie(string cookie, out string user, out SecretToken token)
         {
             user = null;
-            token = Guid.Empty;
+            token = SecretToken.Empty;
 
             string[] parts = cookie.Split(new char[] { ',' }, 2);
             if (parts.Length != 2) { return false; }
-            if (!Guid.TryParseExact(parts[0], "n", out token)) { return false; }
+            if (!SecretToken.TryParse(parts[0], out token)) { return false; }
             user = parts[1];
             return true;
         }
 
-        string MakeCookie(string user, Guid token)
+        string MakeCookie(string user, SecretToken token)
         {
-            return String.Format("{0},{1}", token.ToString("n"), user);
+            return String.Format("{0},{1}", token.ToString(), user);
         }
 
-        static string EncryptToken(Guid token) => Scrypt.Encode(token.ToString("N"));
-        static bool CheckToken(Guid token, string encrypted) => Scrypt.Compare(token.ToString("N"), encrypted);
         static bool CheckPassword(string password, string encrypted) => Scrypt.Compare(password, encrypted);
         public static string EncryptPassword(string password) => Scrypt.Encode(password);
 
-        bool ValidateAgainstLoginCache(Guid token, LoginCookieCache[] cache)
+        bool ValidateAgainstLoginCache(SecretToken token, LoginCookieCache[] cache)
         {
             for (int i = 0; i < cache.Length; i++)
             {
@@ -175,7 +255,7 @@
             for (int i = 0; i < cache.Length; i++)
             {
                 // Check against cyphertext; this is slow but faster than hitting S3 again.
-                if (CheckToken(token, cache[i].Token))
+                if (token.EqualsEncrypted(cache[i].Token))
                 {
                     // Hooray! Make sure the cache is updated.
                     cache[i].Plaintext = token;
@@ -232,7 +312,7 @@
 
             // Is it really a valid cookie?
             string user;
-            Guid token;
+            SecretToken token;
             if (!ParseCookie(cookie, out user, out token))
             {
                 Serilog.Log.Debug("Auth: Unable to parse cookie {cookie}", cookie);
@@ -285,8 +365,8 @@
             if (!CheckPassword(password, profile.Password)) { return false; }
 
             // TODO: Fix this login duration. :P
-            Guid token = Guid.NewGuid();
-            var newLogin = new LoginCookie(EncryptToken(token), DateTimeOffset.UtcNow + TimeSpan.FromMinutes(30));
+            SecretToken token = SecretToken.Create();
+            var newLogin = new LoginCookie(token.Encrypt(), DateTimeOffset.UtcNow + TimeSpan.FromMinutes(30));
 
             // Insert the new session at the front (because it's most likely to be tried first), and try to keep the
             // number of sessions bounded.
@@ -323,12 +403,11 @@
 
         struct LoginCookieCache
         {
-            public Guid Plaintext;
+            public SecretToken Plaintext;
             public string Token;
             public DateTimeOffset ExpireAt;
         }
     }
-    // TODO: Url.Action to generate the URL for the rivers.
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
     public class EnforceAuthenticationAttribute : Attribute, IAsyncAuthorizationFilter

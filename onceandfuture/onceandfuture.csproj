@@ -514,6 +514,7 @@
     <Compile Include="Storage.cs" />
     <Compile Include="Syndication.cs" />
     <Compile Include="UserProfile.cs" />
+    <Compile Include="Util\Murmur.cs" />
     <Compile Include="Website.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -526,8 +527,6 @@
     <VisualStudio AllowExistingFolder="true" />
   </ProjectExtensions>
   <Target Name="AfterBuild">
-    <Copy Condition="'$(OS)' != 'Unix'"  
-          SourceFiles="..\packages\libuv.1.9.0\runtimes\win7-x86\native\libuv.dll" 
-          DestinationFolder="$(OutputPath)" />
+    <Copy Condition="'$(OS)' != 'Unix'" SourceFiles="..\packages\libuv.1.9.0\runtimes\win7-x86\native\libuv.dll" DestinationFolder="$(OutputPath)" />
   </Target>
 </Project>
