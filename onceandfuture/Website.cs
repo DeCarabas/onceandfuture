@@ -495,6 +495,85 @@
         }
     }
 
+    public class AsyncProgressActionResult : IActionResult
+    {
+        readonly Task[] tasks;
+        readonly string[] descriptions;
+        readonly SemaphoreSlim semaphore = new SemaphoreSlim(0);
+
+        public AsyncProgressActionResult(Task[] tasks, string[] descriptions)
+        {
+            this.tasks = tasks;
+            this.descriptions = descriptions;
+
+            var callback = new Action<Task>(this.OnTaskCompleted);
+            for (int i = 0; i < this.tasks.Length; i++)
+            {
+                this.tasks[i].ContinueWith(callback);
+            }
+        }
+
+        public bool AllComplete => this.tasks.All(t => t?.IsCompleted ?? false);
+
+        public int GetCompletionPercent()
+        {
+            float total = this.tasks.Length;
+            if (total == 0) { return 100; }
+
+            float complete = 0.0f;
+            for (int i = 0; i < this.tasks.Length; i++)
+            {
+                if (this.tasks[i]?.IsCompleted ?? false) { complete += 1.0f; }
+            }
+            return (int)Math.Max(100.0f * complete / total, 1.0f);
+        }
+
+        public string GetStatusMessage()
+        {
+            for (int i = 0; i < this.tasks.Length; i++)
+            {
+                if (!this.tasks[i]?.IsCompleted ?? false) { return this.descriptions[i]; }
+            }
+            return "Done.";
+        }
+
+        void OnTaskCompleted(Task task)
+        {
+            semaphore.Release();
+        }
+
+        async Task UpdateProgress(TextWriter writer)
+        {
+            int progress = GetCompletionPercent();
+            string message = GetStatusMessage();
+            await WriteProgress(writer, progress, message);
+        }
+
+        async Task WriteProgress(TextWriter writer, int progress, string message)
+        {
+            await writer.WriteLineAsync(String.Format("{0}|{1}", progress, message));
+            await writer.FlushAsync();
+        }
+
+        public async Task ExecuteResultAsync(ActionContext context)
+        {
+            context.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+            context.HttpContext.Response.ContentType = "application/octet-stream";
+            using (var writer = new StreamWriter(context.HttpContext.Response.Body, Encoding.UTF8))
+            {
+                while (!AllComplete)
+                {
+                    // Wait for progress to come in, or one second, whichever comes first.
+                    await this.semaphore.WaitAsync(TimeSpan.FromSeconds(1), context.HttpContext.RequestAborted);
+                    await UpdateProgress(writer);
+                }
+
+                // One last update, make sure the 100% gets sent.
+                await UpdateProgress(writer);
+            }
+        }
+    }
+
     [EnforceAuthentication(userParameterName: "user")]
     public class ApiController : Controller
     {
@@ -586,7 +665,7 @@
                 allDescriptions.Add(String.Format("Updating river {0}...", profile.Rivers[i].Name));
             }
 
-            return new RefreshStatusActionResult(allTasks.ToArray(), allDescriptions.ToArray());
+            return new AsyncProgressActionResult(allTasks.ToArray(), allDescriptions.ToArray());
         }
 
         [HttpPost("/api/v1/user/{user}/signout")]
@@ -953,86 +1032,7 @@
 
             [JsonProperty("email", Required = Required.Always)]
             public string Email { get; }
-        }
-
-        class RefreshStatusActionResult : IActionResult
-        {
-            readonly Task[] tasks;
-            readonly string[] descriptions;
-            readonly SemaphoreSlim semaphore = new SemaphoreSlim(0);
-
-            public RefreshStatusActionResult(Task[] tasks, string[] descriptions)
-            {
-                this.tasks = tasks;
-                this.descriptions = descriptions;
-
-                var callback = new Action<Task>(this.OnTaskCompleted);
-                for (int i = 0; i < this.tasks.Length; i++)
-                {
-                    this.tasks[i].ContinueWith(callback);
-                }
-            }
-
-            bool AllComplete => this.tasks.All(t => t?.IsCompleted ?? false);
-
-            int GetCompletionPercent()
-            {
-                float total = this.tasks.Length;
-                if (total == 0) { return 100; }
-
-                float complete = 0.0f;
-                for (int i = 0; i < this.tasks.Length; i++)
-                {
-                    if (this.tasks[i]?.IsCompleted ?? false) { complete += 1.0f; }
-                }
-                return (int)Math.Max(100.0f * complete / total, 1.0f);
-            }
-
-            string GetStatusMessage()
-            {
-                for (int i = 0; i < this.tasks.Length; i++)
-                {
-                    if (!this.tasks[i]?.IsCompleted ?? false) { return this.descriptions[i]; }
-                }
-                return "Done.";
-            }
-
-            void OnTaskCompleted(Task task)
-            {
-                semaphore.Release();
-            }
-
-            async Task UpdateProgress(TextWriter writer)
-            {
-                int progress = GetCompletionPercent();
-                string message = GetStatusMessage();
-                await WriteProgress(writer, progress, message);
-            }
-
-            async Task WriteProgress(TextWriter writer, int progress, string message)
-            {
-                await writer.WriteLineAsync(String.Format("{0}|{1}", progress, message));
-                await writer.FlushAsync();
-            }
-
-            public async Task ExecuteResultAsync(ActionContext context)
-            {
-                context.HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                context.HttpContext.Response.ContentType = "application/octet-stream";
-                using (var writer = new StreamWriter(context.HttpContext.Response.Body, Encoding.UTF8))
-                {
-                    while (!AllComplete)
-                    {
-                        // Wait for progress to come in, or one second, whichever comes first.
-                        await this.semaphore.WaitAsync(TimeSpan.FromSeconds(1), context.HttpContext.RequestAborted);
-                        await UpdateProgress(writer);
-                    }
-
-                    // One last update, make sure the 100% gets sent.
-                    await UpdateProgress(writer);
-                }
-            }
-        }
+        }        
     }
 
     public class HealthController : Controller
