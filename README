@@ -23,6 +23,8 @@ UI:
 - Deal with the case where you find multiple feeds.
 - Should use the source image original size to help decide text/image mode in
   river auto mode. (Don't ever show me Dave Peck's giant pixellated face.)
+- Fix up the top-line update name thing-- top of river should already have
+  promoted update name.
 
 Back-end Stuff:
 - Measure things:
