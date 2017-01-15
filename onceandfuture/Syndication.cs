@@ -25,6 +25,7 @@
     using AngleSharp.Parser.Html;
     using Newtonsoft.Json;
     using Polly;
+    using Polly.Retry;
 
     public static class Util
     {
@@ -1162,7 +1163,7 @@
     {
         static Random random = new Random();
 
-        public static readonly ContextualPolicy HttpPolicy = Policy
+        public static readonly RetryPolicy HttpPolicy = Policy
             .Handle<HttpRequestException>(ValidateHttpRequestException)
             .Or<TaskCanceledException>()
             .Or<WebException>(ValidateWebException)
@@ -1191,7 +1192,6 @@
             {
                 AllowAutoRedirect = allowRedirect,
                 AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip,
-                MaxRequestContentBufferSize = TenMegabytes,
                 UseCookies = false,
                 UseDefaultCredentials = false,
             };            
