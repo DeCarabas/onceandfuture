@@ -89,7 +89,7 @@
 
     public class UserProfileStore : DocumentStore<string, UserProfile>
     {
-        public UserProfileStore() : base(new BlobStore("onceandfuture-profiles")) { }
+        public UserProfileStore() : base(new BlobStore("onceandfuture-profiles", "profiles")) { }
 
         protected override UserProfile GetDefaultValue(string id) => new UserProfile();
         protected override string GetObjectID(string id) => Util.HashString(id);

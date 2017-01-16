@@ -880,7 +880,7 @@
 
     public class RiverFeedStore : DocumentStore<Uri, River>
     {
-        public RiverFeedStore() : base(new BlobStore("onceandfuture")) { }
+        public RiverFeedStore() : base(new BlobStore("onceandfuture", "feeds")) { }
 
         protected override River GetDefaultValue(Uri id) => new River(metadata: new RiverFeedMeta(originUrl: id));
         protected override string GetObjectID(Uri id) => Util.HashString(id.AbsoluteUri);
@@ -900,7 +900,7 @@
 
     public class RiverArchiveStore
     {
-        readonly BlobStore blobStore = new BlobStore("onceandfuture");
+        readonly BlobStore blobStore = new BlobStore("onceandfuture", "archives");
 
         public async Task<string> WriteRiverArchive(River oldRiver)
         {
@@ -916,7 +916,7 @@
 
     public class AggregateRiverStore : DocumentStore<string, River>
     {
-        public AggregateRiverStore() : base(new BlobStore("onceandfuture")) { }
+        public AggregateRiverStore() : base(new BlobStore("onceandfuture", "aggregates")) { }
 
         protected override River GetDefaultValue(string id) =>
             new River(metadata: new RiverFeedMeta(originUrl: new Uri("aggregate:/" + id)));
@@ -928,7 +928,7 @@
 
     public class RiverThumbnailStore
     {
-        readonly BlobStore blobStore = new BlobStore("onceandfuture-thumbs");
+        readonly BlobStore blobStore = new BlobStore("onceandfuture-thumbs", "thumbs");
 
         public async Task<Uri> StoreImage(byte[] image)
         {

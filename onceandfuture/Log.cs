@@ -101,6 +101,12 @@
                 baseUrl, uri, kind, area, ratio);
         }
 
+        public static void GetObjectAccessDenied(string bucket, string key, Stopwatch timer)
+            => Get().Information(
+                "Object {key} access denied in S3 bucket {bucket} ({elapsed}ms)",
+                key, bucket, timer.ElapsedMilliseconds
+            );
+
         public static void NewBestImage(Uri baseUrl, Uri uri, string kind, int area, float ratio)
         {
             Get().Information(

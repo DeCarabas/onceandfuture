@@ -13,14 +13,14 @@ namespace tests
     public class BlobStoreTest
     {
         [TestMethod]
-        public async Task TestCompress()
+        public async Task BlobCompress()
         {
             string name = "compress-" + Guid.NewGuid().ToString("n");
             byte[] firstObject = new byte[1024];
             var random = new Random();
             random.NextBytes(firstObject);
 
-            var store = new BlobStore("onceandfuture-test");
+            var store = new BlobStore("onceandfuture-test", "test");
             await store.PutObject(name, "application/octet-stream", new MemoryStream(firstObject), compress: true);
             byte[] actualObject = await store.GetObject(name);
 
@@ -28,15 +28,38 @@ namespace tests
         }
 
         [TestMethod]
-        public async Task TestNoCompress()
+        public async Task BlobNoCompress()
         {
             string name = "nocompress-" + Guid.NewGuid().ToString("n");
             byte[] firstObject = new byte[1024];
             var random = new Random();
             random.NextBytes(firstObject);
 
-            var store = new BlobStore("onceandfuture-test");
+            var store = new BlobStore("onceandfuture-test", "test");
             await store.PutObject(name, "application/octet-stream", new MemoryStream(firstObject), compress: false);
+            byte[] actualObject = await store.GetObject(name);
+
+            CollectionAssert.AreEqual(firstObject, actualObject);
+        }
+
+        [TestMethod]
+        public async Task BlobReadFallback()
+        {
+            string name = "fallback-" + Guid.NewGuid().ToString("n");
+            byte[] firstObject = new byte[1024];
+            var random = new Random();
+            random.NextBytes(firstObject);
+
+            var store = new BlobStore("onceandfuture-test", "fallback");
+
+            // Write with the old scheme...
+            await store.PutObjectInternal(
+                new BlobStore.ObjectKey(key: name),
+                "application/octet-stream", 
+                new MemoryStream(firstObject), 
+                compress: true);
+
+            // Should still be able to read.
             byte[] actualObject = await store.GetObject(name);
 
             CollectionAssert.AreEqual(firstObject, actualObject);

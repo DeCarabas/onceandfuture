@@ -17,12 +17,14 @@
 
         readonly string bucket;
         readonly AmazonS3Client client;
+        readonly string subdir;
 
         // In deployment, use this?
         // Credentials stored in the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.
-        public BlobStore(string bucket)
+        public BlobStore(string bucket, string subdir)
         {
             this.bucket = bucket;
+            this.subdir = subdir;
             this.client = new AmazonS3Client(new AmazonS3Config
             {
                 RegionEndpoint = RegionEndpoint.USWest2,
@@ -31,19 +33,38 @@
 
         public Uri GetObjectUri(string name)
         {
-            return new Uri("https://s3-us-west-2.amazonaws.com/" + this.bucket + "/" + Uri.EscapeDataString(name));
+            return new Uri(String.Concat(
+                "https://s3-us-west-2.amazonaws.com/",
+                this.bucket,
+                "/",
+                this.subdir,
+                "/",
+                Uri.EscapeDataString(name)
+            ));
         }
 
         public async Task<byte[]> GetObject(string name)
         {
+            ObjectKey key = KeyForName(name);
+            byte[] result = await GetObjectInternal(key);
+            if (result == null)
+            {
+                // In time all data will be moved to the new scheme, but until then...
+                result = await GetObjectInternal(new ObjectKey(key: name));
+            }
+            return result;
+        }
+
+        async Task<byte[]> GetObjectInternal(ObjectKey key)
+        {
             Stopwatch timer = Stopwatch.StartNew();
             try
             {
-                using (GetObjectResponse response = await this.client.GetObjectAsync(this.bucket, name))
+                using (GetObjectResponse response = await this.client.GetObjectAsync(this.bucket, key.Key))
                 {
                     long length = response.ResponseStream.Length;
                     string ol = response.Metadata[OriginalLength];
-                    if(!String.IsNullOrWhiteSpace(ol))
+                    if (!String.IsNullOrWhiteSpace(ol))
                     {
                         length = long.Parse(ol);
                     }
@@ -66,7 +87,7 @@
                         }
                     }
 
-                    Log.GetObjectComplete(this.bucket, name, timer);
+                    Log.GetObjectComplete(this.bucket, key.Key, timer);
                     return data;
                 }
             }
@@ -74,15 +95,26 @@
             {
                 if (s3e.ErrorCode == "NoSuchKey")
                 {
-                    Log.GetObjectNotFound(this.bucket, name, timer);
+                    Log.GetObjectNotFound(this.bucket, key.Key, timer);
                     return null;
                 }
-                Log.GetObjectError(this.bucket, name, s3e, timer, s3e.ErrorCode, s3e.ResponseBody);
+                if (s3e.ErrorCode == "AccessDenied")
+                {
+                    Log.GetObjectAccessDenied(this.bucket, key.Key, timer);
+                    return null;
+                }
+                Log.GetObjectError(this.bucket, key.Key, s3e, timer, s3e.ErrorCode, s3e.ResponseBody);
                 throw;
             }
         }
 
         public async Task PutObject(string name, string type, MemoryStream stream, bool compress = false)
+        {
+            ObjectKey key = KeyForName(name);
+            await PutObjectInternal(key, type, stream, compress);
+        }
+
+        public async Task PutObjectInternal(ObjectKey key, string type, MemoryStream stream, bool compress)
         {
             Stopwatch timer = Stopwatch.StartNew();
             try
@@ -105,21 +137,34 @@
                 {
                     AutoCloseStream = false,
                     BucketName = this.bucket,
-                    Key = name,
+                    Key = key.Key,
                     ContentType = type,
                     InputStream = sourceStream,
                 };
                 request.Headers.ContentEncoding = encoding;
                 request.Metadata.Add(OriginalLength, stream.Length.ToString());
-                
+
                 await this.client.PutObjectAsync(request);
-                Log.PutObjectComplete(this.bucket, name, type, timer, stream);
+                Log.PutObjectComplete(this.bucket, key.Key, type, timer, stream);
             }
             catch (AmazonS3Exception e)
             {
-                Log.PutObjectError(this.bucket, name, type, e, timer, e.ErrorCode, e.ResponseBody);
+                Log.PutObjectError(this.bucket, key.Key, type, e, timer, e.ErrorCode, e.ResponseBody);
                 throw;
             }
+        }
+
+        ObjectKey KeyForName(string name) => new ObjectKey(this.subdir, name);
+
+        public struct ObjectKey
+        {
+            public string Key;
+
+            public ObjectKey(string key) { Key = key; }
+
+            public ObjectKey(string subdir, string name) { Key = subdir + "/" + name; }
+
+            public override string ToString() => Key;
         }
     }
 
