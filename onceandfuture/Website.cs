@@ -14,7 +14,6 @@
     using System.Threading;
     using System.Threading.Tasks;
     using System.Xml.Linq;
-    using AngleSharp.Extensions;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.AspNetCore.Http;
@@ -37,10 +36,7 @@
         [JsonProperty("details")]
         public string Details { get; set; }
 
-        public override string ToString()
-        {
-            return String.Format("Fault: {0}: {1}", Code, Details);
-        }
+        public override string ToString() => $"Fault: {Code}: {Details}";
     }
 
     public class FaultException : Exception
@@ -96,7 +92,7 @@
             });
     }
 
-    public static class FaultHandlerExtensions
+    public static class CustomMiddlewareExtensions
     {
         public static IApplicationBuilder UseFaultHandler(this IApplicationBuilder builder)
         {
@@ -125,10 +121,9 @@
 
     public sealed class SecretToken : IEquatable<SecretToken>
     {
-        const int cookieSize = 32;
-        static readonly SecretToken empty = new SecretToken(Array.Empty<byte>());
-        static readonly ScryptEncoder encoder = new ScryptEncoder();
-        static readonly RNGCryptoServiceProvider randomGenerator = new RNGCryptoServiceProvider();
+        const int CookieSize = 32;
+        static readonly ScryptEncoder Encoder = new ScryptEncoder();
+        static readonly RNGCryptoServiceProvider RandomGenerator = new RNGCryptoServiceProvider();
 
         readonly byte[] bytes;
 
@@ -138,12 +133,12 @@
             this.bytes = bytes;
         }
 
-        public static SecretToken Empty => empty;
+        public static SecretToken Empty { get; } = new SecretToken(Array.Empty<byte>());
 
         public static SecretToken Create()
         {
-            byte[] bytes = new byte[cookieSize];
-            randomGenerator.GetBytes(bytes);
+            byte[] bytes = new byte[CookieSize];
+            RandomGenerator.GetBytes(bytes);
             return new SecretToken(bytes);
         }
 
@@ -164,14 +159,14 @@
         public string Encrypt()
         {
             if (this.bytes.Length == 0) { return String.Empty; }
-            return encoder.Encode(this.ToString());
+            return Encoder.Encode(ToString());
         }
 
         public bool Equals(SecretToken other)
         {
-            if (Object.ReferenceEquals(other, null)) { return false; }
+            if (ReferenceEquals(other, null)) { return false; }
             if (other.bytes.Length != this.bytes.Length) { return false; }
-            for (int i = 0; i < this.bytes.Length; i++)
+            for (var i = 0; i < this.bytes.Length; i++)
             {
                 if (other.bytes[i] != this.bytes[i]) { return false; }
             }
@@ -187,17 +182,17 @@
         {
             if (this.bytes.Length == 0) { return false; }
             if (String.IsNullOrEmpty(encrypted)) { return false; }
-            return encoder.Compare(ToString(), encrypted);
+            return Encoder.Compare(ToString(), encrypted);
         }
 
         public override int GetHashCode() => (int)Murmur3.Hash32(this.bytes);
 
-        public override string ToString() => Convert.ToBase64String(this.bytes) ?? String.Empty;
+        public override string ToString() => Convert.ToBase64String(this.bytes);
 
         public static bool operator ==(SecretToken a, SecretToken b)
         {
-            if (Object.ReferenceEquals(a, null) && Object.ReferenceEquals(b, null)) { return true; }
-            if (Object.ReferenceEquals(a, null)) { return false; }
+            if (ReferenceEquals(a, null) && ReferenceEquals(b, null)) { return true; }
+            if (ReferenceEquals(a, null)) { return false; }
             return a.Equals(b);
         }
 
@@ -225,17 +220,14 @@
             user = null;
             token = SecretToken.Empty;
 
-            string[] parts = cookie.Split(new char[] { ',' }, 2);
+            string[] parts = cookie.Split(new[] { ',' }, 2);
             if (parts.Length != 2) { return false; }
             if (!SecretToken.TryParse(parts[0], out token)) { return false; }
             user = parts[1];
             return true;
         }
 
-        string MakeCookie(string user, SecretToken token)
-        {
-            return String.Format("{0},{1}", token.ToString(), user);
-        }
+        static string MakeCookie(string user, SecretToken token) => $"{token},{user}";
 
         static bool CheckPassword(string password, string encrypted) => Scrypt.Compare(password, encrypted);
         public static string EncryptPassword(string password) => Scrypt.Encode(password);
@@ -321,7 +313,7 @@
 
             // Is it valid? Check the cache.
             LoginCookieCache[] cachedCookies;
-            if (loginCache.TryGetValue(user, out cachedCookies))
+            if (this.loginCache.TryGetValue(user, out cachedCookies))
             {
                 if (ValidateAgainstLoginCache(token, cachedCookies))
                 {
@@ -344,7 +336,7 @@
             if (profile.Logins.Count > 0)
             {
                 cachedCookies = RebuildCache(cachedCookies, profile.Logins);
-                loginCache[user] = cachedCookies;
+                this.loginCache[user] = cachedCookies;
                 if (ValidateAgainstLoginCache(token, cachedCookies))
                 {
                     Serilog.Log.Debug("Auth: Login session {token} found in cache after refresh", token);
@@ -424,9 +416,9 @@
             string user = (string)context.RouteData.Values[this.userParameterName];
 
             var authmgr = context.HttpContext.RequestServices.GetRequiredService<AuthenticationManager>();
-            string authn_user = await authmgr.GetAuthenticatedUser(context.HttpContext);
+            string authnUser = await authmgr.GetAuthenticatedUser(context.HttpContext);
 
-            if (authn_user == null || !String.Equals(user, authn_user, StringComparison.OrdinalIgnoreCase))
+            if (authnUser == null || !String.Equals(user, authnUser, StringComparison.OrdinalIgnoreCase))
             {
                 throw FaultException.AccessDenied();
             }
@@ -448,21 +440,21 @@
             string user = await this.authenticationManager.GetAuthenticatedUser(HttpContext);
             if (user == null)
             {
-                return RedirectToAction(nameof(AppController.Login));
+                return RedirectToAction(nameof(Login));
             }
             else
             {
-                return RedirectToAction(nameof(AppController.App), new { user = user });
+                return RedirectToAction(nameof(App), new { user });
             }
         }
 
         [HttpGet("/feed/{user}")]
         public async Task<IActionResult> App(string user)
         {
-            string authn_user = await this.authenticationManager.GetAuthenticatedUser(HttpContext);
-            if (!string.Equals(authn_user, user, StringComparison.Ordinal))
+            string authnUser = await this.authenticationManager.GetAuthenticatedUser(HttpContext);
+            if (!string.Equals(authnUser, user, StringComparison.Ordinal))
             {
-                return RedirectToAction(nameof(AppController.Login));
+                return RedirectToAction(nameof(Login));
             }
 
             return PhysicalFile(
@@ -486,11 +478,11 @@
             bool isAuthenticated = await authnManager.ValidateLogin(HttpContext, user, password);
             if (isAuthenticated)
             {
-                return RedirectToAction(nameof(AppController.App), new { user = user });
+                return RedirectToAction(nameof(App), new { user });
             }
             else
             {
-                return RedirectToAction(nameof(AppController.Login));
+                return RedirectToAction(nameof(Login));
             }
         }
     }
@@ -506,7 +498,7 @@
             this.tasks = tasks;
             this.descriptions = descriptions;
 
-            var callback = new Action<Task>(this.OnTaskCompleted);
+            var callback = new Action<Task>(OnTaskCompleted);
             for (int i = 0; i < this.tasks.Length; i++)
             {
                 this.tasks[i].ContinueWith(callback);
@@ -518,7 +510,7 @@
         public int GetCompletionPercent()
         {
             float total = this.tasks.Length;
-            if (total == 0) { return 100; }
+            if (Math.Abs(total) <= float.Epsilon) { return 100; }
 
             float complete = 0.0f;
             for (int i = 0; i < this.tasks.Length; i++)
@@ -539,7 +531,7 @@
 
         void OnTaskCompleted(Task task)
         {
-            semaphore.Release();
+            this.semaphore.Release();
         }
 
         async Task UpdateProgress(TextWriter writer)
@@ -600,9 +592,9 @@
                           {
                               name = r.Name,
                               id = r.Id,
-                              url = Url.Action(nameof(GetRiver), new { user = user, id = r.Id }),
+                              url = Url.Action(nameof(GetRiver), new { user, id = r.Id }),
                           }).ToArray();
-            return Json(new { rivers = rivers });
+            return Json(new { rivers });
         }
 
         [HttpPost("/api/v1/user/{user}")]
@@ -612,7 +604,7 @@
             if (requestBody.Id != null)
             {
                 // Just check it for correctness; we don't need the contents.
-                River existing = await this.LoadAggregate(user, requestBody.Id);
+                await LoadAggregate(user, requestBody.Id);
             }
 
             UserProfile profile = await this.profileStore.GetProfileFor(user);
@@ -635,9 +627,9 @@
                           {
                               name = r.Name,
                               id = r.Id,
-                              url = Url.Action(nameof(GetRiver), new { user = user, id = r.Id }),
+                              url = Url.Action(nameof(GetRiver), new { user, id = r.Id }),
                           }).ToArray();
-            return Json(new { status = "ok", rivers = rivers });
+            return Json(new { status = "ok", rivers });
         }
 
         [HttpPost("/api/v1/user/{user}/refresh_all")]
@@ -686,15 +678,15 @@
                           {
                               name = r.Name,
                               id = r.Id,
-                              url = Url.Action(nameof(GetRiver), new { user = user, id = r.Id }),
+                              url = Url.Action(nameof(GetRiver), new { user, id = r.Id }),
                           }).ToArray();
-            return Json(new { status = "ok", rivers = rivers });
+            return Json(new { status = "ok", rivers });
         }
 
         [HttpGet("/api/v1/user/{user}/river/{id}")]
         public async Task<IActionResult> GetRiver(string user, string id)
         {
-            River river = await this.LoadAggregate(user, id);
+            River river = await LoadAggregate(user, id);
             return Json(river);
         }
 
@@ -722,7 +714,7 @@
         {
             UserProfile profile = await this.profileStore.GetProfileFor(user);
             RiverDefinition river = profile.Rivers.FirstOrDefault(rd => String.CompareOrdinal(rd.Id, id) == 0);
-            IList<Uri> feedUris = river.Feeds ?? (IList<Uri>)(Array.Empty<Uri>());
+            IList<Uri> feedUris = river?.Feeds ?? (IList<Uri>)(Array.Empty<Uri>());
             River[] feedrivers = await Task.WhenAll(feedUris.Select(f => this.feedStore.LoadRiverForFeed(f)));
             return GetSourcesForRiver(feedrivers);
         }
@@ -745,7 +737,7 @@
                 RiverDefinition newRiver = river.With(feeds: river.Feeds.Add(feedUrl));
                 UserProfile newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
                 await this.profileStore.SaveProfileFor(user, newProfile);
-                await feedParser.RefreshAggregateRiverWithFeeds(newRiver.Id, new[] { feedUrl });
+                await this.feedParser.RefreshAggregateRiverWithFeeds(newRiver.Id, new[] { feedUrl });
 
                 river = newRiver;
             }
@@ -1013,7 +1005,7 @@
         {
             public SetPasswordRequest(string password)
             {
-                this.Password = password;
+                Password = password;
             }
 
             [JsonProperty("password", Required = Required.Always)]
@@ -1024,7 +1016,7 @@
         {
             public SetEmailRequest(string email)
             {
-                this.Email = email;
+                Email = email;
             }
 
             [JsonProperty("email", Required = Required.Always)]
@@ -1034,9 +1026,9 @@
 
     public class HealthController : Controller
     {
-        static HealthReport cachedReport;
+        static HealthReport CachedReport;
 
-        readonly Func<Task<HealthResult>>[] HealthChecks;
+        readonly Func<Task<HealthResult>>[] healthChecks;
         readonly UserProfileStore profileStore;
         readonly RiverFeedStore feedStore;
         readonly AggregateRiverStore aggregateStore;
@@ -1053,7 +1045,7 @@
             this.aggregateStore = aggregateStore;
             this.thumbnailStore = thumbnailStore;
 
-            HealthChecks = new Func<Task<HealthResult>>[]
+            this.healthChecks = new Func<Task<HealthResult>>[]
             {
                 CheckAggregateStore,
                 CheckFeedStore,
@@ -1195,10 +1187,10 @@
 
         async Task<HealthReport> CheckHealth()
         {
-            if (cachedReport != null) { return cachedReport; }
-            HealthResult[] results = await Task.WhenAll(from check in HealthChecks select check());
-            cachedReport = new HealthReport(results);
-            return cachedReport;
+            if (CachedReport != null) { return CachedReport; }
+            HealthResult[] results = await Task.WhenAll(from check in this.healthChecks select check());
+            CachedReport = new HealthReport(results);
+            return CachedReport;
         }
 
         class HealthReport
@@ -1277,7 +1269,7 @@
                 };
             }
 
-            public List<RuntimeProperty> Properties { get; } = new List<RuntimeProperty>();
+            List<RuntimeProperty> Properties { get; }
 
             public XElement ToXml() => new XElement(
                 "runtimeSummary",
@@ -1337,34 +1329,37 @@
                 UseShellExecute = false,
             };
 
-            Process process = null;
+            Process process;
             var processStopped = new AutoResetEvent(false);
             while (true)
             {
                 Serilog.Log.Information("Starting webpack");
                 process = Process.Start(startinfo);
-                try
+                if (process != null)
                 {
-                    process.EnableRaisingEvents = true; // Only applies to Exited though.
-                    process.Exited += (o, e) => processStopped.Set();
-                    process.ErrorDataReceived += (o, e) => Serilog.Log.Warning("webpack: {webpack_error}", e.Data);
-                    process.OutputDataReceived += (o, e) => Serilog.Log.Information("webpack: {webpack_info}", e.Data);
-                    process.Start();
-                    process.BeginErrorReadLine();
-                    process.BeginOutputReadLine();
+                    try
+                    {
+                        process.EnableRaisingEvents = true; // Only applies to Exited though.
+                        process.Exited += (o, e) => processStopped.Set();
+                        process.ErrorDataReceived += (o, e) => Serilog.Log.Warning("webpack: {webpack_error}", e.Data);
+                        process.OutputDataReceived += (o, e) => Serilog.Log.Information("webpack: {webpack_info}", e.Data);
+                        process.Start();
+                        process.BeginErrorReadLine();
+                        process.BeginOutputReadLine();
 
-                    Serilog.Log.Information("Waiting for webpack to terminate");
-                    int which = WaitHandle.WaitAny(new WaitHandle[] { this.stop, processStopped });
-                    if (which == 0) { break; }
-                    Serilog.Log.Information("Webpack stopped");
-                }
-                catch (Exception e)
-                {
-                    Serilog.Log.Error(e, "Exception occurred while running webpack");
-                    if (!process.HasExited) { process.Kill(); }
+                        Serilog.Log.Information("Waiting for webpack to terminate");
+                        int which = WaitHandle.WaitAny(new WaitHandle[] { this.stop, processStopped });
+                        if (which == 0) { break; }
+                        Serilog.Log.Information("Webpack stopped");
+                    }
+                    catch (Exception e)
+                    {
+                        Serilog.Log.Error(e, "Exception occurred while running webpack");
+                        if (!process.HasExited) { process.Kill(); }
+                    }
                 }
                 Serilog.Log.Information("Waiting before looping");
-                Thread.Sleep(TimeSpan.FromSeconds(1));
+                if (this.stop.WaitOne(TimeSpan.FromSeconds(1))) { break; }
             }
 
             Serilog.Log.Information("Shutting down webpack");
