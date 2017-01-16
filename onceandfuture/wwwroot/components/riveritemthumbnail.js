@@ -14,8 +14,16 @@ const RiverItemThumbnail = ({item, mode = 'auto'}) => {
       marginRight: 3,
       marginBottom: 3,
     };
-    if ((mode === 'text') ||
-       (mode === 'auto' && (item.body || '').length > 100)) {
+
+    if (mode === 'auto') {
+      if ((thumb.width < FULL_IMAGE_WIDTH) || (item.body || '').length > 100) {
+        mode = 'text';
+      } else {
+        mode = 'image';
+      }
+    }
+
+    if (mode === 'text') {
       imgstyle.float = 'right';
       imgstyle.width = 100;
       imgstyle.height = 100;

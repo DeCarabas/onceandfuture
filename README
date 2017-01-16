@@ -21,8 +21,6 @@ UI:
 - Force line breaks on titles (they are very long when they have urls)
 - Hook progress to adding feed, including idle ping
 - Deal with the case where you find multiple feeds.
-- Should use the source image original size to help decide text/image mode in
-  river auto mode. (Don't ever show me Dave Peck's giant pixellated face.)
 - Fix up the top-line update name thing-- top of river should already have
   promoted update name.
 

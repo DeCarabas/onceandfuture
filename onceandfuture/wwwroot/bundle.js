@@ -22570,7 +22570,7 @@
 	
 	var _Provider2 = _interopRequireDefault(_Provider);
 	
-	var _connectAdvanced = __webpack_require__(/*! ./components/connectAdvanced */ 182);
+	var _connectAdvanced = __webpack_require__(/*! ./components/connectAdvanced */ 183);
 	
 	var _connectAdvanced2 = _interopRequireDefault(_connectAdvanced);
 	
@@ -22602,11 +22602,15 @@
 	
 	var _react = __webpack_require__(/*! react */ 1);
 	
-	var _storeShape = __webpack_require__(/*! ../utils/storeShape */ 180);
+	var _Subscription = __webpack_require__(/*! ../utils/Subscription */ 180);
+	
+	var _Subscription2 = _interopRequireDefault(_Subscription);
+	
+	var _storeShape = __webpack_require__(/*! ../utils/storeShape */ 181);
 	
 	var _storeShape2 = _interopRequireDefault(_storeShape);
 	
-	var _warning = __webpack_require__(/*! ../utils/warning */ 181);
+	var _warning = __webpack_require__(/*! ../utils/warning */ 182);
 	
 	var _warning2 = _interopRequireDefault(_warning);
 	
@@ -22646,7 +22650,7 @@
 	  _inherits(Provider, _Component);
 	
 	  Provider.prototype.getChildContext = function getChildContext() {
-	    return { store: this.store };
+	    return { store: this.store, storeSubscription: null };
 	  };
 	
 	  function Provider(props, context) {
@@ -22683,13 +22687,119 @@
 	  children: _react.PropTypes.element.isRequired
 	};
 	Provider.childContextTypes = {
-	  store: _storeShape2.default.isRequired
+	  store: _storeShape2.default.isRequired,
+	  storeSubscription: _react.PropTypes.instanceOf(_Subscription2.default)
 	};
 	Provider.displayName = 'Provider';
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(/*! ./../../../process/browser.js */ 3)))
 
 /***/ },
 /* 180 */
+/*!*************************************************!*\
+  !*** ./~/react-redux/lib/utils/Subscription.js ***!
+  \*************************************************/
+/***/ function(module, exports) {
+
+	"use strict";
+	
+	exports.__esModule = true;
+	
+	function _classCallCheck(instance, Constructor) {
+	  if (!(instance instanceof Constructor)) {
+	    throw new TypeError("Cannot call a class as a function");
+	  }
+	}
+	
+	// encapsulates the subscription logic for connecting a component to the redux store, as
+	// well as nesting subscriptions of descendant components, so that we can ensure the
+	// ancestor components re-render before descendants
+	
+	var CLEARED = null;
+	var nullListeners = {
+	  notify: function notify() {}
+	};
+	
+	function createListenerCollection() {
+	  // the current/next pattern is copied from redux's createStore code.
+	  // TODO: refactor+expose that code to be reusable here?
+	  var current = [];
+	  var next = [];
+	
+	  return {
+	    clear: function clear() {
+	      next = CLEARED;
+	      current = CLEARED;
+	    },
+	    notify: function notify() {
+	      var listeners = current = next;
+	      for (var i = 0; i < listeners.length; i++) {
+	        listeners[i]();
+	      }
+	    },
+	    subscribe: function subscribe(listener) {
+	      var isSubscribed = true;
+	      if (next === current) next = current.slice();
+	      next.push(listener);
+	
+	      return function unsubscribe() {
+	        if (!isSubscribed || current === CLEARED) return;
+	        isSubscribed = false;
+	
+	        if (next === current) next = current.slice();
+	        next.splice(next.indexOf(listener), 1);
+	      };
+	    }
+	  };
+	}
+	
+	var Subscription = function () {
+	  function Subscription(store, parentSub) {
+	    _classCallCheck(this, Subscription);
+	
+	    this.store = store;
+	    this.parentSub = parentSub;
+	    this.unsubscribe = null;
+	    this.listeners = nullListeners;
+	  }
+	
+	  Subscription.prototype.addNestedSub = function addNestedSub(listener) {
+	    this.trySubscribe();
+	    return this.listeners.subscribe(listener);
+	  };
+	
+	  Subscription.prototype.notifyNestedSubs = function notifyNestedSubs() {
+	    this.listeners.notify();
+	  };
+	
+	  Subscription.prototype.isSubscribed = function isSubscribed() {
+	    return Boolean(this.unsubscribe);
+	  };
+	
+	  Subscription.prototype.trySubscribe = function trySubscribe() {
+	    if (!this.unsubscribe) {
+	      // this.onStateChange is set by connectAdvanced.initSubscription()
+	      this.unsubscribe = this.parentSub ? this.parentSub.addNestedSub(this.onStateChange) : this.store.subscribe(this.onStateChange);
+	
+	      this.listeners = createListenerCollection();
+	    }
+	  };
+	
+	  Subscription.prototype.tryUnsubscribe = function tryUnsubscribe() {
+	    if (this.unsubscribe) {
+	      this.unsubscribe();
+	      this.unsubscribe = null;
+	      this.listeners.clear();
+	      this.listeners = nullListeners;
+	    }
+	  };
+	
+	  return Subscription;
+	}();
+	
+	exports.default = Subscription;
+
+/***/ },
+/* 181 */
 /*!***********************************************!*\
   !*** ./~/react-redux/lib/utils/storeShape.js ***!
   \***********************************************/
@@ -22708,7 +22818,7 @@
 	});
 
 /***/ },
-/* 181 */
+/* 182 */
 /*!********************************************!*\
   !*** ./~/react-redux/lib/utils/warning.js ***!
   \********************************************/
@@ -22741,7 +22851,7 @@
 	}
 
 /***/ },
-/* 182 */
+/* 183 */
 /*!*********************************************************!*\
   !*** ./~/react-redux/lib/components/connectAdvanced.js ***!
   \*********************************************************/
@@ -22765,21 +22875,21 @@
 	
 	exports.default = connectAdvanced;
 	
-	var _hoistNonReactStatics = __webpack_require__(/*! hoist-non-react-statics */ 183);
+	var _hoistNonReactStatics = __webpack_require__(/*! hoist-non-react-statics */ 184);
 	
 	var _hoistNonReactStatics2 = _interopRequireDefault(_hoistNonReactStatics);
 	
-	var _invariant = __webpack_require__(/*! invariant */ 184);
+	var _invariant = __webpack_require__(/*! invariant */ 185);
 	
 	var _invariant2 = _interopRequireDefault(_invariant);
 	
 	var _react = __webpack_require__(/*! react */ 1);
 	
-	var _Subscription = __webpack_require__(/*! ../utils/Subscription */ 185);
+	var _Subscription = __webpack_require__(/*! ../utils/Subscription */ 180);
 	
 	var _Subscription2 = _interopRequireDefault(_Subscription);
 	
-	var _storeShape = __webpack_require__(/*! ../utils/storeShape */ 180);
+	var _storeShape = __webpack_require__(/*! ../utils/storeShape */ 181);
 	
 	var _storeShape2 = _interopRequireDefault(_storeShape);
 	
@@ -22902,7 +23012,7 @@
 	      Connect.prototype.getChildContext = function getChildContext() {
 	        var _ref2;
 	
-	        return _ref2 = {}, _ref2[subscriptionKey] = this.subscription, _ref2;
+	        return _ref2 = {}, _ref2[subscriptionKey] = this.subscription || this.parentSub, _ref2;
 	      };
 	
 	      Connect.prototype.componentDidMount = function componentDidMount() {
@@ -23054,7 +23164,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(/*! ./../../../process/browser.js */ 3)))
 
 /***/ },
-/* 183 */
+/* 184 */
 /*!********************************************!*\
   !*** ./~/hoist-non-react-statics/index.js ***!
   \********************************************/
@@ -23111,7 +23221,7 @@
 	};
 
 /***/ },
-/* 184 */
+/* 185 */
 /*!********************************!*\
   !*** ./~/invariant/browser.js ***!
   \********************************/
@@ -23168,111 +23278,6 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(/*! ./../process/browser.js */ 3)))
 
 /***/ },
-/* 185 */
-/*!*************************************************!*\
-  !*** ./~/react-redux/lib/utils/Subscription.js ***!
-  \*************************************************/
-/***/ function(module, exports) {
-
-	"use strict";
-	
-	exports.__esModule = true;
-	
-	function _classCallCheck(instance, Constructor) {
-	  if (!(instance instanceof Constructor)) {
-	    throw new TypeError("Cannot call a class as a function");
-	  }
-	}
-	
-	// encapsulates the subscription logic for connecting a component to the redux store, as
-	// well as nesting subscriptions of descendant components, so that we can ensure the
-	// ancestor components re-render before descendants
-	
-	var CLEARED = null;
-	var nullListeners = {
-	  notify: function notify() {}
-	};
-	
-	function createListenerCollection() {
-	  // the current/next pattern is copied from redux's createStore code.
-	  // TODO: refactor+expose that code to be reusable here?
-	  var current = [];
-	  var next = [];
-	
-	  return {
-	    clear: function clear() {
-	      next = CLEARED;
-	      current = CLEARED;
-	    },
-	    notify: function notify() {
-	      var listeners = current = next;
-	      for (var i = 0; i < listeners.length; i++) {
-	        listeners[i]();
-	      }
-	    },
-	    subscribe: function subscribe(listener) {
-	      var isSubscribed = true;
-	      if (next === current) next = current.slice();
-	      next.push(listener);
-	
-	      return function unsubscribe() {
-	        if (!isSubscribed || current === CLEARED) return;
-	        isSubscribed = false;
-	
-	        if (next === current) next = current.slice();
-	        next.splice(next.indexOf(listener), 1);
-	      };
-	    }
-	  };
-	}
-	
-	var Subscription = function () {
-	  function Subscription(store, parentSub) {
-	    _classCallCheck(this, Subscription);
-	
-	    this.store = store;
-	    this.parentSub = parentSub;
-	    this.unsubscribe = null;
-	    this.listeners = nullListeners;
-	  }
-	
-	  Subscription.prototype.addNestedSub = function addNestedSub(listener) {
-	    this.trySubscribe();
-	    return this.listeners.subscribe(listener);
-	  };
-	
-	  Subscription.prototype.notifyNestedSubs = function notifyNestedSubs() {
-	    this.listeners.notify();
-	  };
-	
-	  Subscription.prototype.isSubscribed = function isSubscribed() {
-	    return Boolean(this.unsubscribe);
-	  };
-	
-	  Subscription.prototype.trySubscribe = function trySubscribe() {
-	    if (!this.unsubscribe) {
-	      // this.onStateChange is set by connectAdvanced.initSubscription()
-	      this.unsubscribe = this.parentSub ? this.parentSub.addNestedSub(this.onStateChange) : this.store.subscribe(this.onStateChange);
-	
-	      this.listeners = createListenerCollection();
-	    }
-	  };
-	
-	  Subscription.prototype.tryUnsubscribe = function tryUnsubscribe() {
-	    if (this.unsubscribe) {
-	      this.unsubscribe();
-	      this.unsubscribe = null;
-	      this.listeners.clear();
-	      this.listeners = nullListeners;
-	    }
-	  };
-	
-	  return Subscription;
-	}();
-	
-	exports.default = Subscription;
-
-/***/ },
 /* 186 */
 /*!**********************************************!*\
   !*** ./~/react-redux/lib/connect/connect.js ***!
@@ -23297,7 +23302,7 @@
 	
 	exports.createConnect = createConnect;
 	
-	var _connectAdvanced = __webpack_require__(/*! ../components/connectAdvanced */ 182);
+	var _connectAdvanced = __webpack_require__(/*! ../components/connectAdvanced */ 183);
 	
 	var _connectAdvanced2 = _interopRequireDefault(_connectAdvanced);
 	
@@ -24727,7 +24732,7 @@
 	
 	var _isPlainObject2 = _interopRequireDefault(_isPlainObject);
 	
-	var _warning = __webpack_require__(/*! ./warning */ 181);
+	var _warning = __webpack_require__(/*! ./warning */ 182);
 	
 	var _warning2 = _interopRequireDefault(_warning);
 	
@@ -24985,7 +24990,7 @@
 	exports.__esModule = true;
 	exports.default = verifySubselectors;
 	
-	var _warning = __webpack_require__(/*! ../utils/warning */ 181);
+	var _warning = __webpack_require__(/*! ../utils/warning */ 182);
 	
 	var _warning2 = _interopRequireDefault(_warning);
 	
@@ -29770,7 +29775,16 @@
 	      marginRight: 3,
 	      marginBottom: 3
 	    };
-	    if (mode === 'text' || mode === 'auto' && (item.body || '').length > 100) {
+	
+	    if (mode === 'auto') {
+	      if (thumb.width < _style.FULL_IMAGE_WIDTH || (item.body || '').length > 100) {
+	        mode = 'text';
+	      } else {
+	        mode = 'image';
+	      }
+	    }
+	
+	    if (mode === 'text') {
 	      imgstyle.float = 'right';
 	      imgstyle.width = 100;
 	      imgstyle.height = 100;
