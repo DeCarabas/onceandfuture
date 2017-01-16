@@ -1787,6 +1787,16 @@
             return river;
         }
 
+        public async Task<River> FetchRiver(Uri uri)
+        {
+            River river = await feedStore.LoadRiverForFeed(uri);
+            while(river.Metadata.LastStatus == HttpStatusCode.MovedPermanently)
+            {
+                river = await feedStore.LoadRiverForFeed(river.Metadata.OriginUrl);
+            }
+            return river;
+        }
+
         async Task<River> WriteRiver(Uri uri, River river)
         {
             river = await MaybeArchiveRiver(uri.AbsoluteUri, river);
@@ -1830,7 +1840,7 @@
             Log.Get().Information("{id}: Last updated @ {lastUpdated}", id, lastUpdated);
 
             var parser = new RiverFeedParser();
-            River[] rivers = await Task.WhenAll(from url in feedUrls select parser.FetchAndUpdateRiver(url));
+            River[] rivers = await Task.WhenAll(from url in feedUrls select parser.FetchRiver(url));
             Log.Get().Information("{id}: Pulled {riverCount} rivers", id, rivers.Length);
 
             List<RiverFeed> newFeeds = new List<RiverFeed>();
@@ -1859,7 +1869,9 @@
                 }
             }
 
+            // Sort all the new feeds by time they were updated (latest time first).
             Log.Get().Information("{id}: Resulted in {riverCount} new feeds", id, newFeeds.Count);
+            newFeeds = newFeeds.OrderByDescending(f => f.WhenLastUpdate).ToList();
             var newRiver = river.With(
                 updatedFeeds: river.UpdatedFeeds.With(feeds: newFeeds.Concat(river.UpdatedFeeds.Feeds)));
 
