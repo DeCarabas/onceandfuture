@@ -546,12 +546,9 @@
         {
             int progress = GetCompletionPercent();
             string message = GetStatusMessage();
-            await WriteProgress(writer, progress, message);
-        }
 
-        async Task WriteProgress(TextWriter writer, int progress, string message)
-        {
-            await writer.WriteLineAsync(String.Format("{0}|{1}", progress, message));
+            string line = String.Format("{0}|{1}", progress, message);
+            await writer.WriteLineAsync(line);
             await writer.FlushAsync();
         }
 
@@ -1032,7 +1029,7 @@
 
             [JsonProperty("email", Required = Required.Always)]
             public string Email { get; }
-        }        
+        }
     }
 
     public class HealthController : Controller
