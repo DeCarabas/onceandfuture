@@ -41,7 +41,6 @@ Tests:
 
 Shipping:
 - Re-pack font awesome fonts
-- Use packed/minified/precompiled source if it exists
 - Implement ATOM cache timeout and RSS skip hours and the like to poll more
   intelligently.
 - Clip titles that are too long. (Because seriously.)
