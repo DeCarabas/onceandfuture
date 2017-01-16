@@ -14,13 +14,13 @@
 
     static class Log
     {
-        readonly static ConcurrentDictionary<string, ILogger> TaggedLoggers =
+        static readonly ConcurrentDictionary<string, ILogger> TaggedLoggers =
             new ConcurrentDictionary<string, ILogger>();
-        readonly static Func<string, ILogger> logCreator = Create;
+        static readonly Func<string, ILogger> LogCreator = Create;
 
         static ILogger Create(string tag) => Serilog.Log.Logger.ForContext("tag", tag);
 
-        public static ILogger Get([CallerMemberName]string tag = null) => TaggedLoggers.GetOrAdd(tag, logCreator);
+        static ILogger Get([CallerMemberName]string tag = "unknown") => TaggedLoggers.GetOrAdd(tag, LogCreator);
 
         public static void BadDate(string url, string date)
         {
@@ -219,8 +219,8 @@
             object url;
             context.TryGetValue("uri", out url);
             Get().Warning(
-                exception, 
-                "HTTP error detected from {url}, sleeping {ts} before retry {retry}", 
+                exception,
+                "HTTP error detected from {url}, sleeping {ts} before retry {retry}",
                 url, timespan, retryCount);
         }
 
@@ -260,79 +260,76 @@
             );
         }
 
-        public static void GetObjectNotFound(string bucket, string name, Stopwatch timer)
-        {
-            Get().Information(
+        public static void GetObjectNotFound(string bucket, string name, Stopwatch timer) 
+            => Get().Information(
                 "Object {name} not found in S3 bucket {bucket} ({elapsed}ms)",
-                name, bucket, timer.ElapsedMilliseconds
-            );
-        }
+                name, bucket, timer.ElapsedMilliseconds);
 
-        public static void DetectFeedServerError(Uri uri, HttpResponseMessage response)
-        {
-            Get().Warning("Error detecting feed @ {url}: {status}", uri.AbsoluteUri, response.StatusCode);
-        }
+        public static void DetectFeedServerError(Uri uri, HttpResponseMessage response) 
+            => Get().Warning("Error detecting feed @ {url}: {status}", uri.AbsoluteUri, response.StatusCode);
 
-        public static void DetectFeedLoadFeedError(Uri feedUri, HttpStatusCode lastStatus)
-        {
-            Get().Warning("Error loading detected feed @ {url}: {status}", feedUri.AbsoluteUri, lastStatus);
-        }
+        public static void DetectFeedLoadFeedError(Uri feedUri, HttpStatusCode lastStatus) 
+            => Get().Warning("Error loading detected feed @ {url}: {status}", feedUri.AbsoluteUri, lastStatus);
 
-        public static void FindFeedBaseWasFeed(Uri baseUri)
-        {
-            Get().Debug("{base}: Base URL was a feed.", baseUri.AbsoluteUri);
-        }
+        public static void FindFeedBaseWasFeed(Uri baseUri) 
+            => Get().Debug("{base}: Base URL was a feed.", baseUri.AbsoluteUri);
 
-        public static void FindFeedCheckingBase(Uri baseUri)
-        {
-            Get().Debug("{base}: Checking base URL...", baseUri.AbsoluteUri);
-        }
+        public static void FindFeedCheckingBase(Uri baseUri) 
+            => Get().Debug("{base}: Checking base URL...", baseUri.AbsoluteUri);
 
-        public static void FindFeedCheckingLinkElements(Uri baseUri)
-        {
-            Get().Debug("{base}: Checking link elements...", baseUri.AbsoluteUri);
-        }
+        public static void FindFeedCheckingLinkElements(Uri baseUri) 
+            => Get().Debug("{base}: Checking link elements...", baseUri.AbsoluteUri);
 
-        public static void FindFeedFoundLinkElements(Uri baseUri, List<Uri> linkUrls)
-        {
-            Get().Debug("{base}: Found {count} link elements.", baseUri.AbsoluteUri, linkUrls.Count);
-        }
+        public static void FindFeedFoundLinkElements(Uri baseUri, List<Uri> linkUrls) 
+            => Get().Debug("{base}: Found {count} link elements.", baseUri.AbsoluteUri, linkUrls.Count);
 
-        public static void FindFeedCheckingAnchorElements(Uri baseUri)
-        {
-            Get().Debug("{base}: Checking anchor elements...", baseUri.AbsoluteUri);
-        }
+        public static void FindFeedCheckingAnchorElements(Uri baseUri) 
+            => Get().Debug("{base}: Checking anchor elements...", baseUri.AbsoluteUri);
 
-        public static void FindFeedFoundSomeAnchors(Uri baseUri, List<Uri> localGuesses, List<Uri> remoteGuesses)
-        {
-            Get().Debug("{base}: Found {localCount} local and {remoteCount} remote anchors.",
+        public static void FindFeedFoundSomeAnchors(Uri baseUri, List<Uri> localGuesses, List<Uri> remoteGuesses) 
+            => Get().Debug(
+                "{base}: Found {localCount} local and {remoteCount} remote anchors.",
                 baseUri.AbsoluteUri, localGuesses.Count, remoteGuesses.Count);
-        }
 
-        public static void FindFeedsFoundLocalGuesses(Uri baseUri, List<Uri> localAnchors)
-        {
-            Get().Debug("{base}: Found {count} local anchors.", baseUri.AbsoluteUri, localAnchors.Count);
-        }
+        public static void FindFeedsFoundLocalGuesses(Uri baseUri, List<Uri> localAnchors) 
+            => Get().Debug("{base}: Found {count} local anchors.", baseUri.AbsoluteUri, localAnchors.Count);
 
-        public static void FindFeedsFoundRemoteGuesses(Uri baseUri, List<Uri> remoteAnchors)
-        {
-            Get().Debug("{base}: Found {count} remote anchors.", baseUri.AbsoluteUri, remoteAnchors.Count);
-        }
+        public static void FindFeedsFoundRemoteGuesses(Uri baseUri, List<Uri> remoteAnchors) 
+            => Get().Debug("{base}: Found {count} remote anchors.", baseUri.AbsoluteUri, remoteAnchors.Count);
 
         public static void FindFeedsFoundRandomGuesses(Uri baseUri, List<Uri> randomGuesses)
-        {
-            Get().Debug("{base}: Found {count} random guesses.", baseUri.AbsoluteUri, randomGuesses.Count);
-        }
+            => Get().Debug("{base}: Found {count} random guesses.", baseUri.AbsoluteUri, randomGuesses.Count);
 
         public static void FindFeedFoundTotal(Uri baseUri, List<Uri> allUrls)
-        {
-            Get().Debug("{base}: Found {count} URIs in total.", baseUri.AbsoluteUri, allUrls.Count);
-        }
+            => Get().Debug("{base}: Found {count} URIs in total.", baseUri.AbsoluteUri, allUrls.Count);
 
-        public static void WroteArchive(string id, River river, string archiveKey) =>
-            Get().Information("{id}: Wrote archive at {archiveKey}", id, archiveKey);
+        public static void WroteArchive(string id, River river, string archiveKey)
+            => Get().Information("{id}: Wrote archive at {archiveKey}", id, archiveKey);
 
-        public static void SplittingFeed(string id, River river) =>
-            Get().Verbose("{id}: Splitting feed with {count} items in it...", id, river.UpdatedFeeds.Feeds.Count);
+        public static void SplittingFeed(string id, River river)
+            => Get().Verbose("{id}: Splitting feed with {count} items in it...", id, river.UpdatedFeeds.Feeds.Count);
+
+        public static void AggregateRefreshed(string id, Stopwatch aggregateTimer)
+            => Get().Information("{id}: Refreshed in {elapsed}ms", id, aggregateTimer.ElapsedMilliseconds);
+
+        public static void UpdatingAggregate(string id) => Get().Information("{id}: Updating aggregate", id);
+
+        public static void AggregateHasNewFeeds(string id, int newFeedsCount) 
+            => Get().Information("{id}: Resulted in {riverCount} new feeds", id, newFeedsCount);
+
+        public static void AggregateFeedState(
+            string id, Uri metadataOriginUrl, int newUpdatesLength, DateTimeOffset biggestUpdate)
+            => Get().Debug(
+                "{id}: {feedUrl}: Has {count} new items @ {lastUpdate}",
+                id, metadataOriginUrl, newUpdatesLength, biggestUpdate);
+
+        public static void AggregateNewUpdates(string id, Uri metadataOriginUrl, int newUpdatesLength) 
+            => Get().Debug("{id}: {feedUrl}: Has {count} new updates", id, metadataOriginUrl, newUpdatesLength);
+
+        public static void AggregateRefreshPulledRivers(string id, int riversLength) 
+            => Get().Information("{id}: Pulled {riverCount} rivers", id, riversLength);
+
+        public static void AggregateRefreshStart(string id, int feedUrlsCount) 
+            => Get().Information("{id}: Refreshing aggregate with {feedUrlCount} feeds", id, feedUrlsCount);
     }
 }

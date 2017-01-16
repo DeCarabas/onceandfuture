@@ -1194,7 +1194,7 @@
                 AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip,
                 UseCookies = false,
                 UseDefaultCredentials = false,
-            };            
+            };
 
             HttpClient client = new HttpClient(handler, true);
             client.Timeout = TimeSpan.FromSeconds(15);
@@ -1790,7 +1790,7 @@
         public async Task<River> FetchRiver(Uri uri)
         {
             River river = await feedStore.LoadRiverForFeed(uri);
-            while(river.Metadata.LastStatus == HttpStatusCode.MovedPermanently)
+            while (river.Metadata.LastStatus == HttpStatusCode.MovedPermanently)
             {
                 river = await feedStore.LoadRiverForFeed(river.Metadata.OriginUrl);
             }
@@ -1830,57 +1830,45 @@
         {
             Stopwatch aggregateTimer = Stopwatch.StartNew();
 
-            Log.Get().Information("{id}: Loading aggregate", id);
             River river = await aggregateStore.LoadAggregate(id);
 
-            Log.Get().Information("{id}: Refreshing aggregate with {feedUrlCount} feeds", id, feedUrls.Count);
+            Log.AggregateRefreshStart(id, feedUrls.Count);
             DateTimeOffset lastUpdated = river.UpdatedFeeds.Feeds.Count > 0
                 ? river.UpdatedFeeds.Feeds.Max(f => f.WhenLastUpdate)
                 : DateTimeOffset.MinValue;
-            Log.Get().Information("{id}: Last updated @ {lastUpdated}", id, lastUpdated);
 
             var parser = new RiverFeedParser();
             River[] rivers = await Task.WhenAll(from url in feedUrls select parser.FetchRiver(url));
-            Log.Get().Information("{id}: Pulled {riverCount} rivers", id, rivers.Length);
+            Log.AggregateRefreshPulledRivers(id, rivers.Length);
 
-            List<RiverFeed> newFeeds = new List<RiverFeed>();
-            for (int riverIndex = 0; riverIndex < rivers.Length; riverIndex++)
+            var newFeeds = new List<RiverFeed>();
+            foreach (River feedRiver in rivers)
             {
-                River feedRiver = rivers[riverIndex];
-                Log.Get().Debug(
-                    "{id}: {feedUrl}: Has {count} feeds",
-                    id, feedRiver.Metadata.OriginUrl, feedRiver.UpdatedFeeds.Feeds.Count);
-
-                RiverFeed[] newUpdates;
-                newUpdates = feedRiver.UpdatedFeeds.Feeds.Where(rf => rf.WhenLastUpdate > lastUpdated).ToArray();
-                Log.Get().Debug(
-                    "{id}: {feedUrl}: Has {count} new updates",
-                    id, feedRiver.Metadata.OriginUrl, newUpdates.Length);
+                RiverFeed[] newUpdates =
+                    feedRiver.UpdatedFeeds.Feeds.Where(rf => rf.WhenLastUpdate > lastUpdated).ToArray();
+                Log.AggregateNewUpdates(id, feedRiver.Metadata.OriginUrl, newUpdates.Length);
 
                 if (newUpdates.Length > 0)
                 {
                     RiverItem[] newItems = newUpdates.SelectMany(rf => rf.Items).ToArray();
                     DateTimeOffset biggestUpdate = newUpdates.Max(rf => rf.WhenLastUpdate);
-                    Log.Get().Debug(
-                        "{id}: {feedUrl}: Has {count} new items @ {lastUpdate}",
-                        id, feedRiver.Metadata.OriginUrl, newUpdates.Length, biggestUpdate);
-
+                    Log.AggregateFeedState(id, feedRiver.Metadata.OriginUrl, newUpdates.Length, biggestUpdate);
                     newFeeds.Add(newUpdates[0].With(whenLastUpdate: biggestUpdate, items: newItems));
                 }
             }
 
             // Sort all the new feeds by time they were updated (latest time first).
-            Log.Get().Information("{id}: Resulted in {riverCount} new feeds", id, newFeeds.Count);
+            Log.AggregateHasNewFeeds(id, newFeeds.Count);
             newFeeds = newFeeds.OrderByDescending(f => f.WhenLastUpdate).ToList();
-            var newRiver = river.With(
+            River newRiver = river.With(
                 updatedFeeds: river.UpdatedFeeds.With(feeds: newFeeds.Concat(river.UpdatedFeeds.Feeds)));
 
             newRiver = await MaybeArchiveRiver(id, newRiver);
 
-            Log.Get().Information("{id}: Updating aggregate", id);
-            await aggregateStore.WriteAggregate(id, newRiver);
+            Log.UpdatingAggregate(id);
+            await this.aggregateStore.WriteAggregate(id, newRiver);
 
-            Log.Get().Information("{id}: Refreshed in {elapsed}ms", id, aggregateTimer.ElapsedMilliseconds);
+            Log.AggregateRefreshed(id, aggregateTimer);
             return newRiver;
         }
 

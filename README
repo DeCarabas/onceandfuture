@@ -28,7 +28,6 @@ Back-end Stuff:
 - Measure things:
   - Number of concurrent HTTP connections
   - Latencies of various things
-- Replace inline log with static log method
 - Login cookie cache scrubber
 - Max request size
 - Limit on HTTP response sizes, strong timeouts
