@@ -2001,12 +2001,12 @@
                     if (element.Name == XNames.RSS.Rss)
                     {
                         result = LoadFeed(responseUri, element.Element(XNames.RSS.Channel));
-                        Log.EndGetFeed(uri, "rss2.0", response, result, loadTimer);
+                        Log.EndGetFeed(uri, "ok", "rss2.0", response, result, loadTimer);
                     }
                     else if (element.Name == XNames.Atom.Feed)
                     {
                         result = LoadFeed(responseUri, element);
-                        Log.EndGetFeed(uri, "atom", response, result, loadTimer);
+                        Log.EndGetFeed(uri, "ok", "atom", response, result, loadTimer);
                     }
                     else if (element.Name == XNames.RDF.Rdf)
                     {
@@ -2016,7 +2016,7 @@
                                 element.Elements(XNames.RSS10.Item).Select(xe => LoadItem(xe))
                             )
                         );
-                        Log.EndGetFeed(uri, "rdf", response, result, loadTimer);
+                        Log.EndGetFeed(uri, "ok", "rdf", response, result, loadTimer);
                     }
                     else
                     {
@@ -2034,9 +2034,9 @@
                         lastModified: newLastModified);
                 }
             }
-            catch (TaskCanceledException)
+            catch (TaskCanceledException requestException)
             {
-                Log.FeedTimeout(uri, loadTimer);
+                Log.FeedTimeout(uri, loadTimer, requestException);
                 return new FetchResult(
                     feed: null,
                     status: 0,

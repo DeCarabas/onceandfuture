@@ -8,9 +8,17 @@
     using System.Net;
     using System.Net.Http;
     using System.Runtime.CompilerServices;
+    using System.Text;
+    using System.Threading.Tasks;
     using System.Xml;
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
     using Polly;
     using Serilog;
+    using Serilog.Events;
+    using Serilog.Sinks.PeriodicBatching;
+    using System.Linq;
+    using Serilog.Configuration;
 
     static class Log
     {
@@ -28,71 +36,48 @@
         }
 
         public static void NetworkError(Uri uri, Exception e, Stopwatch loadTimer)
-        {
-            Get().Error(e, "{uri}: {elapsed} ms: Network Error", uri, loadTimer.ElapsedMilliseconds);
-        }
+            => EndGetFeed(uri, "network_error", null, null, null, loadTimer, e);
 
         public static void XmlError(Uri uri, XmlException xmlException, Stopwatch loadTimer)
-        {
-            Get().Error(xmlException, "{uri}: {elapsed} ms: XML Error", uri, loadTimer.ElapsedMilliseconds);
-        }
+            => EndGetFeed(uri, "xml_error", null, null, null, loadTimer, xmlException);
 
         public static void BeginGetFeed(Uri uri)
         {
-            Get().Information("{uri}: Begin fetching feed", uri);
+            Get().Information("{url}: Begin fetching feed", uri);
         }
 
         public static void EndGetFeed(
             Uri uri,
+            string status,
             string version,
             HttpResponseMessage response,
             RiverFeed result,
-            Stopwatch loadTimer
+            Stopwatch loadTimer,
+            Exception error = null
         )
         {
             Get().Information(
-                "{uri}: Fetched {item_count} items from {feed} feed in {elapsed} ms",
+                error,
+                "{url}: {status}: Fetched {item_count} items from {version} feed in {elapsed_ms} ms",
                 uri,
-                result.Items.Count,
+                status,
+                result?.Items?.Count ?? 0,
                 version,
                 loadTimer.ElapsedMilliseconds
             );
         }
 
         public static void UnrecognizableFeed(Uri uri, HttpResponseMessage response, string body, Stopwatch loadTimer)
-        {
-            Get().Error(
-                "{uri}: Could not identify feed type in {elapsed} ms: {body}",
-                uri,
-                loadTimer.ElapsedMilliseconds,
-                body
-            );
-        }
+            => EndGetFeed(uri, "unrecognizable", "???", response, null, loadTimer); // TODO: Body
 
         public static void EndGetFeedFailure(Uri uri, HttpResponseMessage response, string body, Stopwatch loadTimer)
-        {
-            Get().Error(
-                "{uri}: Got failure status code {code} in {elapsed} ms: {body}",
-                uri,
-                response.StatusCode,
-                loadTimer.ElapsedMilliseconds,
-                body
-            );
-        }
+            => EndGetFeed(uri, "failure", null, response, null, loadTimer, null); // TODO: Body
 
         public static void EndGetFeedNotModified(Uri uri, HttpResponseMessage response, Stopwatch loadTimer)
-        {
-            Get().Information("{uri}: Got feed not modified in {elapsed} ms", uri, loadTimer.ElapsedMilliseconds);
-        }
+            => EndGetFeed(uri, "not_modified", null, response, null, loadTimer, null);
 
         public static void EndGetFeedMovedPermanently(Uri uri, HttpResponseMessage response, Stopwatch loadTimer)
-        {
-            Get().Information(
-                "{uri}: Feed moved permanently to {location} in {elapsed} ms",
-                uri,
-                response.Headers.Location,
-                loadTimer.ElapsedMilliseconds);
-        }
+            => EndGetFeed(uri, "moved", null, response, null, loadTimer, null);
 
         public static void ConsideringImage(Uri baseUrl, Uri uri, string kind, int area, float ratio)
         {
@@ -103,7 +88,7 @@
 
         public static void GetObjectAccessDenied(string bucket, string key, Stopwatch timer)
             => Get().Information(
-                "Object {key} access denied in S3 bucket {bucket} ({elapsed}ms)",
+                "Object {key} access denied in S3 bucket {bucket} ({elapsed_ms}ms)",
                 key, bucket, timer.ElapsedMilliseconds
             );
 
@@ -145,7 +130,7 @@
         public static void EndLoadThumbnails(Uri baseUri, RiverItem[] items, Stopwatch loadTimer)
         {
             Get().Information(
-                "{baseUrl}: Finished loading thumbs for {count} items in {elapsed} ms",
+                "{baseUrl}: Finished loading thumbs for {count} items in {elapsed_ms} ms",
                 baseUri,
                 items.Length,
                 loadTimer.ElapsedMilliseconds);
@@ -159,7 +144,7 @@
         public static void EndGetThumbsFromSoup(Uri baseUrl, int length, Stopwatch loadTimer)
         {
             Get().Information(
-                "{baseUrl}: Loaded {length} thumbnails in {elapsed} ms",
+                "{baseUrl}: Loaded {length} thumbnails in {elapsed_ms} ms",
                 baseUrl, length, loadTimer.ElapsedMilliseconds);
         }
 
@@ -188,10 +173,8 @@
             Get().Information("{baseUrl}: {url}: Cached Error: {error}", baseUrl, imageUrl, (string)cachedObject);
         }
 
-        public static void FeedTimeout(Uri uri, Stopwatch loadTimer)
-        {
-            Get().Error("{url}: Timeout after {elapsed} ms", uri, loadTimer.ElapsedMilliseconds);
-        }
+        public static void FeedTimeout(Uri uri, Stopwatch loadTimer, Exception error)
+            => EndGetFeed(uri, "timeout", null, null, null, loadTimer, error);
 
         public static void ThumbnailTimeout(Uri baseUrl, Uri imageUri, string kind)
         {
@@ -227,7 +210,7 @@
         public static void PutObjectComplete(string bucket, string name, string type, Stopwatch timer, Stream stream)
         {
             Get().Verbose(
-                "Put Object: {bucket}/{name} ({type}, {len} bytes) in {elapsed}ms",
+                "Put Object: {bucket}/{name} ({type}, {len} bytes) in {elapsed_ms}ms",
                 bucket, name, type, stream.Length, timer.ElapsedMilliseconds
             );
         }
@@ -235,7 +218,7 @@
         public static void GetObjectComplete(string bucket, string name, Stopwatch timer)
         {
             Get().Verbose(
-                "Get Object: {bucket}/{name} in {elapsed}ms",
+                "Get Object: {bucket}/{name} in {elapsed_ms}ms",
                 bucket, name, timer.ElapsedMilliseconds
             );
         }
@@ -245,7 +228,7 @@
         {
             Get().Error(
                 error,
-                "Put Object: ERROR {bucket}/{name} ({type}) in {elapsed}ms: {code}: {body}",
+                "Put Object: ERROR {bucket}/{name} ({type}) in {elapsed_ms}ms: {code}: {body}",
                 bucket, name, type, timer.ElapsedMilliseconds, code, body
             );
         }
@@ -255,46 +238,46 @@
         {
             Get().Error(
                 error,
-                "Get Object: ERROR {bucket}/{name} in {elapsed}ms: {code}: {body}",
+                "Get Object: ERROR {bucket}/{name} in {elapsed_ms}ms: {code}: {body}",
                 bucket, name, timer.ElapsedMilliseconds, code, body
             );
         }
 
-        public static void GetObjectNotFound(string bucket, string name, Stopwatch timer) 
+        public static void GetObjectNotFound(string bucket, string name, Stopwatch timer)
             => Get().Information(
-                "Object {name} not found in S3 bucket {bucket} ({elapsed}ms)",
+                "Object {name} not found in S3 bucket {bucket} ({elapsed_ms}ms)",
                 name, bucket, timer.ElapsedMilliseconds);
 
-        public static void DetectFeedServerError(Uri uri, HttpResponseMessage response) 
+        public static void DetectFeedServerError(Uri uri, HttpResponseMessage response)
             => Get().Warning("Error detecting feed @ {url}: {status}", uri.AbsoluteUri, response.StatusCode);
 
-        public static void DetectFeedLoadFeedError(Uri feedUri, HttpStatusCode lastStatus) 
+        public static void DetectFeedLoadFeedError(Uri feedUri, HttpStatusCode lastStatus)
             => Get().Warning("Error loading detected feed @ {url}: {status}", feedUri.AbsoluteUri, lastStatus);
 
-        public static void FindFeedBaseWasFeed(Uri baseUri) 
+        public static void FindFeedBaseWasFeed(Uri baseUri)
             => Get().Debug("{base}: Base URL was a feed.", baseUri.AbsoluteUri);
 
-        public static void FindFeedCheckingBase(Uri baseUri) 
+        public static void FindFeedCheckingBase(Uri baseUri)
             => Get().Debug("{base}: Checking base URL...", baseUri.AbsoluteUri);
 
-        public static void FindFeedCheckingLinkElements(Uri baseUri) 
+        public static void FindFeedCheckingLinkElements(Uri baseUri)
             => Get().Debug("{base}: Checking link elements...", baseUri.AbsoluteUri);
 
-        public static void FindFeedFoundLinkElements(Uri baseUri, List<Uri> linkUrls) 
+        public static void FindFeedFoundLinkElements(Uri baseUri, List<Uri> linkUrls)
             => Get().Debug("{base}: Found {count} link elements.", baseUri.AbsoluteUri, linkUrls.Count);
 
-        public static void FindFeedCheckingAnchorElements(Uri baseUri) 
+        public static void FindFeedCheckingAnchorElements(Uri baseUri)
             => Get().Debug("{base}: Checking anchor elements...", baseUri.AbsoluteUri);
 
-        public static void FindFeedFoundSomeAnchors(Uri baseUri, List<Uri> localGuesses, List<Uri> remoteGuesses) 
+        public static void FindFeedFoundSomeAnchors(Uri baseUri, List<Uri> localGuesses, List<Uri> remoteGuesses)
             => Get().Debug(
                 "{base}: Found {localCount} local and {remoteCount} remote anchors.",
                 baseUri.AbsoluteUri, localGuesses.Count, remoteGuesses.Count);
 
-        public static void FindFeedsFoundLocalGuesses(Uri baseUri, List<Uri> localAnchors) 
+        public static void FindFeedsFoundLocalGuesses(Uri baseUri, List<Uri> localAnchors)
             => Get().Debug("{base}: Found {count} local anchors.", baseUri.AbsoluteUri, localAnchors.Count);
 
-        public static void FindFeedsFoundRemoteGuesses(Uri baseUri, List<Uri> remoteAnchors) 
+        public static void FindFeedsFoundRemoteGuesses(Uri baseUri, List<Uri> remoteAnchors)
             => Get().Debug("{base}: Found {count} remote anchors.", baseUri.AbsoluteUri, remoteAnchors.Count);
 
         public static void FindFeedsFoundRandomGuesses(Uri baseUri, List<Uri> randomGuesses)
@@ -310,11 +293,11 @@
             => Get().Verbose("{id}: Splitting feed with {count} items in it...", id, river.UpdatedFeeds.Feeds.Count);
 
         public static void AggregateRefreshed(string id, Stopwatch aggregateTimer)
-            => Get().Information("{id}: Refreshed in {elapsed}ms", id, aggregateTimer.ElapsedMilliseconds);
+            => Get().Information("{id}: Refreshed in {elapsed_ms}ms", id, aggregateTimer.ElapsedMilliseconds);
 
         public static void UpdatingAggregate(string id) => Get().Information("{id}: Updating aggregate", id);
 
-        public static void AggregateHasNewFeeds(string id, int newFeedsCount) 
+        public static void AggregateHasNewFeeds(string id, int newFeedsCount)
             => Get().Information("{id}: Resulted in {riverCount} new feeds", id, newFeedsCount);
 
         public static void AggregateFeedState(
@@ -323,13 +306,151 @@
                 "{id}: {feedUrl}: Has {count} new items @ {lastUpdate}",
                 id, metadataOriginUrl, newUpdatesLength, biggestUpdate);
 
-        public static void AggregateNewUpdates(string id, Uri metadataOriginUrl, int newUpdatesLength) 
+        public static void AggregateNewUpdates(string id, Uri metadataOriginUrl, int newUpdatesLength)
             => Get().Debug("{id}: {feedUrl}: Has {count} new updates", id, metadataOriginUrl, newUpdatesLength);
 
-        public static void AggregateRefreshPulledRivers(string id, int riversLength) 
+        public static void AggregateRefreshPulledRivers(string id, int riversLength)
             => Get().Information("{id}: Pulled {riverCount} rivers", id, riversLength);
 
-        public static void AggregateRefreshStart(string id, int feedUrlsCount) 
+        public static void AggregateRefreshStart(string id, int feedUrlsCount)
             => Get().Information("{id}: Refreshing aggregate with {feedUrlCount} feeds", id, feedUrlsCount);
     }
+
+    public class HoneycombSink : PeriodicBatchingSink
+    {
+        HttpClient client;
+        string dataset;
+
+        public HoneycombSink(string defaultDataset, string writeKey, int batchSizeLimit, TimeSpan period)
+            : base(batchSizeLimit, period)
+        {
+            this.client = new HttpClient();
+            this.client.BaseAddress = new Uri("https://api.honeycomb.io/1/");
+            this.client.DefaultRequestHeaders.Add("X-Honeycomb-Team", writeKey);
+
+            this.dataset = defaultDataset;
+
+        }
+
+        protected override bool CanInclude(LogEvent evt)
+        {
+            return base.CanInclude(evt);
+        }
+
+        protected override Task EmitBatchAsync(IEnumerable<LogEvent> events)
+            => Task.WhenAll(events.Select(e => SendEvent(e)).ToArray());
+
+        async Task SendEvent(LogEvent logEvent)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, "events/" + this.dataset)
+            {
+                Content = new StringContent(
+                    content: JsonConvert.SerializeObject(EventToJObject(logEvent)),
+                    encoding: Encoding.UTF8,
+                    mediaType: "application/json"
+                ),
+                Headers =
+                {
+                    { "X-Honeycomb-Event-Time", logEvent.Timestamp.ToString("o") },
+                }
+            };
+
+            using (HttpResponseMessage message = await client.SendAsync(request))
+            {
+                // TODO: Log if unsuccessful. This requires... hum.
+                if (!message.IsSuccessStatusCode)
+                {
+                    string msg = await message.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Warning: Failed to send event: {message.StatusCode}: {msg}");
+                }
+            }
+        }
+
+        public static JObject EventToJObject(LogEvent logEvent)
+        {
+            JObject evt = new JObject(
+                new JProperty("message", logEvent.RenderMessage()),
+                new JProperty("level", logEvent.Level.ToString())
+            );
+            foreach (KeyValuePair<string, LogEventPropertyValue> prop in logEvent.Properties)
+            {
+                evt[prop.Key] = ConvertPropertyValue(prop.Value);
+            }
+
+            return evt;
+        }
+
+        static JToken ConvertPropertyValue(LogEventPropertyValue value)
+        {
+            var scalar = value as ScalarValue;
+            if (scalar != null) { return ConvertScalarValue(scalar); }
+
+            var seq = value as SequenceValue;
+            if (seq != null) { return ConvertSequenceValue(seq); }
+
+            var strct = value as StructureValue;
+            if (strct != null) { return ConvertStructureValue(strct); }
+
+            var dict = value as DictionaryValue;
+            if (dict != null) { return ConvertDictionaryValue(dict); }
+
+            // TODO: Log or something.
+            return JValue.CreateUndefined();
+        }
+
+        static JToken ConvertDictionaryValue(DictionaryValue dict)
+        {
+            JObject obj = new JObject();
+            foreach (KeyValuePair<ScalarValue, LogEventPropertyValue> kvp in dict.Elements)
+            {
+                string propname = kvp.Key.Value?.ToString() ?? "<<null>>";
+                obj.Add(propname, ConvertPropertyValue(kvp.Value));
+            }
+            return obj;
+        }
+
+        static JToken ConvertStructureValue(StructureValue strct)
+        {
+            JObject obj = new JObject();
+            obj.Add("__type", new JValue(strct.TypeTag));
+            foreach (LogEventProperty prop in strct.Properties)
+            {
+                obj.Add(prop.Name, ConvertPropertyValue(prop.Value));
+            }
+            return obj;
+        }
+
+        static JToken ConvertSequenceValue(SequenceValue seq)
+        {
+            JArray arr = new JArray();
+            foreach (LogEventPropertyValue elem in seq.Elements)
+            {
+                arr.Add(ConvertPropertyValue(elem));
+            }
+            return arr;
+        }
+
+        static JToken ConvertScalarValue(ScalarValue scalar)
+        {
+            return new JValue(scalar.Value);
+        }
+    }
+
+    public static class LoggerConfigurationHoneycombExtensions
+    {
+        public static LoggerConfiguration Honeycomb(
+            this LoggerSinkConfiguration sinkConfiguration,
+            string dataset,
+            string writeKey,
+            int batchSizeLimit = 50,
+            TimeSpan? period = null,
+            LogEventLevel restrictedToMinimumLevel = LogEventLevel.Verbose)
+        {
+            return sinkConfiguration.Sink(
+                new HoneycombSink(dataset, writeKey, batchSizeLimit, period ?? TimeSpan.FromMinutes(1)),
+                restrictedToMinimumLevel
+            );
+        }
+    }
+
 }

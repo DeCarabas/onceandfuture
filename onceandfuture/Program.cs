@@ -76,15 +76,21 @@
                 {
                     Console.WriteLine(Options.GetHelp(parsedArgs.Verb));
                     return 0;
-                }                
+                }
 
                 // Global configuration.
                 var logLevel = (LogEventLevel)Math.Max((int)(LogEventLevel.Error - parsedArgs["verbose"].Count), 0);
-                Serilog.Log.Logger = new LoggerConfiguration()
+                var logConfig = new LoggerConfiguration()
                     .Enrich.FromLogContext()
                     .MinimumLevel.Is(logLevel)
-                    .WriteTo.LiterateConsole()
-                    .CreateLogger();
+                    .WriteTo.LiterateConsole();
+                string honeycomb_key = Environment.GetEnvironmentVariable("HONEYCOMB_KEY");
+                if (honeycomb_key != null)
+                {
+                    Console.WriteLine("(Honeycomb configured.)");
+                    logConfig.WriteTo.Honeycomb("server", honeycomb_key);
+                }
+                Serilog.Log.Logger = logConfig.CreateLogger();
 
                 return parsedArgs.Verb.Handler(parsedArgs);
             }
