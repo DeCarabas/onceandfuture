@@ -20,8 +20,6 @@ UI:
 - When removing a feed, remove from sources.
 - Hook progress to adding feed, including idle ping
 - Deal with the case where you find multiple feeds.
-- Fix up the top-line update name thing-- top of river should already have
-  promoted update name.
 
 Back-end Stuff:
 - Measure things:

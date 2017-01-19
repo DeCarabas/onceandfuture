@@ -29544,8 +29544,11 @@
 	    key: 'render',
 	    value: function render() {
 	      var stuck = findChild(this.state.titles, this.state.scrollTop);
+	      // if (!stuck) { stuck = this.state.titles[0]; }
 	      var stuckChild = null;
+	      var stuckWidth = 'auto';
 	      if (stuck) {
+	        stuckWidth = stuck.getWidth();
 	        stuckChild = _react2.default.createElement(
 	          'div',
 	          { style: stuck.props.style },
@@ -29555,7 +29558,9 @@
 	
 	      var pinstyle = Object.assign({}, this.props.style, {
 	        bottom: undefined,
-	        height: 'auto'
+	        height: 'auto',
+	        right: undefined,
+	        width: stuckWidth
 	      });
 	
 	      return _react2.default.createElement(
@@ -29615,6 +29620,15 @@
 	    key: 'getOffsetTop',
 	    value: function getOffsetTop() {
 	      return this.placeholder.offsetTop;
+	    }
+	
+	    // The 3 here is a margin or padding or something I forget anyway it should
+	    // be read but I don't know how.
+	
+	  }, {
+	    key: 'getWidth',
+	    value: function getWidth() {
+	      return this.placeholder.offsetWidth + 3;
 	    }
 	  }, {
 	    key: 'render',

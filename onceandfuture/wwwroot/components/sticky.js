@@ -73,15 +73,20 @@ export class StickyContainer extends React.Component {
   }
 
   render() {
-    const stuck = findChild(this.state.titles, this.state.scrollTop);
+    let stuck = findChild(this.state.titles, this.state.scrollTop);
+    // if (!stuck) { stuck = this.state.titles[0]; }
     let stuckChild = null;
+    let stuckWidth = 'auto';
     if (stuck) {
+      stuckWidth = stuck.getWidth();
       stuckChild = <div style={stuck.props.style}>{stuck.props.children}</div>;
     }
 
     const pinstyle = Object.assign({}, this.props.style, {
       bottom: undefined,
-      height: 'auto'
+      height: 'auto',
+      right: undefined,
+      width: stuckWidth,
     });
 
     return <div>
@@ -116,6 +121,10 @@ export class StickyTitle extends React.Component {
   }
 
   getOffsetTop() { return this.placeholder.offsetTop; }
+
+  // The 3 here is a margin or padding or something I forget anyway it should
+  // be read but I don't know how.
+  getWidth() { return this.placeholder.offsetWidth + 3; }
 
   render() {
     return <div ref={this.gotElement} style={this.props.style}>{this.props.children}</div>;
