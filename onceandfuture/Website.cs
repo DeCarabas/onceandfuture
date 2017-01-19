@@ -737,6 +737,8 @@
                 RiverDefinition newRiver = river.With(feeds: river.Feeds.Add(feedUrl));
                 UserProfile newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
                 await this.profileStore.SaveProfileFor(user, newProfile);
+
+                await this.feedParser.FetchAndUpdateRiver(feedUrl);
                 await this.feedParser.RefreshAggregateRiverWithFeeds(newRiver.Id, new[] { feedUrl });
 
                 river = newRiver;
