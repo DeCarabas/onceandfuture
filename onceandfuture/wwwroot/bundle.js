@@ -29717,9 +29717,13 @@
 	  var item = _ref.item;
 	
 	  var style = {
-	    fontSize: _style.ITEM_TITLE_FONT_SIZE
+	    fontSize: _style.ITEM_TITLE_FONT_SIZE,
+	    overflowWrap: "break-word"
 	  };
 	  var titleText = item.title || item.pubDate;
+	  if (titleText.length > 280) {
+	    titleText = titleText.substring(0, 280);
+	  }
 	  return _react2.default.createElement(
 	    _riverlink2.default,
 	    { href: item.link },

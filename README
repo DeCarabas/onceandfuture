@@ -18,7 +18,6 @@ UI:
 - Import/export OPML
 - Font size for bubbles is wrong.
 - When removing a feed, remove from sources.
-- Force line breaks on titles (they are very long when they have urls)
 - Hook progress to adding feed, including idle ping
 - Deal with the case where you find multiple feeds.
 - Fix up the top-line update name thing-- top of river should already have
@@ -43,7 +42,6 @@ Shipping:
 - Re-pack font awesome fonts
 - Implement ATOM cache timeout and RSS skip hours and the like to poll more
   intelligently.
-- Clip titles that are too long. (Because seriously.)
 
 Later:
 - Extract enclosures and the like, store locally (in the DB) and present them
