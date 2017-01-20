@@ -76,9 +76,11 @@ export class StickyContainer extends React.Component {
     let stuck = findChild(this.state.titles, this.state.scrollTop);
     // if (!stuck) { stuck = this.state.titles[0]; }
     let stuckChild = null;
-    let stuckWidth = 'auto';
+    let stuckWidth = undefined;
+    let stuckLeft = undefined;
     if (stuck) {
-      stuckWidth = stuck.getWidth();
+      stuckLeft = stuck.getOffsetLeft();
+      stuckWidth = stuck.getOffsetWidth() + stuckLeft;
       stuckChild = <div style={stuck.props.style}>{stuck.props.children}</div>;
     }
 
@@ -87,6 +89,7 @@ export class StickyContainer extends React.Component {
       height: 'auto',
       right: undefined,
       width: stuckWidth,
+      paddingLeft: stuckLeft,
     });
 
     return <div>
@@ -120,11 +123,13 @@ export class StickyTitle extends React.Component {
     this.context.stickyContainer.childDidUpdate(this);
   }
 
+  getOffsetLeft() { return this.placeholder.offsetLeft; }
+
   getOffsetTop() { return this.placeholder.offsetTop; }
 
   // The 3 here is a margin or padding or something I forget anyway it should
   // be read but I don't know how.
-  getWidth() { return this.placeholder.offsetWidth + 3; }
+  getOffsetWidth() { return this.placeholder.offsetWidth; }
 
   render() {
     return <div ref={this.gotElement} style={this.props.style}>{this.props.children}</div>;

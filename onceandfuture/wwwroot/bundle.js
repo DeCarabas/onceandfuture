@@ -29546,9 +29546,11 @@
 	      var stuck = findChild(this.state.titles, this.state.scrollTop);
 	      // if (!stuck) { stuck = this.state.titles[0]; }
 	      var stuckChild = null;
-	      var stuckWidth = 'auto';
+	      var stuckWidth = undefined;
+	      var stuckLeft = undefined;
 	      if (stuck) {
-	        stuckWidth = stuck.getWidth();
+	        stuckLeft = stuck.getOffsetLeft();
+	        stuckWidth = stuck.getOffsetWidth() + stuckLeft;
 	        stuckChild = _react2.default.createElement(
 	          'div',
 	          { style: stuck.props.style },
@@ -29560,7 +29562,8 @@
 	        bottom: undefined,
 	        height: 'auto',
 	        right: undefined,
-	        width: stuckWidth
+	        width: stuckWidth,
+	        paddingLeft: stuckLeft
 	      });
 	
 	      return _react2.default.createElement(
@@ -29617,6 +29620,11 @@
 	      this.context.stickyContainer.childDidUpdate(this);
 	    }
 	  }, {
+	    key: 'getOffsetLeft',
+	    value: function getOffsetLeft() {
+	      return this.placeholder.offsetLeft;
+	    }
+	  }, {
 	    key: 'getOffsetTop',
 	    value: function getOffsetTop() {
 	      return this.placeholder.offsetTop;
@@ -29626,9 +29634,9 @@
 	    // be read but I don't know how.
 	
 	  }, {
-	    key: 'getWidth',
-	    value: function getWidth() {
-	      return this.placeholder.offsetWidth + 3;
+	    key: 'getOffsetWidth',
+	    value: function getOffsetWidth() {
+	      return this.placeholder.offsetWidth;
 	    }
 	  }, {
 	    key: 'render',
