@@ -13,8 +13,6 @@ UI:
 - Account creation flow
 - Recover lost password flow
 - Add/remove river sets
-- More/less UX is jarring. Fixing this, though, requires restricting the
-  number of items that I can have in a river at once, at least initially.
 - Import/export OPML
 - Font size for bubbles is wrong.
 - When removing a feed, remove from sources.

@@ -13,11 +13,12 @@ const MoreBox = ({update, river_index, expand, collapse}) => {
     };
     if (!update.expanded) {
       const click = expand(river_index, update_key(update));
-      return <p style={moreStyle} onClick={click}>More...</p>;
-    } else {
-      const click = collapse(river_index, update_key(update));
-      return <p style={moreStyle} onClick={click}>Less...</p>;
+      return <p style={moreStyle} onClick={click}>See more...</p>;
     }
+    //  else {
+    //   const click = collapse(river_index, update_key(update));
+    //   return <p style={moreStyle} onClick={click}>Less...</p>;
+    // }
   }
 
   return <p />;

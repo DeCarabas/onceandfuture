@@ -29276,16 +29276,13 @@
 	      return _react2.default.createElement(
 	        'p',
 	        { style: moreStyle, onClick: click },
-	        'More...'
-	      );
-	    } else {
-	      var _click = collapse(river_index, (0, _util.update_key)(update));
-	      return _react2.default.createElement(
-	        'p',
-	        { style: moreStyle, onClick: _click },
-	        'Less...'
+	        'See more...'
 	      );
 	    }
+	    //  else {
+	    //   const click = collapse(river_index, update_key(update));
+	    //   return <p style={moreStyle} onClick={click}>Less...</p>;
+	    // }
 	  }
 	
 	  return _react2.default.createElement('p', null);
