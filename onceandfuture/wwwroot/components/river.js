@@ -23,16 +23,23 @@ import {
 function modalForRiver(river, index, dismiss, dispatch) {
   const style = {
     position: 'absolute',
-    top: SIZE_RIVER_MODAL_TOP, bottom: 0,
+    top: SIZE_RIVER_MODAL_TOP,
     width: '100%',
-    overflowY: 'auto',
   };
   const modal = river.modal || {};
   let control;
   switch (modal.kind) {
-    case 'loading': control = <RiverProgress percent={modal.percent} />; break;
-    case 'settings': control = <RiverSettings river={river} index={index} />; break;
-    case 'bubble': control = <RiverBalloon info={modal.info}  dismiss={dismiss} dispatchAction={dispatch} />; break;
+    case 'loading':
+      control = <RiverProgress percent={modal.percent} />;
+      break;
+    case 'settings':
+      control = <RiverSettings river={river} index={index} />;
+      style.bottom = 0;
+      style.overflowY = 'auto';
+      break;
+    case 'bubble':
+      control = <RiverBalloon info={modal.info}  dismiss={dismiss} dispatchAction={dispatch} />;
+      break;
     default: return <span />;
   }
   return <div style={style}>
