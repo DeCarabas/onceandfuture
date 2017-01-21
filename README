@@ -15,7 +15,6 @@ UI:
 - Add/remove river sets
 - Import/export OPML
 - Font size for bubbles is wrong.
-- When removing a feed, remove from sources.
 - Hook progress to adding feed, including idle ping
 - Deal with the case where you find multiple feeds.
 

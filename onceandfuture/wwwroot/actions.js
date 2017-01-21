@@ -623,6 +623,7 @@ export function riverRemoveSource(index, river, source_id, source_url) {
     },
     loaded_json: (dispatch, result) => {
       dispatch(riverRemoveSourceSuccess(index, river, result, source_url));
+      dispatch(refreshRiver(index, river.name, river.url, river.id));
     },
     error: (dispatch, message) => {
       dispatch(riverRemoveSourceError(index, river, message));

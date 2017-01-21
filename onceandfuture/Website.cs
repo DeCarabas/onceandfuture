@@ -738,7 +738,19 @@
                 UserProfile newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
                 await this.profileStore.SaveProfileFor(user, newProfile);
 
-                await this.feedParser.FetchAndUpdateRiver(feedUrl);
+                // Grab some number of items out of the udpated river; we're gonna forge an update.
+                River parsedFeed = await this.feedParser.FetchAndUpdateRiver(feedUrl);
+                RiverFeed newUpdate = parsedFeed.UpdatedFeeds.Feeds[0].With(
+                    items: parsedFeed.UpdatedFeeds.Feeds.SelectMany(f => f.Items).Take(30));
+
+                River aggregate = await this.aggregateStore.LoadAggregate(newRiver.Id);
+                River newAggregate = aggregate.With(
+                    updatedFeeds: aggregate.UpdatedFeeds.With(
+                        feeds: aggregate.UpdatedFeeds.Feeds.Insert(0, newUpdate)
+                    )
+                );
+                await this.aggregateStore.WriteAggregate(newRiver.Id, newAggregate);
+
                 await this.feedParser.RefreshAggregateRiverWithFeeds(newRiver.Id, new[] { feedUrl });
 
                 river = newRiver;
@@ -772,6 +784,14 @@
 
             if (newRiver.Feeds.Count != river.Feeds.Count)
             {
+                // Remove all instances of the source from the current aggregate.
+                River aggregate = await this.aggregateStore.LoadAggregate(id);
+                ImmutableList<RiverFeed> newFeeds = aggregate.UpdatedFeeds.Feeds.RemoveAll(
+                    f => Util.HashString(f.FeedUrl.AbsoluteUri) == sourceId);
+                River newAggregate = aggregate.With(updatedFeeds: aggregate.UpdatedFeeds.With(feeds: newFeeds));
+                await this.aggregateStore.WriteAggregate(id, newAggregate);
+
+                // Remove the source from the profile.
                 UserProfile newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
                 await this.profileStore.SaveProfileFor(user, newProfile);
             }

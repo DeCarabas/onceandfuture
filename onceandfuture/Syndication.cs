@@ -1830,7 +1830,7 @@
         {
             Stopwatch aggregateTimer = Stopwatch.StartNew();
 
-            River river = await aggregateStore.LoadAggregate(id);
+            River river = await this.aggregateStore.LoadAggregate(id);
 
             Log.AggregateRefreshStart(id, feedUrls.Count);
             DateTimeOffset lastUpdated = river.UpdatedFeeds.Feeds.Count > 0
