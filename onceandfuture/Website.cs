@@ -1191,6 +1191,9 @@
             }
         }
 
+        [HttpGet("/health/ping")]
+        public IActionResult Ping() => Ok();
+
         [HttpGet("/health")]
         public async Task<IActionResult> HealthView()
         {
