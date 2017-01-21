@@ -1,7 +1,6 @@
 import React from 'react';
 import RiverFeedUpdate from './riverfeedupdate';
 import { update_key } from '../util';
-import { StickyContainer } from './sticky';
 
 const RiverUpdates = ({river, index}) => {
   const TOP_SPACE = 65;
@@ -26,7 +25,7 @@ const RiverUpdates = ({river, index}) => {
       />
   );
 
-  return <StickyContainer style={style}>{update_nodes}</StickyContainer>;
+  return <div style={style}>{update_nodes}</div>;
 };
 
 export default RiverUpdates;

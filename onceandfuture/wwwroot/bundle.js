@@ -29199,8 +29199,6 @@
 	
 	var _util = __webpack_require__(/*! ../util */ 223);
 	
-	var _sticky = __webpack_require__(/*! ./sticky */ 246);
-	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var RiverUpdates = function RiverUpdates(_ref) {
@@ -29230,7 +29228,7 @@
 	  });
 	
 	  return _react2.default.createElement(
-	    _sticky.StickyContainer,
+	    'div',
 	    { style: style },
 	    update_nodes
 	  );
@@ -29265,7 +29263,7 @@
 	
 	var _riverfeedupdatetitle2 = _interopRequireDefault(_riverfeedupdatetitle);
 	
-	var _riveritem = __webpack_require__(/*! ./riveritem */ 247);
+	var _riveritem = __webpack_require__(/*! ./riveritem */ 246);
 	
 	var _riveritem2 = _interopRequireDefault(_riveritem);
 	
@@ -29385,8 +29383,6 @@
 	
 	var _reltime2 = _interopRequireDefault(_reltime);
 	
-	var _sticky = __webpack_require__(/*! ./sticky */ 246);
-	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var RiverFeedUpdateTitle = function RiverFeedUpdateTitle(_ref) {
@@ -29401,7 +29397,7 @@
 	    null,
 	    _react2.default.createElement('hr', null),
 	    _react2.default.createElement(
-	      _sticky.StickyTitle,
+	      'div',
 	      { style: style },
 	      _react2.default.createElement(
 	        'div',
@@ -29423,249 +29419,6 @@
 
 /***/ },
 /* 246 */
-/*!**************************************!*\
-  !*** ./wwwroot/components/sticky.js ***!
-  \**************************************/
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
-	exports.StickyTitle = exports.StickyContainer = undefined;
-	
-	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-	
-	var _react = __webpack_require__(/*! react */ 1);
-	
-	var _react2 = _interopRequireDefault(_react);
-	
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-	
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-	
-	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-	
-	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-	
-	function findChild(childs, offset) {
-	  var min = 0;
-	  var max = childs.length - 1;
-	  while (min <= max) {
-	    var index = min + Math.floor((max - min) / 2);
-	    var child = childs[index];
-	    var indexOffset = child.getOffsetTop();
-	    if (indexOffset === offset) {
-	      return child;
-	    } else if (indexOffset > offset) {
-	      max = index - 1;
-	    } else {
-	      min = index + 1;
-	    }
-	  }
-	
-	  if (max < 0) {
-	    return null;
-	  }
-	  return childs[max];
-	}
-	
-	var StickyContainer = exports.StickyContainer = function (_React$Component) {
-	  _inherits(StickyContainer, _React$Component);
-	
-	  function StickyContainer(props) {
-	    _classCallCheck(this, StickyContainer);
-	
-	    var _this = _possibleConstructorReturn(this, (StickyContainer.__proto__ || Object.getPrototypeOf(StickyContainer)).call(this, props));
-	
-	    _this.state = { scrollTop: 0, titles: [], sorted: true };
-	    _this.handleScroll = _this.handleScroll.bind(_this);
-	    return _this;
-	  }
-	
-	  _createClass(StickyContainer, [{
-	    key: 'getChildContext',
-	    value: function getChildContext() {
-	      return { stickyContainer: this };
-	    }
-	  }, {
-	    key: 'childDidMount',
-	    value: function childDidMount(child) {
-	      var _this2 = this;
-	
-	      this.setState(function (prevState) {
-	        var newTitles = [].concat(prevState.titles, child);
-	        return _this2.handleUpdate(newTitles);
-	      });
-	    }
-	  }, {
-	    key: 'childDidUpdate',
-	    value: function childDidUpdate() {
-	      var _this3 = this;
-	
-	      this.setState(function (prevState) {
-	        return _this3.handleUpdate(prevState.titles);
-	      });
-	    }
-	  }, {
-	    key: 'handleUpdate',
-	    value: function handleUpdate(newTitles) {
-	      newTitles.sort(function (a, b) {
-	        return a.getOffsetTop() - b.getOffsetTop();
-	      });
-	      return { titles: newTitles };
-	    }
-	  }, {
-	    key: 'childWillUnmount',
-	    value: function childWillUnmount(child) {
-	      var _this4 = this;
-	
-	      return this.setState(function (prevState) {
-	        var index = _this4.state.titles.findIndex(function (c) {
-	          return c === child;
-	        });
-	        if (index >= 0) {
-	          var newTitles = Array.from(prevState.titles);
-	          newTitles.splice(index, 1);
-	          return { titles: newTitles };
-	        } else {
-	          return {};
-	        }
-	      });
-	    }
-	  }, {
-	    key: 'handleScroll',
-	    value: function handleScroll(event) {
-	      var _this5 = this;
-	
-	      this.lastScrollPosition = event.target.scrollTop;
-	      if (!this.ticking) {
-	        window.requestAnimationFrame(function () {
-	          _this5.setState({ scrollTop: _this5.lastScrollPosition });
-	          _this5.ticking = false;
-	        });
-	      }
-	      this.ticking = true;
-	    }
-	  }, {
-	    key: 'render',
-	    value: function render() {
-	      var stuck = findChild(this.state.titles, this.state.scrollTop);
-	      // if (!stuck) { stuck = this.state.titles[0]; }
-	      var stuckChild = null;
-	      var stuckWidth = undefined;
-	      var stuckLeft = undefined;
-	      if (stuck) {
-	        stuckLeft = stuck.getOffsetLeft();
-	        stuckWidth = stuck.getOffsetWidth() + stuckLeft;
-	        stuckChild = _react2.default.createElement(
-	          'div',
-	          { style: stuck.props.style },
-	          stuck.props.children
-	        );
-	      }
-	
-	      var pinstyle = Object.assign({}, this.props.style, {
-	        bottom: undefined,
-	        height: 'auto',
-	        right: undefined,
-	        width: stuckWidth,
-	        paddingLeft: stuckLeft
-	      });
-	
-	      return _react2.default.createElement(
-	        'div',
-	        null,
-	        _react2.default.createElement(
-	          'div',
-	          { style: this.props.style, onScroll: this.handleScroll },
-	          this.props.children
-	        ),
-	        _react2.default.createElement(
-	          'div',
-	          { style: pinstyle },
-	          stuckChild
-	        )
-	      );
-	    }
-	  }]);
-	
-	  return StickyContainer;
-	}(_react2.default.Component);
-	
-	StickyContainer.childContextTypes = {
-	  stickyContainer: _react2.default.PropTypes.object
-	};
-	
-	var StickyTitle = exports.StickyTitle = function (_React$Component2) {
-	  _inherits(StickyTitle, _React$Component2);
-	
-	  function StickyTitle(props) {
-	    _classCallCheck(this, StickyTitle);
-	
-	    var _this6 = _possibleConstructorReturn(this, (StickyTitle.__proto__ || Object.getPrototypeOf(StickyTitle)).call(this, props));
-	
-	    _this6.gotElement = function (element) {
-	      _this6.placeholder = element;
-	    };
-	    return _this6;
-	  }
-	
-	  _createClass(StickyTitle, [{
-	    key: 'componentDidMount',
-	    value: function componentDidMount() {
-	      this.context.stickyContainer.childDidMount(this);
-	    }
-	  }, {
-	    key: 'componentWillUnmount',
-	    value: function componentWillUnmount() {
-	      this.context.stickyContainer.childWillUnmount(this);
-	    }
-	  }, {
-	    key: 'componentDidUpdate',
-	    value: function componentDidUpdate() {
-	      this.context.stickyContainer.childDidUpdate(this);
-	    }
-	  }, {
-	    key: 'getOffsetLeft',
-	    value: function getOffsetLeft() {
-	      return this.placeholder.offsetLeft;
-	    }
-	  }, {
-	    key: 'getOffsetTop',
-	    value: function getOffsetTop() {
-	      return this.placeholder.offsetTop;
-	    }
-	
-	    // The 3 here is a margin or padding or something I forget anyway it should
-	    // be read but I don't know how.
-	
-	  }, {
-	    key: 'getOffsetWidth',
-	    value: function getOffsetWidth() {
-	      return this.placeholder.offsetWidth;
-	    }
-	  }, {
-	    key: 'render',
-	    value: function render() {
-	      return _react2.default.createElement(
-	        'div',
-	        { ref: this.gotElement, style: this.props.style },
-	        this.props.children
-	      );
-	    }
-	  }]);
-	
-	  return StickyTitle;
-	}(_react2.default.Component);
-	
-	StickyTitle.contextTypes = {
-	  stickyContainer: _react2.default.PropTypes.object
-	};
-
-/***/ },
-/* 247 */
 /*!*****************************************!*\
   !*** ./wwwroot/components/riveritem.js ***!
   \*****************************************/
@@ -29681,11 +29434,11 @@
 	
 	var _react2 = _interopRequireDefault(_react);
 	
-	var _riveritemtitle = __webpack_require__(/*! ./riveritemtitle */ 248);
+	var _riveritemtitle = __webpack_require__(/*! ./riveritemtitle */ 247);
 	
 	var _riveritemtitle2 = _interopRequireDefault(_riveritemtitle);
 	
-	var _riveritemthumbnail = __webpack_require__(/*! ./riveritemthumbnail */ 249);
+	var _riveritemthumbnail = __webpack_require__(/*! ./riveritemthumbnail */ 248);
 	
 	var _riveritemthumbnail2 = _interopRequireDefault(_riveritemthumbnail);
 	
@@ -29719,7 +29472,7 @@
 	exports.default = RiverItem;
 
 /***/ },
-/* 248 */
+/* 247 */
 /*!**********************************************!*\
   !*** ./wwwroot/components/riveritemtitle.js ***!
   \**********************************************/
@@ -29768,7 +29521,7 @@
 	exports.default = RiverItemTitle;
 
 /***/ },
-/* 249 */
+/* 248 */
 /*!**************************************************!*\
   !*** ./wwwroot/components/riveritemthumbnail.js ***!
   \**************************************************/
