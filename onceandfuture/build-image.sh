@@ -50,6 +50,7 @@ cd /app
 rm -rf /packages
 rm -rf /tmp/dotnet
 rm -rf /root/.nuget
+rm -rf /ImageSharp
 
 # I'd love to just drop the entire runtime after running mkbundle but mkbundle doesn't work for me yet.
 rm -rf /opt/mono/lib/mono/3.5-api/

@@ -23,10 +23,10 @@ namespace onceandfuture
         static readonly ILogger Logger = Serilog.Log.ForContext(HoneycombSink.DatasetPropertyKey, "Thumbnails");
 
         public static void LogThumbnail(
-            Uri referrer, 
-            Uri thumbnailUri, 
-            string kind, 
-            Image<Color> image, 
+            Uri referrer,
+            Uri thumbnailUri,
+            string kind,
+            Image<Color> image,
             string judgement,
             Exception exception = null)
         {
@@ -42,7 +42,7 @@ namespace onceandfuture
                 aspectRatio = (float)Math.Max(image.Width, image.Height) / (float)Math.Min(image.Width, image.Height);
                 area = image.Width * image.Height;
             }
-            
+
             Logger.Information(
                 exception,
                 "{Referrer}: Image {Thumbnail} ({Kind}): {Judgement} ({Width}x{Height} / Ratio: {AspectRatio} / Area: {Area})",
@@ -260,7 +260,7 @@ namespace onceandfuture
                         baseUrl);
                     if (sourceImage != null)
                     {
-                        Log.FoundThumbnail(baseUrl, thumbnailUrl, "EmbeddedThumb");
+                        ThumbnailLog.LogThumbnail(baseUrl, thumbnailUrl, "EmbeddedThumb", sourceImage, "Best");
                     }
                 }
             }
@@ -419,7 +419,7 @@ namespace onceandfuture
                     {
                         CacheError(bestImageUrl, "Not the best");
                         ThumbnailLog.LogThumbnail(baseUrl, bestImageUrl.Uri, bestImageUrl.Kind, bestImage, "NotBest");
-                    }                    
+                    }
 
                     bestArea = area;
                     bestImage = image;

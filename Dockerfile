@@ -1,7 +1,8 @@
 FROM decarabas/monodev:latest
-RUN mkdir app
+RUN mkdir app & mkdir ImageSharp
 WORKDIR app
 COPY ./onceandfuture .
+COPY ./ImageSharp ../ImageSharp
 
 RUN bash ./build-image.sh
 
