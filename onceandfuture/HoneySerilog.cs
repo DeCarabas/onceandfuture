@@ -15,8 +15,10 @@
 
     public class HoneycombSink : PeriodicBatchingSink
     {
+        public const string DatasetPropertyKey = "HoneycombDataset";
+
         HttpClient client;
-        string dataset;
+        string defaultDataset;
 
         public HoneycombSink(string defaultDataset, string writeKey, int batchSizeLimit, TimeSpan period)
             : base(batchSizeLimit, period)
@@ -25,7 +27,7 @@
             this.client.BaseAddress = new Uri("https://api.honeycomb.io/1/");
             this.client.DefaultRequestHeaders.Add("X-Honeycomb-Team", writeKey);
 
-            this.dataset = defaultDataset;
+            this.defaultDataset = defaultDataset;
 
         }
 
@@ -39,7 +41,11 @@
 
         async Task SendEvent(LogEvent logEvent)
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, "events/" + this.dataset)
+            LogEventPropertyValue datasetProperty = null;
+            logEvent.Properties.TryGetValue(DatasetPropertyKey, out datasetProperty);
+            string dataset = ((datasetProperty as ScalarValue)?.Value as string) ?? this.defaultDataset;
+
+            var request = new HttpRequestMessage(HttpMethod.Post, "events/" + dataset)
             {
                 Content = new StringContent(
                     content: JsonConvert.SerializeObject(EventToJObject(logEvent)),
@@ -71,6 +77,7 @@
             );
             foreach (KeyValuePair<string, LogEventPropertyValue> prop in logEvent.Properties)
             {
+                if (prop.Key == DatasetPropertyKey) { continue; }
                 evt[prop.Key] = ConvertPropertyValue(prop.Value);
             }
 

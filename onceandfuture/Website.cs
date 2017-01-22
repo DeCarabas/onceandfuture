@@ -14,6 +14,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using System.Xml.Linq;
+    using ImageSharp;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.AspNetCore.Http;
@@ -1136,7 +1137,8 @@
             var result = new HealthResult { Title = "Thumbnail Store", Healthy = false };
             try
             {
-                byte[] img = await LoadFileBytes("dummy.png");
+                byte[] bytes = await LoadFileBytes("dummy.png");
+                Image<Color> img = new Image<Color>(new MemoryStream(bytes));
                 /* Uri uri = */
                 await this.thumbnailStore.StoreImage(img);
                 // TODO: validate URI makes an image.
@@ -1157,17 +1159,11 @@
             var result = new HealthResult { Title = "Make Thumbnail", Healthy = false };
             try
             {
-                int width, height;
-                byte[] img = await LoadFileBytes("dummy.png");
-                using (var ms = new MemoryStream(img))
-                using (var i = new System.Drawing.Bitmap(ms))
-                {
-                    width = i.Width;
-                    height = i.Height;
-                }
-                var srcImg = new ThumbnailExtractor.ImageData(width, height, img);
+                byte[] bytes = await LoadFileBytes("dummy.png");
+                Image<Color> img = new Image<Color>(new MemoryStream(bytes));
+
                 /* var dstImage =*/
-                ThumbnailExtractor.MakeThumbnail(srcImg);
+                ThumbnailExtractor.MakeThumbnail(img);
 
                 result.Healthy = true;
                 result.Log.Add("OK");

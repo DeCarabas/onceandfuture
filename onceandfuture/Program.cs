@@ -6,7 +6,9 @@
     using System.IO;
     using System.Linq;
     using System.Net;
+    using System.Net.Http;
     using System.Threading.Tasks;
+    using ImageSharp;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.Configuration;
@@ -58,6 +60,10 @@
             .AddVerb("findfeed", "Find the feed for an URL", DoFindFeed, v => v
                 .AddOption("url", "The URL to find a feed for.", o => o.IsRequired())
             )
+            .AddVerb("thumbnail", "Load an image and produce a thumbnail", DoThumbnail, v => v
+                .AddOption("url", "The URL of the image to load.", o => o.IsRequired())
+                .AddOption("out", "The file to write.", o => o.IsRequired())
+            )
             ;
 
 
@@ -92,7 +98,18 @@
                 }
                 Serilog.Log.Logger = logConfig.CreateLogger();
 
-                return parsedArgs.Verb.Handler(parsedArgs);
+                var formats = new ImageSharp.Formats.IImageFormat[]
+                {
+                    new ImageSharp.Formats.BmpFormat(),
+                    new ImageSharp.Formats.PngFormat(),
+                    new ImageSharp.Formats.JpegFormat(),
+                    new ImageSharp.Formats.GifFormat(),
+                };
+                foreach(var fmt in formats) { ImageSharp.Configuration.Default.AddImageFormat(fmt); }
+
+                int result = parsedArgs.Verb.Handler(parsedArgs);
+                Serilog.Log.CloseAndFlush();
+                return result;
             }
             catch (Exception e)
             {
@@ -401,6 +418,25 @@
             }
 
             Console.WriteLine("Found {0} feeds", found.Count);
+            return 0;
+        }
+
+        static int DoThumbnail(ParsedOpts args)
+        {
+            Uri url = new Uri(args["url"].Value);
+
+            Image<Color> sourceImage = ThumbnailExtractor.FindImageAsync(url).Result;
+            if (sourceImage == null)
+            {
+                Console.Error.WriteLine("No image found @ {0}.", url);
+                return 1;
+            }
+
+            Image<Color> thumb = ThumbnailExtractor.MakeThumbnail(sourceImage);
+            using (var stream = File.Create(args["out"].Value))
+            {
+                thumb.SaveAsPng(stream);
+            }
             return 0;
         }
 

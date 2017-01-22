@@ -1,0 +1,442 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{893F7911-4874-4CFB-9D46-84DF5EE909A7}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>ImageSharp</RootNamespace>
+    <AssemblyName>ImageSharp</AssemblyName>
+    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Buffers, Version=4.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.0.0\lib\netstandard1.1\System.Buffers.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.3.0\lib\netstandard1.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="ImageSharp.Drawing\Brushes\Brushes.cs" />
+    <Compile Include="ImageSharp.Drawing\Brushes\Brushes{TColor}.cs" />
+    <Compile Include="ImageSharp.Drawing\Brushes\IBrush.cs" />
+    <Compile Include="ImageSharp.Drawing\Brushes\ImageBrush.cs" />
+    <Compile Include="ImageSharp.Drawing\Brushes\ImageBrush{TColor}.cs" />
+    <Compile Include="ImageSharp.Drawing\Brushes\PatternBrush.cs" />
+    <Compile Include="ImageSharp.Drawing\Brushes\PatternBrush{TColor}.cs" />
+    <Compile Include="ImageSharp.Drawing\Brushes\Processors\BrushApplicator.cs" />
+    <Compile Include="ImageSharp.Drawing\Brushes\RecolorBrush.cs" />
+    <Compile Include="ImageSharp.Drawing\Brushes\RecolorBrush{TColor}.cs" />
+    <Compile Include="ImageSharp.Drawing\Brushes\SolidBrush.cs" />
+    <Compile Include="ImageSharp.Drawing\Brushes\SolidBrush{TColor}.cs" />
+    <Compile Include="ImageSharp.Drawing\Draw.cs" />
+    <Compile Include="ImageSharp.Drawing\DrawImage.cs" />
+    <Compile Include="ImageSharp.Drawing\DrawRectangle.cs" />
+    <Compile Include="ImageSharp.Drawing\Fill.cs" />
+    <Compile Include="ImageSharp.Drawing\FillRectangle.cs" />
+    <Compile Include="ImageSharp.Drawing\GraphicsOptions.cs" />
+    <Compile Include="ImageSharp.Drawing\Paths\BezierLineSegment.cs" />
+    <Compile Include="ImageSharp.Drawing\Paths\ILineSegment.cs" />
+    <Compile Include="ImageSharp.Drawing\Paths\InternalPath.cs" />
+    <Compile Include="ImageSharp.Drawing\Paths\IPath.cs" />
+    <Compile Include="ImageSharp.Drawing\Paths\LinearLineSegment.cs" />
+    <Compile Include="ImageSharp.Drawing\Paths\Path.cs" />
+    <Compile Include="ImageSharp.Drawing\Paths\PointInfo.cs" />
+    <Compile Include="ImageSharp.Drawing\Pens\IPen.cs" />
+    <Compile Include="ImageSharp.Drawing\Pens\Pen.cs" />
+    <Compile Include="ImageSharp.Drawing\Pens\Pens.cs" />
+    <Compile Include="ImageSharp.Drawing\Pens\Pens{TColor}.cs" />
+    <Compile Include="ImageSharp.Drawing\Pens\Pen{TColor}.cs" />
+    <Compile Include="ImageSharp.Drawing\Pens\Processors\ColoredPointInfo.cs" />
+    <Compile Include="ImageSharp.Drawing\Pens\Processors\PenApplicator.cs" />
+    <Compile Include="ImageSharp.Drawing\Processors\DrawImageProcessor.cs" />
+    <Compile Include="ImageSharp.Drawing\Processors\DrawPathProcessor.cs" />
+    <Compile Include="ImageSharp.Drawing\Processors\FillProcessor.cs" />
+    <Compile Include="ImageSharp.Drawing\Processors\FillShapeProcessor.cs" />
+    <Compile Include="ImageSharp.Drawing\Properties\AssemblyInfo.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\BezierPolygon.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\ComplexPolygon.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\IShape.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\LinearPolygon.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\Polygon.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\PolygonClipper\Clipper.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\PolygonClipper\ClipperException.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\PolygonClipper\Direction.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\PolygonClipper\EdgeSide.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\PolygonClipper\IntersectNode.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\PolygonClipper\IntersectNodeSort.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\PolygonClipper\Join.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\PolygonClipper\LocalMinima.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\PolygonClipper\Maxima.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\PolygonClipper\OutPt.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\PolygonClipper\OutRec.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\PolygonClipper\PolyNode.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\PolygonClipper\PolyTree.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\PolygonClipper\PolyType.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\PolygonClipper\Scanbeam.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\PolygonClipper\TEdge.cs" />
+    <Compile Include="ImageSharp.Drawing\Shapes\RectangularPolygon.cs" />
+    <Compile Include="ImageSharp.Formats.Bmp\BmpBitsPerPixel.cs" />
+    <Compile Include="ImageSharp.Formats.Bmp\BmpCompression.cs" />
+    <Compile Include="ImageSharp.Formats.Bmp\BmpDecoder.cs" />
+    <Compile Include="ImageSharp.Formats.Bmp\BmpDecoderCore.cs" />
+    <Compile Include="ImageSharp.Formats.Bmp\BmpEncoder.cs" />
+    <Compile Include="ImageSharp.Formats.Bmp\BmpEncoderCore.cs" />
+    <Compile Include="ImageSharp.Formats.Bmp\BmpFileHeader.cs" />
+    <Compile Include="ImageSharp.Formats.Bmp\BmpFormat.cs" />
+    <Compile Include="ImageSharp.Formats.Bmp\BmpInfoHeader.cs" />
+    <Compile Include="ImageSharp.Formats.Bmp\ImageExtensions.cs" />
+    <Compile Include="ImageSharp.Formats.Bmp\Properties\AssemblyInfo.cs" />
+    <Compile Include="ImageSharp.Formats.Gif\DisposalMethod.cs" />
+    <Compile Include="ImageSharp.Formats.Gif\GifConstants.cs" />
+    <Compile Include="ImageSharp.Formats.Gif\GifDecoder.cs" />
+    <Compile Include="ImageSharp.Formats.Gif\GifDecoderCore.cs" />
+    <Compile Include="ImageSharp.Formats.Gif\GifEncoder.cs" />
+    <Compile Include="ImageSharp.Formats.Gif\GifEncoderCore.cs" />
+    <Compile Include="ImageSharp.Formats.Gif\GifFormat.cs" />
+    <Compile Include="ImageSharp.Formats.Gif\ImageExtensions.cs" />
+    <Compile Include="ImageSharp.Formats.Gif\LzwDecoder.cs" />
+    <Compile Include="ImageSharp.Formats.Gif\LzwEncoder.cs" />
+    <Compile Include="ImageSharp.Formats.Gif\PackedField.cs" />
+    <Compile Include="ImageSharp.Formats.Gif\Properties\AssemblyInfo.cs" />
+    <Compile Include="ImageSharp.Formats.Gif\Sections\GifGraphicsControlExtension.cs" />
+    <Compile Include="ImageSharp.Formats.Gif\Sections\GifImageDescriptor.cs" />
+    <Compile Include="ImageSharp.Formats.Gif\Sections\GifLogicalScreenDescriptor.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Components\Block8x8F.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Components\Block8x8F.Generated1.cs">
+      <DependentUpon>Block8x8F.Generated.tt</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <Compile Include="ImageSharp.Formats.Jpeg\Components\BlockQuad.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Components\DCT.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Components\Decoder\Bits.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Components\Decoder\Bytes.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Components\Decoder\Component.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Components\Decoder\HuffmanTree.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Components\Decoder\JpegPixelArea.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Components\Decoder\JpegScanDecoder.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Components\Decoder\Scan.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Components\Decoder\YCbCrImage.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Components\Encoder\HuffIndex.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Components\Encoder\HuffmanLut.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Components\Encoder\HuffmanSpec.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Components\Encoder\QuantIndex.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\ImageExtensions.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\JpegConstants.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\JpegDecoder.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\JpegDecoderCore.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\JpegEncoder.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\JpegEncoderCore.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\JpegFormat.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\JpegSubsample.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Properties\AssemblyInfo.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\UnzigData.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Utils\JpegUtils.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Utils\MutableSpan.cs" />
+    <Compile Include="ImageSharp.Formats.Jpeg\Utils\MutableSpanExtensions.cs" />
+    <Compile Include="ImageSharp.Formats.Png\Filters\AverageFilter.cs" />
+    <Compile Include="ImageSharp.Formats.Png\Filters\FilterType.cs" />
+    <Compile Include="ImageSharp.Formats.Png\Filters\NoneFilter.cs" />
+    <Compile Include="ImageSharp.Formats.Png\Filters\PaethFilter.cs" />
+    <Compile Include="ImageSharp.Formats.Png\Filters\SubFilter.cs" />
+    <Compile Include="ImageSharp.Formats.Png\Filters\UpFilter.cs" />
+    <Compile Include="ImageSharp.Formats.Png\ImageExtensions.cs" />
+    <Compile Include="ImageSharp.Formats.Png\PngChunk.cs" />
+    <Compile Include="ImageSharp.Formats.Png\PngChunkTypes.cs" />
+    <Compile Include="ImageSharp.Formats.Png\PngColorType.cs" />
+    <Compile Include="ImageSharp.Formats.Png\PngDecoder.cs" />
+    <Compile Include="ImageSharp.Formats.Png\PngDecoderCore.cs" />
+    <Compile Include="ImageSharp.Formats.Png\PngEncoder.cs" />
+    <Compile Include="ImageSharp.Formats.Png\PngEncoderCore.cs" />
+    <Compile Include="ImageSharp.Formats.Png\PngFormat.cs" />
+    <Compile Include="ImageSharp.Formats.Png\PngHeader.cs" />
+    <Compile Include="ImageSharp.Formats.Png\PngInterlaceMode.cs" />
+    <Compile Include="ImageSharp.Formats.Png\Properties\AssemblyInfo.cs" />
+    <Compile Include="ImageSharp.Formats.Png\Zlib\Adler32.cs" />
+    <Compile Include="ImageSharp.Formats.Png\Zlib\Crc32.cs" />
+    <Compile Include="ImageSharp.Formats.Png\Zlib\IChecksum.cs" />
+    <Compile Include="ImageSharp.Formats.Png\Zlib\ZlibDeflateStream.cs" />
+    <Compile Include="ImageSharp.Formats.Png\Zlib\ZlibInflateStream.cs" />
+    <Compile Include="ImageSharp.Processing\Binarization\BinaryThreshold.cs" />
+    <Compile Include="ImageSharp.Processing\ColorMatrix\BlackWhite.cs" />
+    <Compile Include="ImageSharp.Processing\ColorMatrix\ColorBlindness.cs" />
+    <Compile Include="ImageSharp.Processing\ColorMatrix\Grayscale.cs" />
+    <Compile Include="ImageSharp.Processing\ColorMatrix\Hue.cs" />
+    <Compile Include="ImageSharp.Processing\ColorMatrix\Kodachrome.cs" />
+    <Compile Include="ImageSharp.Processing\ColorMatrix\Lomograph.cs" />
+    <Compile Include="ImageSharp.Processing\ColorMatrix\Options\ColorBlindness.cs" />
+    <Compile Include="ImageSharp.Processing\ColorMatrix\Options\GrayscaleMode.cs" />
+    <Compile Include="ImageSharp.Processing\ColorMatrix\Polaroid.cs" />
+    <Compile Include="ImageSharp.Processing\ColorMatrix\Saturation.cs" />
+    <Compile Include="ImageSharp.Processing\ColorMatrix\Sepia.cs" />
+    <Compile Include="ImageSharp.Processing\Convolution\BoxBlur.cs" />
+    <Compile Include="ImageSharp.Processing\Convolution\DetectEdges.cs" />
+    <Compile Include="ImageSharp.Processing\Convolution\GaussianBlur.cs" />
+    <Compile Include="ImageSharp.Processing\Convolution\GaussianSharpen.cs" />
+    <Compile Include="ImageSharp.Processing\Convolution\Options\EdgeDetection.cs" />
+    <Compile Include="ImageSharp.Processing\Effects\Alpha.cs" />
+    <Compile Include="ImageSharp.Processing\Effects\BackgroundColor.cs" />
+    <Compile Include="ImageSharp.Processing\Effects\Brightness.cs" />
+    <Compile Include="ImageSharp.Processing\Effects\Contrast.cs" />
+    <Compile Include="ImageSharp.Processing\Effects\Invert.cs" />
+    <Compile Include="ImageSharp.Processing\Effects\OilPainting.cs" />
+    <Compile Include="ImageSharp.Processing\Effects\Pixelate.cs" />
+    <Compile Include="ImageSharp.Processing\Overlays\Glow.cs" />
+    <Compile Include="ImageSharp.Processing\Overlays\Vignette.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Binarization\BinaryThresholdProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\BlackWhiteProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\ColorBlindness\AchromatomalyProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\ColorBlindness\AchromatopsiaProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\ColorBlindness\DeuteranomalyProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\ColorBlindness\DeuteranopiaProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\ColorBlindness\ProtanomalyProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\ColorBlindness\ProtanopiaProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\ColorBlindness\TritanomalyProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\ColorBlindness\TritanopiaProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\ColorMatrixFilter.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\GrayscaleBt601Processor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\GrayscaleBt709Processor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\HueProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\IColorMatrixFilter.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\KodachromeProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\LomographProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\PolaroidProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\SaturationProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\ColorMatrix\SepiaProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\BoxBlurProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\Convolution2DProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\Convolution2PassProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\ConvolutionProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\EdgeDetection\EdgeDetector2DProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\EdgeDetection\EdgeDetectorCompassProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\EdgeDetection\EdgeDetectorProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\EdgeDetection\IEdgeDetectorProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\EdgeDetection\KayyaliProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\EdgeDetection\KirschProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\EdgeDetection\Laplacian3X3Processor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\EdgeDetection\Laplacian5X5Processor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\EdgeDetection\LaplacianOfGaussianProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\EdgeDetection\PrewittProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\EdgeDetection\RobertsCrossProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\EdgeDetection\RobinsonProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\EdgeDetection\ScharrProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\EdgeDetection\SobelProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\GaussianBlurProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Convolution\GaussianSharpenProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Effects\AlphaProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Effects\BackgroundColorProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Effects\BrightnessProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Effects\ContrastProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Effects\InvertProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Effects\OilPaintingProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Effects\PixelateProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Overlays\GlowProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Overlays\VignetteProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Transforms\CompandingResizeProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Transforms\CropProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Transforms\EntropyCropProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Transforms\FlipProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Transforms\Matrix3x2Processor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Transforms\ResamplingWeightedProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Transforms\ResizeProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Transforms\RotateProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Processors\Transforms\SkewProcessor.cs" />
+    <Compile Include="ImageSharp.Processing\Properties\AssemblyInfo.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\AutoOrient.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Crop.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\EntropyCrop.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Flip.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Options\AnchorPosition.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Options\FlipType.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Options\Orientation.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Options\ResizeHelper.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Options\ResizeMode.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Options\ResizeOptions.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Options\RotateType.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Pad.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resamplers\BicubicResampler.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resamplers\BoxResampler.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resamplers\CatmullRomResampler.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resamplers\HermiteResampler.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resamplers\IResampler.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resamplers\Lanczos2Resampler.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resamplers\Lanczos3Resampler.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resamplers\Lanczos5Resampler.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resamplers\Lanczos8Resampler.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resamplers\MitchellNetravaliResampler.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resamplers\NearestNeighborResampler.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resamplers\RobidouxResampler.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resamplers\RobidouxSharpResampler.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resamplers\SplineResampler.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resamplers\TriangleResampler.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resamplers\WelchResampler.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Resize.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Rotate.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\RotateFlip.cs" />
+    <Compile Include="ImageSharp.Processing\Transforms\Skew.cs" />
+    <Compile Include="ImageSharp\Colors\Color.cs" />
+    <Compile Include="ImageSharp\Colors\ColorConstants.cs" />
+    <Compile Include="ImageSharp\Colors\ColorDefinitions.cs" />
+    <Compile Include="ImageSharp\Colors\ColorspaceTransforms.cs" />
+    <Compile Include="ImageSharp\Colors\ColorTransforms.cs" />
+    <Compile Include="ImageSharp\Colors\ComponentOrder.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\Alpha8.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\Argb.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\Bgr565.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\Bgra4444.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\Bgra5551.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\Byte4.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\HalfSingle.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\HalfTypeHelper.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\HalfVector2.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\HalfVector4.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\IPackedBytes.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\IPackedPixel.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\IPackedVector.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\NormalizedByte2.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\NormalizedByte4.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\NormalizedShort2.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\NormalizedShort4.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\PackedPixelConverterHelper.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\Rg32.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\Rgba1010102.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\Rgba64.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\Short2.cs" />
+    <Compile Include="ImageSharp\Colors\PackedPixel\Short4.cs" />
+    <Compile Include="ImageSharp\Colors\RgbaComponent.cs" />
+    <Compile Include="ImageSharp\Colors\Spaces\Bgra32.cs" />
+    <Compile Include="ImageSharp\Colors\Spaces\CieLab.cs" />
+    <Compile Include="ImageSharp\Colors\Spaces\CieXyz.cs" />
+    <Compile Include="ImageSharp\Colors\Spaces\Cmyk.cs" />
+    <Compile Include="ImageSharp\Colors\Spaces\Hsl.cs" />
+    <Compile Include="ImageSharp\Colors\Spaces\Hsv.cs" />
+    <Compile Include="ImageSharp\Colors\Spaces\IAlmostEquatable.cs" />
+    <Compile Include="ImageSharp\Colors\Spaces\YCbCr.cs" />
+    <Compile Include="ImageSharp\Colors\Vector4BlendTransforms.cs" />
+    <Compile Include="ImageSharp\Common\Constants.cs" />
+    <Compile Include="ImageSharp\Common\Exceptions\ImageFormatException.cs" />
+    <Compile Include="ImageSharp\Common\Exceptions\ImageProcessingException.cs" />
+    <Compile Include="ImageSharp\Common\Extensions\ArrayExtensions.cs" />
+    <Compile Include="ImageSharp\Common\Extensions\ByteExtensions.cs" />
+    <Compile Include="ImageSharp\Common\Extensions\ComparableExtensions.cs" />
+    <Compile Include="ImageSharp\Common\Extensions\EnumerableExtensions.cs" />
+    <Compile Include="ImageSharp\Common\Extensions\StreamExtensions.cs" />
+    <Compile Include="ImageSharp\Common\Extensions\Vector4Extensions.cs" />
+    <Compile Include="ImageSharp\Common\Helpers\Guard.cs" />
+    <Compile Include="ImageSharp\Common\Helpers\ImageMaths.cs" />
+    <Compile Include="ImageSharp\Configuration.cs" />
+    <Compile Include="ImageSharp\Formats\IImageDecoder.cs" />
+    <Compile Include="ImageSharp\Formats\IImageEncoder.cs" />
+    <Compile Include="ImageSharp\Formats\IImageFormat.cs" />
+    <Compile Include="ImageSharp\Image.cs" />
+    <Compile Include="ImageSharp\ImageFrame.cs" />
+    <Compile Include="ImageSharp\ImageProcessor.cs" />
+    <Compile Include="ImageSharp\Image\IImageBase{TColor}.cs" />
+    <Compile Include="ImageSharp\Image\IImageFrame{TColor}.cs" />
+    <Compile Include="ImageSharp\Image\IImageProcessor.cs" />
+    <Compile Include="ImageSharp\Image\ImageBase{TColor}.cs" />
+    <Compile Include="ImageSharp\Image\ImageFrame{TColor}.cs" />
+    <Compile Include="ImageSharp\Image\ImageProcessingExtensions.cs" />
+    <Compile Include="ImageSharp\Image\ImageProperty.cs" />
+    <Compile Include="ImageSharp\Image\Image{TColor}.cs" />
+    <Compile Include="ImageSharp\Image\PixelAccessor{TColor}.cs" />
+    <Compile Include="ImageSharp\Image\PixelArea{TColor}.cs" />
+    <Compile Include="ImageSharp\IO\BigEndianBitConverter.cs" />
+    <Compile Include="ImageSharp\IO\EndianBinaryReader.cs" />
+    <Compile Include="ImageSharp\IO\EndianBinaryWriter.cs" />
+    <Compile Include="ImageSharp\IO\EndianBitConverter.cs" />
+    <Compile Include="ImageSharp\IO\Endianness.cs" />
+    <Compile Include="ImageSharp\IO\LittleEndianBitConverter.cs" />
+    <Compile Include="ImageSharp\Numerics\Ellipse.cs" />
+    <Compile Include="ImageSharp\Numerics\LongRational.cs" />
+    <Compile Include="ImageSharp\Numerics\Point.cs" />
+    <Compile Include="ImageSharp\Numerics\Rational.cs" />
+    <Compile Include="ImageSharp\Numerics\Rectangle.cs" />
+    <Compile Include="ImageSharp\Numerics\RectangleF.cs" />
+    <Compile Include="ImageSharp\Numerics\SignedRational.cs" />
+    <Compile Include="ImageSharp\Numerics\Size.cs" />
+    <Compile Include="ImageSharp\PixelAccessor.cs" />
+    <Compile Include="ImageSharp\Profiles\Exif\ExifDataType.cs" />
+    <Compile Include="ImageSharp\Profiles\Exif\ExifParts.cs" />
+    <Compile Include="ImageSharp\Profiles\Exif\ExifProfile.cs" />
+    <Compile Include="ImageSharp\Profiles\Exif\ExifReader.cs" />
+    <Compile Include="ImageSharp\Profiles\Exif\ExifTag.cs" />
+    <Compile Include="ImageSharp\Profiles\Exif\ExifTagDescriptionAttribute.cs" />
+    <Compile Include="ImageSharp\Profiles\Exif\ExifValue.cs" />
+    <Compile Include="ImageSharp\Profiles\Exif\ExifWriter.cs" />
+    <Compile Include="ImageSharp\Properties\AssemblyInfo.cs" />
+    <Compile Include="ImageSharp\Quantizers\IQuantizer.cs" />
+    <Compile Include="ImageSharp\Quantizers\Octree\OctreeQuantizer.cs" />
+    <Compile Include="ImageSharp\Quantizers\Octree\Quantizer.cs" />
+    <Compile Include="ImageSharp\Quantizers\Options\Quantization.cs" />
+    <Compile Include="ImageSharp\Quantizers\Palette\PaletteQuantizer.cs" />
+    <Compile Include="ImageSharp\Quantizers\Quantize.cs" />
+    <Compile Include="ImageSharp\Quantizers\QuantizedImage.cs" />
+    <Compile Include="ImageSharp\Quantizers\Wu\Box.cs" />
+    <Compile Include="ImageSharp\Quantizers\Wu\WuQuantizer.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ImageSharp.Drawing\Shapes\PolygonClipper\README.md" />
+    <None Include="ImageSharp.Formats.Jpeg\Components\Decoder\JpegScanDecoder.md" />
+    <None Include="ImageSharp.Formats.Png\Zlib\README.md" />
+    <None Include="ImageSharp.Processing\Processors\ColorMatrix\ColorBlindness\README.md" />
+    <None Include="ImageSharp\Colors\PackedPixel\README.md" />
+    <None Include="ImageSharp\Profiles\Exif\README.md" />
+    <None Include="ImageSharp\project.json" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="ImageSharp.Formats.Jpeg\Components\Block8x8F.Generated.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Block8x8F.Generated1.cs</LastGenOutput>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

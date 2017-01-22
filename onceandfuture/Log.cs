@@ -98,9 +98,9 @@
                 baseUrl, imageUri, kind, response.StatusCode, response.ReasonPhrase);
         }
 
-        public static void InvalidThumbnailImageFormat(Uri baseUrl, Uri imageUri, string kind, ArgumentException ae)
+        public static void InvalidThumbnailImageFormat(Uri baseUrl, Uri imageUri, string kind, Exception ae)
         {
-            // N.B.: Logging the ArgumentException is pointless.
+            // N.B.: Logging the exception is pointless.
             Get().Warning("{BaseUrl}: {ImageUrl} ({ThumbKind}): Is not a valid image", baseUrl, imageUri, kind);
         }
 
