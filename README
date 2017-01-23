@@ -15,7 +15,7 @@ UI:
 - Add/remove river sets
 - Import/export OPML
 - Deal with the case where you find multiple feeds.
-- Retry loading sources
+- CSR protection
 
 Back-end Stuff:
 - Measure things:
@@ -41,6 +41,7 @@ Later:
 - Extract enclosures and the like, store locally (in the DB) and present them
   in the river. (Then do UI work to expose audio enclosures and the like.)
 - Trim rivers that get too big
+- God these names are all terrible -- river? feed? what's what?
 
 Far future:
 - For the future, we'll probably need options on individual feeds for

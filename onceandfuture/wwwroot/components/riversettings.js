@@ -18,6 +18,7 @@ import {
   removeRiver,
   riverAddFeed,
   riverAddFeedUrlChanged,
+  riverGetFeedSources,
   riverRemoveSource,
   riverSetFeedMode,
   riverSetName,
@@ -134,11 +135,16 @@ const RiverSource = ({source, deleteSource}) => {
   </tr>;
 };
 
-const RiverSourcesBox = ({sources, deleteSource}) => {
+const RiverSourcesBox = ({sources, deleteSource, refreshSources}) => {
   const pending_style = {
     textAlign: 'center',
   };
   const error_style = pending_style;
+  const error_link_style = {
+    borderBottom: '1px solid blue',
+    color: 'blue',
+    cursor: 'pointer',
+  };
 
   var tbl_body;
   if (sources === 'PENDING') {
@@ -147,7 +153,9 @@ const RiverSourcesBox = ({sources, deleteSource}) => {
     </tr>;
   } else if (sources === 'ERROR') {
     tbl_body = <tr>
-      <td style={error_style} colSpan='3'>An unexpected error occurred.</td>
+      <td style={error_style} colSpan='3'>
+        An unexpected error occurred. <span style={error_link_style} onClick={refreshSources}>(Retry?)</span>
+      </td>
     </tr>;
   } else if (sources) {
     tbl_body = sources.map(
@@ -196,6 +204,7 @@ const RiverSettingsBase = ({
   deleteRiver,
   removeSource,
   setRiverName,
+  getFeedSources,
 }) => {
   const style = {
     position: 'absolute',
@@ -212,13 +221,14 @@ const RiverSettingsBase = ({
   const delRiver = () => deleteRiver(user, river);
   const delSource = (source_id, source_url) => removeSource(index, river, source_id, source_url);
   const setName = (name) => setRiverName(index, river, name);
+  const refreshSources = () => getFeedSources(index, river);
 
   return <div style={style}>
     <AddFeedBox feedUrlChanged={urlChanged} addFeedToRiver={addFeed} />
     <hr />
     <FeedDisplayModeBox mode={river.mode} setFeedMode={setFeedMode} />
     <hr />
-    <RiverSourcesBox sources={river.sources} deleteSource={delSource} />
+    <RiverSourcesBox sources={river.sources} deleteSource={delSource} refreshSources={refreshSources} />
     <hr />
     <RenameRiverBox name={river.name} setName={setName}/>
     <hr />
@@ -240,6 +250,7 @@ const mapDispatchToProps = (dispatch) => {
     removeSource: (index, river, source_id, source_url) =>
       dispatch(riverRemoveSource(index, river, source_id, source_url)),
     setRiverName: (index, river, new_name) => dispatch(riverSetName(index, river, new_name)),
+    getFeedSources: (index, river) => dispatch(riverGetFeedSources(index, river)),
   };
 };
 

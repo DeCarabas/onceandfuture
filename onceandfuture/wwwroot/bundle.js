@@ -858,9 +858,16 @@
   \**********************************/
 /***/ function(module, exports) {
 
+	/*
+	object-assign
+	(c) Sindre Sorhus
+	@license MIT
+	*/
+	
 	'use strict';
 	/* eslint-disable no-unused-vars */
 	
+	var getOwnPropertySymbols = Object.getOwnPropertySymbols;
 	var hasOwnProperty = Object.prototype.hasOwnProperty;
 	var propIsEnumerable = Object.prototype.propertyIsEnumerable;
 	
@@ -881,7 +888,7 @@
 			// Detect buggy property enumeration order in older V8 versions.
 	
 			// https://bugs.chromium.org/p/v8/issues/detail?id=4118
-			var test1 = new String('abc'); // eslint-disable-line
+			var test1 = new String('abc'); // eslint-disable-line no-new-wrappers
 			test1[5] = 'de';
 			if (Object.getOwnPropertyNames(test1)[0] === '5') {
 				return false;
@@ -909,7 +916,7 @@
 			}
 	
 			return true;
-		} catch (e) {
+		} catch (err) {
 			// We don't expect any of the above to throw, but better to be safe.
 			return false;
 		}
@@ -929,8 +936,8 @@
 				}
 			}
 	
-			if (Object.getOwnPropertySymbols) {
-				symbols = Object.getOwnPropertySymbols(from);
+			if (getOwnPropertySymbols) {
+				symbols = getOwnPropertySymbols(from);
 				for (var i = 0; i < symbols.length; i++) {
 					if (propIsEnumerable.call(from, symbols[i])) {
 						to[symbols[i]] = from[symbols[i]];
@@ -25026,8 +25033,8 @@
 	exports.__esModule = true;
 	function createThunkMiddleware(extraArgument) {
 	  return function (_ref) {
-	    var dispatch = _ref.dispatch;
-	    var getState = _ref.getState;
+	    var dispatch = _ref.dispatch,
+	        getState = _ref.getState;
 	    return function (next) {
 	      return function (action) {
 	        if (typeof action === 'function') {
@@ -28769,12 +28776,18 @@
 	
 	var RiverSourcesBox = function RiverSourcesBox(_ref7) {
 	  var sources = _ref7.sources,
-	      deleteSource = _ref7.deleteSource;
+	      deleteSource = _ref7.deleteSource,
+	      refreshSources = _ref7.refreshSources;
 	
 	  var pending_style = {
 	    textAlign: 'center'
 	  };
 	  var error_style = pending_style;
+	  var error_link_style = {
+	    borderBottom: '1px solid blue',
+	    color: 'blue',
+	    cursor: 'pointer'
+	  };
 	
 	  var tbl_body;
 	  if (sources === 'PENDING') {
@@ -28794,7 +28807,12 @@
 	      _react2.default.createElement(
 	        'td',
 	        { style: error_style, colSpan: '3' },
-	        'An unexpected error occurred.'
+	        'An unexpected error occurred. ',
+	        _react2.default.createElement(
+	          'span',
+	          { style: error_link_style, onClick: refreshSources },
+	          '(Retry?)'
+	        )
 	      )
 	    );
 	  } else if (sources) {
@@ -28871,7 +28889,8 @@
 	      riverSetFeedMode = _ref8.riverSetFeedMode,
 	      deleteRiver = _ref8.deleteRiver,
 	      removeSource = _ref8.removeSource,
-	      setRiverName = _ref8.setRiverName;
+	      setRiverName = _ref8.setRiverName,
+	      getFeedSources = _ref8.getFeedSources;
 	
 	  var style = {
 	    position: 'absolute',
@@ -28900,6 +28919,9 @@
 	  var setName = function setName(name) {
 	    return setRiverName(index, river, name);
 	  };
+	  var refreshSources = function refreshSources() {
+	    return getFeedSources(index, river);
+	  };
 	
 	  return _react2.default.createElement(
 	    'div',
@@ -28908,7 +28930,7 @@
 	    _react2.default.createElement('hr', null),
 	    _react2.default.createElement(FeedDisplayModeBox, { mode: river.mode, setFeedMode: setFeedMode }),
 	    _react2.default.createElement('hr', null),
-	    _react2.default.createElement(RiverSourcesBox, { sources: river.sources, deleteSource: delSource }),
+	    _react2.default.createElement(RiverSourcesBox, { sources: river.sources, deleteSource: delSource, refreshSources: refreshSources }),
 	    _react2.default.createElement('hr', null),
 	    _react2.default.createElement(RenameRiverBox, { name: river.name, setName: setName }),
 	    _react2.default.createElement('hr', null),
@@ -28940,6 +28962,9 @@
 	    },
 	    setRiverName: function setRiverName(index, river, new_name) {
 	      return dispatch((0, _actions.riverSetName)(index, river, new_name));
+	    },
+	    getFeedSources: function getFeedSources(index, river) {
+	      return dispatch((0, _actions.riverGetFeedSources)(index, river));
 	    }
 	  };
 	};
