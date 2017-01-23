@@ -14,8 +14,8 @@ UI:
 - Recover lost password flow
 - Add/remove river sets
 - Import/export OPML
-- Font size for bubbles is wrong.
 - Deal with the case where you find multiple feeds.
+- Retry loading sources
 
 Back-end Stuff:
 - Measure things:
