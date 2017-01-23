@@ -84,28 +84,7 @@
                     return 0;
                 }
 
-                // Global configuration.
-                var logLevel = (LogEventLevel)Math.Max((int)(LogEventLevel.Error - parsedArgs["verbose"].Count), 0);
-                var logConfig = new LoggerConfiguration()
-                    .Enrich.FromLogContext()
-                    .MinimumLevel.Is(logLevel)
-                    .WriteTo.LiterateConsole();
-                string honeycomb_key = Environment.GetEnvironmentVariable("HONEYCOMB_KEY");
-                if (honeycomb_key != null)
-                {
-                    Console.WriteLine("(Honeycomb configured.)");
-                    logConfig.WriteTo.Honeycomb("server", honeycomb_key);
-                }
-                Serilog.Log.Logger = logConfig.CreateLogger();
-
-                var formats = new ImageSharp.Formats.IImageFormat[]
-                {
-                    new ImageSharp.Formats.BmpFormat(),
-                    new ImageSharp.Formats.PngFormat(),
-                    new ImageSharp.Formats.JpegFormat(),
-                    new ImageSharp.Formats.GifFormat(),
-                };
-                foreach(var fmt in formats) { ImageSharp.Configuration.Default.AddImageFormat(fmt); }
+                ConfigureGlobalSettings(parsedArgs);
 
                 int result = parsedArgs.Verb.Handler(parsedArgs);
                 Serilog.Log.CloseAndFlush();
@@ -116,6 +95,31 @@
                 Console.WriteLine(e);
                 return 99;
             }
+        }
+
+        static void ConfigureGlobalSettings(ParsedOpts parsedArgs)
+        {
+            var logLevel = (LogEventLevel)Math.Max((int)(LogEventLevel.Error - parsedArgs["verbose"].Count), 0);
+            var logConfig = new LoggerConfiguration()
+                .Enrich.FromLogContext()
+                .MinimumLevel.Is(logLevel)
+                .WriteTo.LiterateConsole();
+            string honeycomb_key = Environment.GetEnvironmentVariable("HONEYCOMB_KEY");
+            if (honeycomb_key != null)
+            {
+                Console.WriteLine("(Honeycomb configured.)");
+                logConfig.WriteTo.Honeycomb("server", honeycomb_key);
+            }
+            Serilog.Log.Logger = logConfig.CreateLogger();
+
+            var formats = new ImageSharp.Formats.IImageFormat[]
+            {
+                    new ImageSharp.Formats.BmpFormat(),
+                    new ImageSharp.Formats.PngFormat(),
+                    new ImageSharp.Formats.JpegFormat(),
+                    new ImageSharp.Formats.GifFormat(),
+            };
+            foreach (var fmt in formats) { ImageSharp.Configuration.Default.AddImageFormat(fmt); }
         }
 
         static int DoShow(ParsedOpts args)
