@@ -7,6 +7,7 @@ import {
   SIZE_RIVER_MODAL_TOP,
   SIZE_RIVER_TITLE_TOP_SPACER,
 } from './style';
+import AmbiguousFeedDialog from './ambiguousfeeddialog';
 import RiverBalloon from './riverballoon';
 import RiverSettings from './riversettings';
 import RiverProgress from './riverprogress';
@@ -36,6 +37,9 @@ function modalForRiver(river, index, dismiss, dispatch) {
       control = <RiverSettings river={river} index={index} />;
       style.bottom = 0;
       style.overflowY = 'auto';
+      break;
+    case 'ambiguous':
+      control = <AmbiguousFeedDialog index={index} river={river} address={modal.address} feeds={modal.feeds} />;
       break;
     case 'bubble':
       control = <RiverBalloon info={modal.info}  dismiss={dismiss} dispatchAction={dispatch} />;

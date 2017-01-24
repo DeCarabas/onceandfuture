@@ -14,7 +14,8 @@ const RiverSettingsButton = ({river, onShowSettings, onHideSettings}) => {
     position: 'absolute',
     right: 0, top: 0,
   };
-  const is_settings = (river.modal || {}).kind === 'settings';
+  const modal_kind = (river.modal || {}).kind;
+  const is_settings = modal_kind === 'settings' || modal_kind === 'ambiguous';
 
   var icon, onClick, tip;
   if (is_settings) {

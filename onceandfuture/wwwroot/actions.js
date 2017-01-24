@@ -73,6 +73,16 @@ export function riverAddFeedFailed(index, message) {
   };
 }
 
+export const RIVER_ADD_FEED_FAILED_AMBIGUOUS = 'RIVER_ADD_FEED_FAILED_AMBIGUOUS';
+export function riverAddFeedFailedAmbiguous(index, address, feeds) {
+  return {
+    type: RIVER_ADD_FEED_FAILED_AMBIGUOUS,
+    address: address,
+    feeds: feeds,
+    river_index: index,
+  };
+}
+
 export const RIVER_LIST_UPDATE_START = 'RIVER_LIST_UPDATE_START';
 export function riverListUpdateStart() {
   return {
@@ -495,9 +505,15 @@ export function riverAddFeed(index, river, url) {
     verb: 'POST', url: river.url + '/sources',
     msg: { 'url': url },
     start: (dispatch) => dispatch(riverAddFeedStart(index)),
-    loaded: (dispatch) => {
-      const on_complete = riverAddFeedSuccess(index);
-      dispatch(refreshRiver(index, river.name, river.url, river.id, on_complete));
+    loaded_json: (dispatch, result) => {
+      if (result.status === 'ok') {
+        const on_complete = riverAddFeedSuccess(index);
+        dispatch(refreshRiver(index, river.name, river.url, river.id, on_complete));
+      } else if (result.status == 'ambiguous') {
+        dispatch(riverAddFeedFailedAmbiguous(index, url, result.feeds));
+      } else {
+        dispatch(riverAddFeedFailed(index, "an unexpected server response."));
+      }
     },
     error: (dispatch, message) => {
       dispatch(riverAddFeedFailed(index, message));

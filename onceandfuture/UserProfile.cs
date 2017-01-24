@@ -46,12 +46,14 @@
     public class UserProfile
     {
         public UserProfile(
+            string user = null,
             IEnumerable<RiverDefinition> rivers = null,
             IEnumerable<LoginCookie> logins = null,
             string password = null,
             string email = null,
             bool emailVerified = false)
         {
+            User = user;
             Rivers = ImmutableList.CreateRange(rivers ?? Enumerable.Empty<RiverDefinition>());
             Logins = ImmutableList.CreateRange(logins ?? Enumerable.Empty<LoginCookie>());
             Password = password;
@@ -60,6 +62,7 @@
         }
 
         public UserProfile With(
+            string user = null,
             IEnumerable<RiverDefinition> rivers = null,
             IEnumerable<LoginCookie> logins = null,
             string password = null,
@@ -67,6 +70,7 @@
             bool? emailVerified = null)
         {
             return new UserProfile(
+                user ?? User,
                 rivers ?? Rivers, 
                 logins ?? Logins, 
                 password ?? Password, 
@@ -74,6 +78,8 @@
                 emailVerified ?? EmailVerified);
         }
 
+        [JsonIgnore]
+        public string User { get; }
         [JsonProperty("rivers")]
         public ImmutableList<RiverDefinition> Rivers { get; }
         [JsonProperty("logins")]
@@ -93,7 +99,9 @@
 
         protected override UserProfile GetDefaultValue(string id) => new UserProfile();
         protected override string GetObjectID(string id) => Util.HashString(id);
-        public Task<UserProfile> GetProfileFor(string user) => GetDocument(user);
+        public Task<UserProfile> GetProfileFor(string user) 
+            => GetDocument(user).ContinueWith(t => t.Result.With(user: user));
+        public Task SaveProfile(UserProfile profile) => WriteDocument(profile.User, profile);
         public Task SaveProfileFor(string user, UserProfile profile) => WriteDocument(user, profile);
     }
 }

@@ -2,13 +2,11 @@ import React from 'react';
 import { connect } from 'react-redux';
 import {
   COLOR_DARK,
-  COLOR_VERY_LIGHT,
   COLOR_VERY_DARK,
 
-  SIZE_SPACER_HEIGHT,
-  SIZE_SPACER_WIDTH,
+  RIVER_SETTINGS_BASE_STYLE,
 
-  Z_INDEX_SETTINGS,
+  SIZE_SPACER_HEIGHT,
 } from './style';
 import {
   RIVER_MODE_AUTO,
@@ -206,14 +204,9 @@ const RiverSettingsBase = ({
   setRiverName,
   getFeedSources,
 }) => {
-  const style = {
+  const style = Object.assign({}, RIVER_SETTINGS_BASE_STYLE, {
     position: 'absolute',
-
-    backgroundColor: COLOR_VERY_LIGHT,
-    zIndex: Z_INDEX_SETTINGS,
-    padding: SIZE_SPACER_WIDTH,
-    border: '1px solid ' + COLOR_VERY_DARK,
-  };
+  });
 
   const addFeed = (url) => addFeedToRiver(index, river, url);
   const urlChanged = (text) => feedUrlChanged(index, text);

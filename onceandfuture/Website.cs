@@ -37,6 +37,9 @@
         [JsonProperty("details")]
         public string Details { get; set; }
 
+        [JsonProperty("data")]
+        public object Data { get; set; }
+
         public override string ToString() => $"Fault: {Code}: {Details}";
     }
 
@@ -90,6 +93,15 @@
                 Status = "error",
                 Code = "duplicatename",
                 Details = "You already have a river named " + name,
+            });
+
+        public static Exception AmbiguousFeedUrl(string url, Dictionary<string, string> foundFeeds) =>
+            new FaultException(HttpStatusCode.BadRequest, new Fault
+            {
+                Status = "error",
+                Code = "ambigousfeedurl",
+                Details = "There are multiple feeds @ " + url,
+                Data = foundFeeds,
             });
     }
 
@@ -723,43 +735,54 @@
         [HttpPost("/api/v1/user/{user}/river/{id}/sources")]
         public async Task<IActionResult> AddRiverSource(string user, string id)
         {
-            var requestBody = await ReadRequest<AddFeedRequest>();
-            IList<Uri> feedUrls = await FeedDetector.GetFeedUrls(requestBody.Url);
+            var requestBody = await ReadRequest<AddRiverSourceRequest>();
+
+            Task<IList<Uri>> feedUrlsTask = FeedDetector.GetFeedUrls(requestBody.Url);
+            Task<UserProfile> loadProfileTask = this.profileStore.GetProfileFor(user);
+
+            await Task.WhenAll(feedUrlsTask, loadProfileTask);
+
+            IList<Uri> feedUrls = await feedUrlsTask;
             if (feedUrls.Count == 0) { throw FaultException.NoFeed(requestBody.Url); }
 
-            Uri feedUrl = feedUrls[0];
-
-            UserProfile profile = await this.profileStore.GetProfileFor(user);
+            UserProfile profile = await loadProfileTask;
             RiverDefinition river = profile.Rivers.FirstOrDefault(rd => String.CompareOrdinal(rd.Id, id) == 0);
             if (river == null) { throw FaultException.NoRiver(id); }
 
-            if (!river.Feeds.Contains(feedUrl))
+            if (feedUrls.Count > 1)
             {
-                RiverDefinition newRiver = river.With(feeds: river.Feeds.Add(feedUrl));
-                UserProfile newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
-                await this.profileStore.SaveProfileFor(user, newProfile);
-
-                // Grab some number of items out of the udpated river; we're gonna forge an update.
-                River parsedFeed = await this.feedParser.FetchAndUpdateRiver(feedUrl);
-                RiverFeed newUpdate = parsedFeed.UpdatedFeeds.Feeds[0].With(
-                    items: parsedFeed.UpdatedFeeds.Feeds.SelectMany(f => f.Items).Take(30));
-
-                River aggregate = await this.aggregateStore.LoadAggregate(newRiver.Id);
-                River newAggregate = aggregate.With(
-                    updatedFeeds: aggregate.UpdatedFeeds.With(
-                        feeds: aggregate.UpdatedFeeds.Feeds.Insert(0, newUpdate)
-                    )
-                );
-                await this.aggregateStore.WriteAggregate(newRiver.Id, newAggregate);
-
-                await this.feedParser.RefreshAggregateRiverWithFeeds(newRiver.Id, new[] { feedUrl });
-
-                river = newRiver;
+                // NOTE: I considered and rejected filtering the set of returned feeds by the set of feeds already
+                //       subscribed; but then I thought the UX of the "the URL is ambiguous, which feed do you want?"
+                //       dialog with a single feed was dumb. Then I considered (and rejected) filtering the list of 
+                //       feedUrls directly, and auto-subscribing to the only non-subscribed feed. But that's a bad UX:
+                //       if I've forgotten I've subscribed to something and try to re-subscribe then I will end up 
+                //       subscribing to a feed I didn't intend to. (Consider the SFP page, where I find RSS by <a> 
+                //       tags, and where there is a link to both the page comments and the comic present on the front
+                //       page.)
+                // 
+                Tuple<Uri, string>[] foundFeeds = await LoadFeedTitles(feedUrls);
+                return Json(new
+                {
+                    status = "ambiguous",
+                    feeds = (from kvp in foundFeeds
+                             select new
+                             {
+                                 feedUrl = kvp.Item1,
+                                 title = kvp.Item2,
+                                 isSubscribed = river.Feeds.Contains(kvp.Item1),
+                             }).ToList(),
+                }, Policies.SerializerSettings);
             }
+            else
+            {
+                Uri feedUrl = feedUrls[0];
 
-            IList<Uri> feedUris = river.Feeds ?? (IList<Uri>)(Array.Empty<Uri>());
-            River[] feedrivers = await Task.WhenAll(feedUris.Select(f => this.feedStore.LoadRiverForFeed(f)));
-            return GetSourcesForRiver(feedrivers);
+                RiverDefinition newRiver = await SubscribeRiverToFeed(profile, river, feedUrl);
+
+                IList<Uri> feedUris = newRiver.Feeds ?? (IList<Uri>)(Array.Empty<Uri>());
+                River[] feedrivers = await Task.WhenAll(feedUris.Select(f => this.feedStore.LoadRiverForFeed(f)));
+                return GetSourcesForRiver(feedrivers);
+            }
         }
 
         [HttpDelete("/api/v1/user/{user}/river/{id}/sources/{sourceId}")]
@@ -893,6 +916,7 @@
         {
             return Json(new
             {
+                status = "ok",
                 sources = feedrivers.Select(r => new
                 {
                     id = Util.HashString(r.Metadata.OriginUrl.AbsoluteUri),
@@ -938,6 +962,29 @@
             return river;
         }
 
+        async Task<Tuple<Uri, string>[]> LoadFeedTitles(IList<Uri> feedUrls)
+        {
+            var fetchTitleTasks = new Task<Tuple<Uri, string>>[feedUrls.Count];
+            for (int i = 0; i < feedUrls.Count; i++)
+            {
+                Uri feedUrl = feedUrls[i];
+                fetchTitleTasks[i] = this.feedParser.FetchAndUpdateRiver(feedUrls[i]).ContinueWith(tr =>
+                {
+                    string title = feedUrl.AbsoluteUri;
+                    if (tr.Exception == null && tr.Result.UpdatedFeeds.Feeds.Count > 0)
+                    {
+                        title = tr.Result.UpdatedFeeds.Feeds[0].FeedTitle;
+                        feedUrl = tr.Result.Metadata.OriginUrl;
+                    }
+
+                    return Tuple.Create(feedUrl, title);
+                });
+            }
+
+
+            return await Task.WhenAll(fetchTitleTasks);
+        }
+
         async Task<River> RefreshAggregate(string owner, RiverDefinition riverDef, Task feedsTask)
         {
             await feedsTask;
@@ -962,6 +1009,35 @@
             return riverTasks;
         }
 
+        async Task<RiverDefinition> SubscribeRiverToFeed(UserProfile profile, RiverDefinition river, Uri feedUrl)
+        {
+            River parsedFeed = await this.feedParser.FetchAndUpdateRiver(feedUrl);
+            feedUrl = parsedFeed.Metadata.OriginUrl;
+
+            if (!river.Feeds.Contains(feedUrl))
+            {
+                RiverDefinition newRiver = river.With(feeds: river.Feeds.Add(feedUrl));
+                UserProfile newProfile = profile.With(rivers: profile.Rivers.Replace(river, newRiver));
+                await this.profileStore.SaveProfile(newProfile);
+
+                // Grab some number of items out of the udpated river; we're gonna forge an update.
+                RiverFeed newUpdate = parsedFeed.UpdatedFeeds.Feeds[0].With(
+                    items: parsedFeed.UpdatedFeeds.Feeds.SelectMany(f => f.Items).Take(30));
+
+                River aggregate = await this.aggregateStore.LoadAggregate(newRiver.Id);
+                River newAggregate = aggregate.With(
+                    updatedFeeds: aggregate.UpdatedFeeds.With(
+                        feeds: aggregate.UpdatedFeeds.Feeds.Insert(0, newUpdate)
+                    )
+                );
+                await this.aggregateStore.WriteAggregate(newRiver.Id, newAggregate);
+
+                river = newRiver;
+            }
+
+            return river;
+        }
+
         Task<River>[] UpdateAllFeeds(Uri[] feeds)
         {
             Task<River>[] feedTasks = new Task<River>[feeds.Length];
@@ -972,9 +1048,9 @@
             return feedTasks;
         }
 
-        public class AddFeedRequest
+        public class AddRiverSourceRequest
         {
-            public AddFeedRequest(string url) { Url = url; }
+            public AddRiverSourceRequest(string url) { Url = url; }
 
             [JsonProperty("url", Required = Required.Always)]
             public string Url { get; }

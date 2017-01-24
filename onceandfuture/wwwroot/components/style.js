@@ -100,6 +100,16 @@ export const Z_INDEX_ACCOUNT_SETTINGS = 400;
 export const Z_INDEX_ACCOUNT_MENU     = 410;
 export const Z_INDEX_TOOLTIP          = 900;
 
+// ---- Useful shorthand
+
+export const RIVER_SETTINGS_BASE_STYLE = {
+  backgroundColor: COLOR_VERY_LIGHT,
+  border: '1px solid ' + COLOR_VERY_DARK,
+  padding: SIZE_SPACER_WIDTH,
+  zIndex: Z_INDEX_SETTINGS,
+};
+
+
 // KILL THESE
 export const FULL_IMAGE_WIDTH = 300;
 export const COLUMNSPACER = 10;

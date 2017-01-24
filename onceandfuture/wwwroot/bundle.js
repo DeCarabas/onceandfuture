@@ -171,6 +171,12 @@
 	        level: 'error'
 	      };
 	
+	    case _actions.RIVER_SET_NAME_ERROR:
+	      return {
+	        text: "I can't change the name of the river right now." + errorDetail,
+	        level: 'error'
+	      };
+	
 	    default:
 	      return {};
 	  }
@@ -210,6 +216,11 @@
 	    case _actions.RIVER_SET_NAME_ERROR:
 	      return Object.assign({}, state, {
 	        modal: { kind: 'bubble', info: get_river_info(action) }
+	      });
+	
+	    case _actions.RIVER_ADD_FEED_FAILED_AMBIGUOUS:
+	      return Object.assign({}, state, {
+	        modal: { kind: 'ambiguous', address: action.address, feeds: action.feeds }
 	      });
 	
 	    case _actions.RIVER_UPDATE_SUCCESS:
@@ -26018,7 +26029,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.RIVER_SET_FEED_MODE = exports.SET_PASSWORD_ERROR = exports.SET_PASSWORD_SUCCESS = exports.SET_PASSWORD_START = exports.SET_EMAIL_ERROR = exports.SET_EMAIL_SUCCESS = exports.SET_EMAIL_START = exports.GET_EMAIL_ERROR = exports.GET_EMAIL_SUCCESS = exports.GET_EMAIL_START = exports.SIGN_OUT_ERROR = exports.USER_MENU_TOGGLE = exports.ACCOUNT_SETTINGS_TOGGLE = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
+	exports.RIVER_SET_FEED_MODE = exports.SET_PASSWORD_ERROR = exports.SET_PASSWORD_SUCCESS = exports.SET_PASSWORD_START = exports.SET_EMAIL_ERROR = exports.SET_EMAIL_SUCCESS = exports.SET_EMAIL_START = exports.GET_EMAIL_ERROR = exports.GET_EMAIL_SUCCESS = exports.GET_EMAIL_START = exports.SIGN_OUT_ERROR = exports.USER_MENU_TOGGLE = exports.ACCOUNT_SETTINGS_TOGGLE = exports.RIVER_SET_NAME_ERROR = exports.RIVER_SET_NAME_SUCCESS = exports.RIVER_SET_NAME_START = exports.RIVER_REMOVE_SOURCE_ERROR = exports.RIVER_REMOVE_SOURCE_SUCCESS = exports.RIVER_REMOVE_SOURCE_START = exports.RIVER_GET_FEED_SOURCES_ERROR = exports.RIVER_GET_FEED_SOURCES_SUCCESS = exports.RIVER_GET_FEED_SOURCES_START = exports.DISMISS_RIVER_BALLOON = exports.DISMISS_BALLOON = exports.REMOVE_RIVER_ERROR = exports.REMOVE_RIVER_SUCCESS = exports.REMOVE_RIVER_START = exports.ADD_RIVER_ERROR = exports.ADD_RIVER_SUCCESS = exports.ADD_RIVER_START = exports.REFRESH_ALL_FEEDS_ERROR = exports.REFRESH_ALL_FEEDS_SUCCESS = exports.REFRESH_ALL_FEEDS_PROGRESS = exports.REFRESH_ALL_FEEDS_START = exports.RIVER_UPDATE_FAILED = exports.RIVER_UPDATE_SUCCESS = exports.RIVER_UPDATE_START = exports.RIVER_LIST_UPDATE_FAILED = exports.RIVER_LIST_UPDATE_SUCCESS = exports.RIVER_LIST_UPDATE_START = exports.RIVER_ADD_FEED_FAILED_AMBIGUOUS = exports.RIVER_ADD_FEED_FAILED = exports.RIVER_ADD_FEED_SUCCESS = exports.RIVER_ADD_FEED_START = exports.HIDE_RIVER_SETTINGS = exports.SHOW_RIVER_SETTINGS = exports.COLLAPSE_FEED_UPDATE = exports.EXPAND_FEED_UPDATE = exports.DROP_RIVER = exports.RIVER_MODE_TEXT = exports.RIVER_MODE_IMAGE = exports.RIVER_MODE_AUTO = undefined;
 	exports.dropRiver = dropRiver;
 	exports.expandFeedUpdate = expandFeedUpdate;
 	exports.collapseFeedUpdate = collapseFeedUpdate;
@@ -26027,6 +26038,7 @@
 	exports.riverAddFeedStart = riverAddFeedStart;
 	exports.riverAddFeedSuccess = riverAddFeedSuccess;
 	exports.riverAddFeedFailed = riverAddFeedFailed;
+	exports.riverAddFeedFailedAmbiguous = riverAddFeedFailedAmbiguous;
 	exports.riverListUpdateStart = riverListUpdateStart;
 	exports.riverListUpdateSuccess = riverListUpdateSuccess;
 	exports.riverListUpdateFailed = riverListUpdateFailed;
@@ -26153,6 +26165,16 @@
 	  return {
 	    type: RIVER_ADD_FEED_FAILED,
 	    error: message,
+	    river_index: index
+	  };
+	}
+	
+	var RIVER_ADD_FEED_FAILED_AMBIGUOUS = exports.RIVER_ADD_FEED_FAILED_AMBIGUOUS = 'RIVER_ADD_FEED_FAILED_AMBIGUOUS';
+	function riverAddFeedFailedAmbiguous(index, address, feeds) {
+	  return {
+	    type: RIVER_ADD_FEED_FAILED_AMBIGUOUS,
+	    address: address,
+	    feeds: feeds,
 	    river_index: index
 	  };
 	}
@@ -26585,9 +26607,15 @@
 	    start: function start(dispatch) {
 	      return dispatch(riverAddFeedStart(index));
 	    },
-	    loaded: function loaded(dispatch) {
-	      var on_complete = riverAddFeedSuccess(index);
-	      dispatch(refreshRiver(index, river.name, river.url, river.id, on_complete));
+	    loaded_json: function loaded_json(dispatch, result) {
+	      if (result.status === 'ok') {
+	        var on_complete = riverAddFeedSuccess(index);
+	        dispatch(refreshRiver(index, river.name, river.url, river.id, on_complete));
+	      } else if (result.status == 'ambiguous') {
+	        dispatch(riverAddFeedFailedAmbiguous(index, url, result.feeds));
+	      } else {
+	        dispatch(riverAddFeedFailed(index, "an unexpected server response."));
+	      }
 	    },
 	    error: function error(dispatch, message) {
 	      dispatch(riverAddFeedFailed(index, message));
@@ -27164,6 +27192,15 @@
 	var Z_INDEX_ACCOUNT_SETTINGS = exports.Z_INDEX_ACCOUNT_SETTINGS = 400;
 	var Z_INDEX_ACCOUNT_MENU = exports.Z_INDEX_ACCOUNT_MENU = 410;
 	var Z_INDEX_TOOLTIP = exports.Z_INDEX_TOOLTIP = 900;
+	
+	// ---- Useful shorthand
+	
+	var RIVER_SETTINGS_BASE_STYLE = exports.RIVER_SETTINGS_BASE_STYLE = {
+	  backgroundColor: COLOR_VERY_LIGHT,
+	  border: '1px solid ' + COLOR_VERY_DARK,
+	  padding: SIZE_SPACER_WIDTH,
+	  zIndex: Z_INDEX_SETTINGS
+	};
 	
 	// KILL THESE
 	var FULL_IMAGE_WIDTH = exports.FULL_IMAGE_WIDTH = 300;
@@ -28404,11 +28441,15 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 227);
 	
+	var _ambiguousfeeddialog = __webpack_require__(/*! ./ambiguousfeeddialog */ 239);
+	
+	var _ambiguousfeeddialog2 = _interopRequireDefault(_ambiguousfeeddialog);
+	
 	var _riverballoon = __webpack_require__(/*! ./riverballoon */ 236);
 	
 	var _riverballoon2 = _interopRequireDefault(_riverballoon);
 	
-	var _riversettings = __webpack_require__(/*! ./riversettings */ 239);
+	var _riversettings = __webpack_require__(/*! ./riversettings */ 240);
 	
 	var _riversettings2 = _interopRequireDefault(_riversettings);
 	
@@ -28416,11 +28457,11 @@
 	
 	var _riverprogress2 = _interopRequireDefault(_riverprogress);
 	
-	var _rivertitle = __webpack_require__(/*! ./rivertitle */ 242);
+	var _rivertitle = __webpack_require__(/*! ./rivertitle */ 243);
 	
 	var _rivertitle2 = _interopRequireDefault(_rivertitle);
 	
-	var _riverupdates = __webpack_require__(/*! ./riverupdates */ 243);
+	var _riverupdates = __webpack_require__(/*! ./riverupdates */ 244);
 	
 	var _riverupdates2 = _interopRequireDefault(_riverupdates);
 	
@@ -28444,6 +28485,9 @@
 	      control = _react2.default.createElement(_riversettings2.default, { river: river, index: index });
 	      style.bottom = 0;
 	      style.overflowY = 'auto';
+	      break;
+	    case 'ambiguous':
+	      control = _react2.default.createElement(_ambiguousfeeddialog2.default, { index: index, river: river, address: modal.address, feeds: modal.feeds });
 	      break;
 	    case 'bubble':
 	      control = _react2.default.createElement(_riverballoon2.default, { info: modal.info, dismiss: dismiss, dispatchAction: dispatch });
@@ -28564,6 +28608,169 @@
 
 /***/ },
 /* 239 */
+/*!***************************************************!*\
+  !*** ./wwwroot/components/ambiguousfeeddialog.js ***!
+  \***************************************************/
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _react = __webpack_require__(/*! react */ 1);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	var _reactRedux = __webpack_require__(/*! react-redux */ 178);
+	
+	var _style = __webpack_require__(/*! ./style */ 227);
+	
+	var _tooltip = __webpack_require__(/*! ./tooltip */ 231);
+	
+	var _tooltip2 = _interopRequireDefault(_tooltip);
+	
+	var _settingscontrols = __webpack_require__(/*! ./settingscontrols */ 229);
+	
+	var _actions = __webpack_require__(/*! ../actions */ 224);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	var AmbiguousFeedDialogBase = function AmbiguousFeedDialogBase(_ref) {
+	  var address = _ref.address,
+	      feeds = _ref.feeds,
+	      addFeedToRiver = _ref.addFeedToRiver,
+	      onHideSettings = _ref.onHideSettings;
+	
+	  var style = Object.assign({}, _style.RIVER_SETTINGS_BASE_STYLE, {
+	    position: 'absolute'
+	  });
+	
+	  var tableStyle = {
+	    width: '100%',
+	    borderSpacing: '0px 4px'
+	  };
+	
+	  var subscribeStyleBase = {
+	    textAlign: 'center',
+	    cursor: 'pointer'
+	  };
+	
+	  var headItemStyle = {
+	    borderBottom: '1px solid'
+	  };
+	
+	  var rows = feeds.map(function (f, i) {
+	    var subscribeStyle = subscribeStyleBase;
+	    var className = 'fa fa-plus';
+	    var toolTip = 'Subscribe to this feed.';
+	    var clickHandler = function clickHandler() {
+	      return addFeedToRiver(f.feedUrl);
+	    };
+	
+	    if (f.isSubscribed) {
+	      className = 'fa fa-ban';
+	      toolTip = 'You are already subscribed to this feed.';
+	      subscribeStyle = Object.assign({}, subscribeStyle, {
+	        cursor: null
+	      });
+	      clickHandler = function clickHandler() {};
+	    }
+	
+	    return _react2.default.createElement(
+	      'tr',
+	      { key: i },
+	      _react2.default.createElement(
+	        'td',
+	        null,
+	        f.title
+	      ),
+	      _react2.default.createElement(
+	        'td',
+	        { style: subscribeStyle, onClick: clickHandler },
+	        _react2.default.createElement(
+	          _tooltip2.default,
+	          { tip: toolTip, position: 'left' },
+	          _react2.default.createElement('i', { className: className, 'aria-hidden': 'true' })
+	        )
+	      )
+	    );
+	  });
+	
+	  return _react2.default.createElement(
+	    'div',
+	    { style: style },
+	    _react2.default.createElement(
+	      'div',
+	      null,
+	      _react2.default.createElement(
+	        'h3',
+	        null,
+	        'I found multiple feeds at the address \'',
+	        address,
+	        '\'.'
+	      ),
+	      _react2.default.createElement(
+	        'p',
+	        null,
+	        'Select the one you want to subscribe to.'
+	      )
+	    ),
+	    _react2.default.createElement(
+	      'table',
+	      { style: tableStyle },
+	      _react2.default.createElement(
+	        'thead',
+	        null,
+	        _react2.default.createElement(
+	          'tr',
+	          null,
+	          _react2.default.createElement(
+	            'th',
+	            { style: headItemStyle },
+	            'Feed Name'
+	          ),
+	          _react2.default.createElement('th', { style: headItemStyle })
+	        )
+	      ),
+	      _react2.default.createElement(
+	        'tbody',
+	        null,
+	        rows
+	      )
+	    ),
+	    _react2.default.createElement(
+	      'div',
+	      null,
+	      _react2.default.createElement(_settingscontrols.SettingsButton, { text: 'Cancel', onClick: onHideSettings })
+	    )
+	  );
+	};
+	
+	var mapStateToProps = function mapStateToProps() {
+	  return {};
+	};
+	var mapDispatchToProps = function mapDispatchToProps(dispatch, ownProps) {
+	  var index = ownProps.index;
+	  var river = ownProps.river;
+	
+	  return {
+	    addFeedToRiver: function addFeedToRiver(url) {
+	      return dispatch((0, _actions.riverAddFeed)(index, river, url));
+	    },
+	    onHideSettings: function onHideSettings() {
+	      return dispatch((0, _actions.hideRiverSettings)(index));
+	    }
+	  };
+	};
+	
+	var AmbiguousFeedDialog = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(AmbiguousFeedDialogBase);
+	
+	exports.default = AmbiguousFeedDialog;
+
+/***/ },
+/* 240 */
 /*!*********************************************!*\
   !*** ./wwwroot/components/riversettings.js ***!
   \*********************************************/
@@ -28585,11 +28792,11 @@
 	
 	var _actions = __webpack_require__(/*! ../actions */ 224);
 	
-	var _reltime = __webpack_require__(/*! ./reltime */ 240);
+	var _reltime = __webpack_require__(/*! ./reltime */ 241);
 	
 	var _reltime2 = _interopRequireDefault(_reltime);
 	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 241);
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 242);
 	
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	
@@ -28892,14 +29099,9 @@
 	      setRiverName = _ref8.setRiverName,
 	      getFeedSources = _ref8.getFeedSources;
 	
-	  var style = {
-	    position: 'absolute',
-	
-	    backgroundColor: _style.COLOR_VERY_LIGHT,
-	    zIndex: _style.Z_INDEX_SETTINGS,
-	    padding: _style.SIZE_SPACER_WIDTH,
-	    border: '1px solid ' + _style.COLOR_VERY_DARK
-	  };
+	  var style = Object.assign({}, _style.RIVER_SETTINGS_BASE_STYLE, {
+	    position: 'absolute'
+	  });
 	
 	  var addFeed = function addFeed(url) {
 	    return addFeedToRiver(index, river, url);
@@ -28974,7 +29176,7 @@
 	exports.default = RiverSettings;
 
 /***/ },
-/* 240 */
+/* 241 */
 /*!***************************************!*\
   !*** ./wwwroot/components/reltime.js ***!
   \***************************************/
@@ -29044,7 +29246,7 @@
 	exports.default = RelTime;
 
 /***/ },
-/* 241 */
+/* 242 */
 /*!*****************************************!*\
   !*** ./wwwroot/components/riverlink.js ***!
   \*****************************************/
@@ -29082,7 +29284,7 @@
 	exports.default = RiverLink;
 
 /***/ },
-/* 242 */
+/* 243 */
 /*!******************************************!*\
   !*** ./wwwroot/components/rivertitle.js ***!
   \******************************************/
@@ -29115,7 +29317,8 @@
 	    position: 'absolute',
 	    right: 0, top: 0
 	  };
-	  var is_settings = (river.modal || {}).kind === 'settings';
+	  var modal_kind = (river.modal || {}).kind;
+	  var is_settings = modal_kind === 'settings' || modal_kind === 'ambiguous';
 	
 	  var icon, onClick, tip;
 	  if (is_settings) {
@@ -29202,7 +29405,7 @@
 	exports.default = RiverTitle;
 
 /***/ },
-/* 243 */
+/* 244 */
 /*!********************************************!*\
   !*** ./wwwroot/components/riverupdates.js ***!
   \********************************************/
@@ -29218,7 +29421,7 @@
 	
 	var _react2 = _interopRequireDefault(_react);
 	
-	var _riverfeedupdate = __webpack_require__(/*! ./riverfeedupdate */ 244);
+	var _riverfeedupdate = __webpack_require__(/*! ./riverfeedupdate */ 245);
 	
 	var _riverfeedupdate2 = _interopRequireDefault(_riverfeedupdate);
 	
@@ -29262,7 +29465,7 @@
 	exports.default = RiverUpdates;
 
 /***/ },
-/* 244 */
+/* 245 */
 /*!***********************************************!*\
   !*** ./wwwroot/components/riverfeedupdate.js ***!
   \***********************************************/
@@ -29284,11 +29487,11 @@
 	
 	var _util = __webpack_require__(/*! ../util */ 223);
 	
-	var _riverfeedupdatetitle = __webpack_require__(/*! ./riverfeedupdatetitle */ 245);
+	var _riverfeedupdatetitle = __webpack_require__(/*! ./riverfeedupdatetitle */ 246);
 	
 	var _riverfeedupdatetitle2 = _interopRequireDefault(_riverfeedupdatetitle);
 	
-	var _riveritem = __webpack_require__(/*! ./riveritem */ 246);
+	var _riveritem = __webpack_require__(/*! ./riveritem */ 247);
 	
 	var _riveritem2 = _interopRequireDefault(_riveritem);
 	
@@ -29382,7 +29585,7 @@
 	exports.default = RiverFeedUpdate;
 
 /***/ },
-/* 245 */
+/* 246 */
 /*!****************************************************!*\
   !*** ./wwwroot/components/riverfeedupdatetitle.js ***!
   \****************************************************/
@@ -29400,11 +29603,11 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 227);
 	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 241);
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 242);
 	
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	
-	var _reltime = __webpack_require__(/*! ./reltime */ 240);
+	var _reltime = __webpack_require__(/*! ./reltime */ 241);
 	
 	var _reltime2 = _interopRequireDefault(_reltime);
 	
@@ -29443,7 +29646,7 @@
 	exports.default = RiverFeedUpdateTitle;
 
 /***/ },
-/* 246 */
+/* 247 */
 /*!*****************************************!*\
   !*** ./wwwroot/components/riveritem.js ***!
   \*****************************************/
@@ -29459,11 +29662,11 @@
 	
 	var _react2 = _interopRequireDefault(_react);
 	
-	var _riveritemtitle = __webpack_require__(/*! ./riveritemtitle */ 247);
+	var _riveritemtitle = __webpack_require__(/*! ./riveritemtitle */ 248);
 	
 	var _riveritemtitle2 = _interopRequireDefault(_riveritemtitle);
 	
-	var _riveritemthumbnail = __webpack_require__(/*! ./riveritemthumbnail */ 248);
+	var _riveritemthumbnail = __webpack_require__(/*! ./riveritemthumbnail */ 249);
 	
 	var _riveritemthumbnail2 = _interopRequireDefault(_riveritemthumbnail);
 	
@@ -29497,7 +29700,7 @@
 	exports.default = RiverItem;
 
 /***/ },
-/* 247 */
+/* 248 */
 /*!**********************************************!*\
   !*** ./wwwroot/components/riveritemtitle.js ***!
   \**********************************************/
@@ -29515,7 +29718,7 @@
 	
 	var _style = __webpack_require__(/*! ./style */ 227);
 	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 241);
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 242);
 	
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	
@@ -29546,7 +29749,7 @@
 	exports.default = RiverItemTitle;
 
 /***/ },
-/* 248 */
+/* 249 */
 /*!**************************************************!*\
   !*** ./wwwroot/components/riveritemthumbnail.js ***!
   \**************************************************/
@@ -29566,7 +29769,7 @@
 	
 	var _util = __webpack_require__(/*! ../util */ 223);
 	
-	var _riverlink = __webpack_require__(/*! ./riverlink */ 241);
+	var _riverlink = __webpack_require__(/*! ./riverlink */ 242);
 	
 	var _riverlink2 = _interopRequireDefault(_riverlink);
 	

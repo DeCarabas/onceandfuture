@@ -29,6 +29,7 @@ import {
   REMOVE_RIVER_SUCCESS,
   RIVER_ADD_FEED_START,
   RIVER_ADD_FEED_FAILED,
+  RIVER_ADD_FEED_FAILED_AMBIGUOUS,
   RIVER_ADD_FEED_SUCCESS,
   RIVER_GET_FEED_SOURCES_ERROR,
   RIVER_GET_FEED_SOURCES_START,
@@ -148,6 +149,12 @@ function get_river_info(action) {
         level: 'error',
       };
 
+    case RIVER_SET_NAME_ERROR:
+      return {
+        text: "I can't change the name of the river right now." + errorDetail,
+        level: 'error',
+      };
+
     default:
       return {};
   }
@@ -185,6 +192,11 @@ function state_river(state = def_river, action) {
     case RIVER_SET_NAME_ERROR:
       return Object.assign({}, state, {
         modal: { kind: 'bubble', info: get_river_info(action), },
+      });
+
+    case RIVER_ADD_FEED_FAILED_AMBIGUOUS:
+      return Object.assign({}, state, {
+        modal: { kind: 'ambiguous', address: action.address, feeds: action.feeds },
       });
 
     case RIVER_UPDATE_SUCCESS:
