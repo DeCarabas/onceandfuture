@@ -12,7 +12,7 @@ const mapStateToProps = (state) => {
 };
 const mapDispatchToProps = (dispatch) => {
   return {
-    dispatch: dispatch,
+    dispatchAction: dispatch,
     dismiss: () => dispatch(dismissBalloon()),
   };
 };

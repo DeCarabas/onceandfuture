@@ -613,11 +613,11 @@
         [HttpPost("/api/v1/user/{user}")]
         public async Task<IActionResult> CreateOrRestoreRiver(string user)
         {
+            River existing = null;
             var requestBody = await ReadRequest<CreateOrRestoreRequest>();
             if (requestBody.Id != null)
             {
-                // Just check it for correctness; we don't need the contents.
-                await LoadAggregate(user, requestBody.Id);
+                existing = await LoadAggregate(user, requestBody.Id);
             }
 
             UserProfile profile = await this.profileStore.GetProfileFor(user);
@@ -642,7 +642,7 @@
                               id = r.Id,
                               url = Url.Action(nameof(GetRiver), new { user, id = r.Id }),
                           }).ToArray();
-            return Json(new { status = "ok", rivers });
+            return Json(new { status = "ok", rivers, existing });
         }
 
         [HttpPost("/api/v1/user/{user}/refresh_all")]

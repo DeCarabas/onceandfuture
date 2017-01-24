@@ -50,4 +50,10 @@ const RiverBalloon = ({info, dispatchAction, dismiss}) => {
   </div>;
 };
 
+RiverBalloon.propTypes = {
+  info: React.PropTypes.object.isRequired,
+  dispatchAction: React.PropTypes.func.isRequired,
+  dismiss: React.PropTypes.func.isRequired,
+};
+
 export default RiverBalloon;

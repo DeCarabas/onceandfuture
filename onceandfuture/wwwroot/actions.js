@@ -174,10 +174,12 @@ export function addRiverStart() {
 }
 
 export const ADD_RIVER_SUCCESS = 'ADD_RIVER_SUCCESS';
-export function addRiverSuccess(rivers) {
+export function addRiverSuccess(rivers, existing_id, existing) {
   return {
     type: ADD_RIVER_SUCCESS,
     rivers: rivers,
+    existing: existing,
+    existing_id: existing_id,
   };
 }
 
@@ -527,7 +529,7 @@ export function addRiver(user, id = null) {
     msg: { name: null, id: id },
     start: (dispatch) => dispatch(addRiverStart()),
     loaded_json: (dispatch, result) => {
-      dispatch(addRiverSuccess(result.rivers));
+      dispatch(addRiverSuccess(result.rivers, id, result.existing));
     },
     error: (dispatch, message) => {
       dispatch(addRiverError(message));

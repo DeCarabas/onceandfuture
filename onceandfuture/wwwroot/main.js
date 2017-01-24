@@ -62,6 +62,7 @@ import {
   addRiver,
   refreshRiverList,
   riverAddFeed,
+  riverUpdateSuccess,
   setRiverOrder,
 } from './actions';
 
@@ -268,13 +269,29 @@ function state_rivers(state = [], action) {
     case ADD_RIVER_SUCCESS:
     case REMOVE_RIVER_SUCCESS:
     case RIVER_LIST_UPDATE_SUCCESS:
+
+      // TODO: It's too hard to map a River structure from the server into a
+      //       river structure here; there are so many things to keep track
+      //       of. Do better engineering to make it easier, get some kind of
+      //       machine help.
+
       return action.rivers.map(nr => {
-        let old_river = state.find(or => or.name === nr.name) || def_river;
-        return Object.assign({}, old_river, {
+        const old_river = state.find(or => or.name === nr.name) || def_river;
+        const new_river = Object.assign({}, old_river, {
           name: nr.name,
           url: nr.url,
           id: nr.id,
         });
+
+        if (action.existing_id === new_river.id) {
+          // If we got an existing ID then we forge an update success.
+          return state_river(
+            new_river,
+            riverUpdateSuccess(0, new_river.name, new_river.url, new_river.id, action.existing)
+          );
+        } else {
+          return new_river;
+        }
       });
 
     case DROP_RIVER:

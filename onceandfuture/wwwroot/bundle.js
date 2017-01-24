@@ -295,15 +295,28 @@
 	    case _actions.ADD_RIVER_SUCCESS:
 	    case _actions.REMOVE_RIVER_SUCCESS:
 	    case _actions.RIVER_LIST_UPDATE_SUCCESS:
+	
+	      // TODO: It's too hard to map a River structure from the server into a
+	      //       river structure here; there are so many things to keep track
+	      //       of. Do better engineering to make it easier, get some kind of
+	      //       machine help.
+	
 	      return action.rivers.map(function (nr) {
 	        var old_river = state.find(function (or) {
 	          return or.name === nr.name;
 	        }) || def_river;
-	        return Object.assign({}, old_river, {
+	        var new_river = Object.assign({}, old_river, {
 	          name: nr.name,
 	          url: nr.url,
 	          id: nr.id
 	        });
+	
+	        if (action.existing_id === new_river.id) {
+	          // If we got an existing ID then we forge an update success.
+	          return state_river(new_river, (0, _actions.riverUpdateSuccess)(0, new_river.name, new_river.url, new_river.id, action.existing));
+	        } else {
+	          return new_river;
+	        }
 	      });
 	
 	    case _actions.DROP_RIVER:
@@ -26270,10 +26283,12 @@
 	}
 	
 	var ADD_RIVER_SUCCESS = exports.ADD_RIVER_SUCCESS = 'ADD_RIVER_SUCCESS';
-	function addRiverSuccess(rivers) {
+	function addRiverSuccess(rivers, existing_id, existing) {
 	  return {
 	    type: ADD_RIVER_SUCCESS,
-	    rivers: rivers
+	    rivers: rivers,
+	    existing: existing,
+	    existing_id: existing_id
 	  };
 	}
 	
@@ -26633,7 +26648,7 @@
 	      return dispatch(addRiverStart());
 	    },
 	    loaded_json: function loaded_json(dispatch, result) {
-	      dispatch(addRiverSuccess(result.rivers));
+	      dispatch(addRiverSuccess(result.rivers, id, result.existing));
 	    },
 	    error: function error(dispatch, message) {
 	      dispatch(addRiverError(message));
@@ -28193,7 +28208,7 @@
 	};
 	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
 	  return {
-	    dispatch: dispatch,
+	    dispatchAction: dispatch,
 	    dismiss: function dismiss() {
 	      return dispatch((0, _actions.dismissBalloon)());
 	    }
@@ -28291,6 +28306,12 @@
 	      action_span
 	    )
 	  );
+	};
+	
+	RiverBalloon.propTypes = {
+	  info: _react2.default.PropTypes.object.isRequired,
+	  dispatchAction: _react2.default.PropTypes.func.isRequired,
+	  dismiss: _react2.default.PropTypes.func.isRequired
 	};
 	
 	exports.default = RiverBalloon;
