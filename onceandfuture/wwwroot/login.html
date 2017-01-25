@@ -1,6 +1,8 @@
 ﻿<html>
-    <head>
-        <style>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Feeds</title>
+    <style>
         /* http://paletton.com/#uid=12-0u0kleqtbzEKgVuIpcmGtdhZ */
         .appBackground {
             background-color: #BFEC97;
@@ -18,7 +20,7 @@
             padding-left: 10px;
         }
         #contentBox {
-            width: 460px;
+            maxWidth: 460px;
             margin: 20 auto;
             text-align: center;
             border: #5EA222 solid 3px;
@@ -56,24 +58,24 @@
             border-bottom: 1px solid;
             margin-top: 15px;
         }
-        </style>
-    </head>
-    <body class="appBackground">
-        <div class="appHeader">Rivers</div>
-        <div id="contentBox">
-            <h1>Welcome back!</h1>
-            <h3>Let's get you signed in.</h3>
-            <form action="/login" method="post">
-                <div class="textBox">
-                    <input type="text" id="username" name="username" placeholder="User ID" />
-                </div>
-                <div class="textBox">
-                    <input type="password" id="password" name="password" placeholder="What's the password?" />
-                </div>
-                <div>
-                    <button type="submit">Sign In</button>
-                </div>
-            </form>
+    </style>
+  </head>
+  <body class="appBackground">
+    <div class="appHeader">Rivers</div>
+    <div id="contentBox">
+      <h1>Welcome back!</h1>
+      <h3>Let's get you signed in.</h3>
+      <form action="/login" method="post">
+        <div class="textBox">
+          <input type="text" id="username" name="username" placeholder="User ID" />
         </div>
-    </body>
+        <div class="textBox">
+          <input type="password" id="password" name="password" placeholder="What's the password?" />
+        </div>
+        <div>
+          <button type="submit">Sign In</button>
+        </div>
+      </form>
+    </div>
+  </body>
 </html>

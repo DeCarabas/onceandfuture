@@ -27183,7 +27183,7 @@
 	var SIZE_PAGE_HEADER = exports.SIZE_PAGE_HEADER = SIZE_BANNER_HEIGHT + SIZE_PROGRESS_HEIGHT;
 	
 	var SIZE_COLUMN_TOP = exports.SIZE_COLUMN_TOP = SIZE_PAGE_HEADER + SIZE_SPACER_HEIGHT;
-	var SIZE_COLUMN_WIDTH = exports.SIZE_COLUMN_WIDTH = 360;
+	var SIZE_COLUMN_WIDTH = exports.SIZE_COLUMN_WIDTH = 300; // 360 is so nice but doesn't fit on an iPhone 5.
 	
 	var SIZE_FULL_IMAGE_GUTTER = exports.SIZE_FULL_IMAGE_GUTTER = 24;
 	var SIZE_FULL_IMAGE_WIDTH = exports.SIZE_FULL_IMAGE_WIDTH = SIZE_COLUMN_WIDTH - 2 * SIZE_FULL_IMAGE_GUTTER;
@@ -27233,7 +27233,6 @@
 	};
 	
 	// KILL THESE
-	var FULL_IMAGE_WIDTH = exports.FULL_IMAGE_WIDTH = 300;
 	var COLUMNSPACER = exports.COLUMNSPACER = 10;
 
 /***/ },
@@ -29841,7 +29840,7 @@
 	    };
 	
 	    if (mode === 'auto') {
-	      if (thumb.width < _style.FULL_IMAGE_WIDTH || (item.body || '').length > 100) {
+	      if (thumb.width < _style.SIZE_FULL_IMAGE_WIDTH || (item.body || '').length > 100) {
 	        mode = 'text';
 	      } else {
 	        mode = 'image';
@@ -29853,8 +29852,8 @@
 	      imgstyle.width = 100;
 	      imgstyle.height = 100;
 	    } else {
-	      imgstyle.width = _style.FULL_IMAGE_WIDTH;
-	      imgstyle.height = _style.FULL_IMAGE_WIDTH;
+	      imgstyle.width = _style.SIZE_FULL_IMAGE_WIDTH;
+	      imgstyle.height = _style.SIZE_FULL_IMAGE_WIDTH;
 	    }
 	
 	    return _react2.default.createElement(

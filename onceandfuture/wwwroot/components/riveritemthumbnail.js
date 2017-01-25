@@ -1,5 +1,5 @@
 import React from 'react';
-import { FULL_IMAGE_WIDTH } from './style';
+import { SIZE_FULL_IMAGE_WIDTH } from './style';
 import { make_full_url } from '../util';
 import RiverLink from './riverlink';
 
@@ -16,7 +16,7 @@ const RiverItemThumbnail = ({item, mode = 'auto'}) => {
     };
 
     if (mode === 'auto') {
-      if ((thumb.width < FULL_IMAGE_WIDTH) || (item.body || '').length > 100) {
+      if ((thumb.width < SIZE_FULL_IMAGE_WIDTH) || (item.body || '').length > 100) {
         mode = 'text';
       } else {
         mode = 'image';
@@ -28,8 +28,8 @@ const RiverItemThumbnail = ({item, mode = 'auto'}) => {
       imgstyle.width = 100;
       imgstyle.height = 100;
     } else {
-      imgstyle.width = FULL_IMAGE_WIDTH;
-      imgstyle.height = FULL_IMAGE_WIDTH;
+      imgstyle.width = SIZE_FULL_IMAGE_WIDTH;
+      imgstyle.height = SIZE_FULL_IMAGE_WIDTH;
     }
 
     return (

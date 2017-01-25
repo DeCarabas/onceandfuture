@@ -58,7 +58,7 @@ export const SIZE_SPACER_WIDTH = 10;
 export const SIZE_PAGE_HEADER = SIZE_BANNER_HEIGHT + SIZE_PROGRESS_HEIGHT;
 
 export const SIZE_COLUMN_TOP = SIZE_PAGE_HEADER + SIZE_SPACER_HEIGHT;
-export const SIZE_COLUMN_WIDTH = 360;
+export const SIZE_COLUMN_WIDTH = 300; // 360 is so nice but doesn't fit on an iPhone 5.
 
 export const SIZE_FULL_IMAGE_GUTTER = 24;
 export const SIZE_FULL_IMAGE_WIDTH = SIZE_COLUMN_WIDTH - (2 * SIZE_FULL_IMAGE_GUTTER);
@@ -111,5 +111,4 @@ export const RIVER_SETTINGS_BASE_STYLE = {
 
 
 // KILL THESE
-export const FULL_IMAGE_WIDTH = 300;
 export const COLUMNSPACER = 10;
