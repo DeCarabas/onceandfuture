@@ -14,6 +14,7 @@ import {
   setPassword,
 } from '../actions';
 import {
+  DISABLED,
   SettingInputBox,
   SettingPasswordBox,
   SettingsSectionTitle,
@@ -62,8 +63,8 @@ const ChangeEmailBox = ({email, emailState, setAddress}) => {
   } else {
     const validator = (value) => {
       // No message but not enabled.
-      if (value === email) { return ''; }
-      if (emailState === 'SETTING') { return ''; }
+      if (value === email) { return DISABLED; }
+      if (emailState === 'SETTING') { return DISABLED; }
 
       if (!value || value.length == 0) {
         return 'Cannot have an empty address.';
@@ -98,7 +99,7 @@ const ChangeEmailBox = ({email, emailState, setAddress}) => {
 
 const ChangePasswordBox = ({passwordState, setPassword}) => {
   const validator = () => {
-    if (passwordState === 'SETTING') { return ''; }
+    if (passwordState === 'SETTING') { return DISABLED; }
     return null;
   };
   const transientError = (passwordState === 'SET_ERROR')

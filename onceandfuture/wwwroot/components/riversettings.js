@@ -24,6 +24,7 @@ import {
 import RelTime from './reltime';
 import RiverLink from './riverlink';
 import {
+  DISABLED,
   SettingsButton,
   SettingInputBox,
   SettingsSectionTitle,
@@ -31,11 +32,20 @@ import {
 import Tooltip from './tooltip';
 
 const AddFeedBox = ({addFeedToRiver}) => {
+  const validator = (value) => {
+      if (!value || value.length == 0) { return DISABLED; }
+      return null;
+  };
   return (
     <div>
       <SettingsSectionTitle text="Add A New Site or Feed" />
       <p>Enter the site name or the URL of a feed to subscribe to:</p>
-      <SettingInputBox value='' setValue={addFeedToRiver} buttonLabel='Add Feed' />
+      <SettingInputBox
+        value=''
+        setValue={addFeedToRiver}
+        buttonLabel='Add Feed'
+        validator={validator}
+        />
     </div>
   );
 };

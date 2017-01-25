@@ -62,6 +62,8 @@ export const SettingsButton = ({onClick, text, error, enabled=true}) => {
   );
 };
 
+export const DISABLED = '';
+
 export class SettingInputBox extends React.Component {
   constructor(props) {
     super(props);

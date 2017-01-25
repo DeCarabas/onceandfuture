@@ -27317,10 +27317,10 @@
 	    var validator = function validator(value) {
 	      // No message but not enabled.
 	      if (value === email) {
-	        return '';
+	        return _settingscontrols.DISABLED;
 	      }
 	      if (emailState === 'SETTING') {
-	        return '';
+	        return _settingscontrols.DISABLED;
 	      }
 	
 	      if (!value || value.length == 0) {
@@ -27364,7 +27364,7 @@
 	
 	  var validator = function validator() {
 	    if (passwordState === 'SETTING') {
-	      return '';
+	      return _settingscontrols.DISABLED;
 	    }
 	    return null;
 	  };
@@ -27463,7 +27463,7 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.SettingPasswordBox = exports.SettingInputBox = exports.SettingsButton = exports.SettingsSectionTitle = undefined;
+	exports.SettingPasswordBox = exports.SettingInputBox = exports.DISABLED = exports.SettingsButton = exports.SettingsSectionTitle = undefined;
 	
 	var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
 	
@@ -27558,6 +27558,8 @@
 	    )
 	  );
 	};
+	
+	var DISABLED = exports.DISABLED = '';
 	
 	var SettingInputBox = exports.SettingInputBox = function (_React$Component) {
 	  _inherits(SettingInputBox, _React$Component);
@@ -28832,6 +28834,12 @@
 	var AddFeedBox = function AddFeedBox(_ref) {
 	  var addFeedToRiver = _ref.addFeedToRiver;
 	
+	  var validator = function validator(value) {
+	    if (!value || value.length == 0) {
+	      return _settingscontrols.DISABLED;
+	    }
+	    return null;
+	  };
 	  return _react2.default.createElement(
 	    'div',
 	    null,
@@ -28841,7 +28849,12 @@
 	      null,
 	      'Enter the site name or the URL of a feed to subscribe to:'
 	    ),
-	    _react2.default.createElement(_settingscontrols.SettingInputBox, { value: '', setValue: addFeedToRiver, buttonLabel: 'Add Feed' })
+	    _react2.default.createElement(_settingscontrols.SettingInputBox, {
+	      value: '',
+	      setValue: addFeedToRiver,
+	      buttonLabel: 'Add Feed',
+	      validator: validator
+	    })
 	  );
 	};
 	
