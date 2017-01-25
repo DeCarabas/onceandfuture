@@ -131,7 +131,7 @@ const AccountSettingsBase = ({
   onSetPassword,
 }) => {
   const style = {
-    width: 460,
+    maxWidth: 460,
     marginLeft: 'auto',
     marginRight: 'auto',
     backgroundColor: COLOR_VERY_LIGHT,

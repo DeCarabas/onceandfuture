@@ -78,6 +78,17 @@ const RiverSetBase = ({
     height: SIZE_PAGE_HEADER,
   };
 
+  // This explicitly contains the absolutely-positioned columns within it, so
+  // that they're not positioned relative to the body. If they're positioned
+  // relative to the body then they stretch out the viewport on mobile, which
+  // is no good.
+  const river_container_style = {
+    position: 'absolute',
+    overflowX: 'auto',
+    width: '100%',
+    height: '100%',
+  };
+
   let accountSettings = <span />;
   let onSettingsClick = onShowSettings;
   if (show_settings) {
@@ -94,12 +105,14 @@ const RiverSetBase = ({
         onSettingsClick={onSettingsClick}
         />
     </div>
-    <div>{columns}</div>
-    <div>
-      <AddRiverButton
-        index={rivers.length}
-        onAddRiver={() => onAddRiver(user)}
-      />
+    <div style={river_container_style}>
+      <div>{columns}</div>
+      <div>
+        <AddRiverButton
+          index={rivers.length}
+          onAddRiver={() => onAddRiver(user)}
+        />
+      </div>
     </div>
     {accountSettings}
   </div>;

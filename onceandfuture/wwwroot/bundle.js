@@ -27037,6 +27037,17 @@
 	    height: _style.SIZE_PAGE_HEADER
 	  };
 	
+	  // This explicitly contains the absolutely-positioned columns within it, so
+	  // that they're not positioned relative to the body. If they're positioned
+	  // relative to the body then they stretch out the viewport on mobile, which
+	  // is no good.
+	  var river_container_style = {
+	    position: 'absolute',
+	    overflowX: 'auto',
+	    width: '100%',
+	    height: '100%'
+	  };
+	
 	  var accountSettings = _react2.default.createElement('span', null);
 	  var onSettingsClick = onShowSettings;
 	  if (show_settings) {
@@ -27061,18 +27072,22 @@
 	    ),
 	    _react2.default.createElement(
 	      'div',
-	      null,
-	      columns
-	    ),
-	    _react2.default.createElement(
-	      'div',
-	      null,
-	      _react2.default.createElement(AddRiverButton, {
-	        index: rivers.length,
-	        onAddRiver: function onAddRiver() {
-	          return _onAddRiver(user);
-	        }
-	      })
+	      { style: river_container_style },
+	      _react2.default.createElement(
+	        'div',
+	        null,
+	        columns
+	      ),
+	      _react2.default.createElement(
+	        'div',
+	        null,
+	        _react2.default.createElement(AddRiverButton, {
+	          index: rivers.length,
+	          onAddRiver: function onAddRiver() {
+	            return _onAddRiver(user);
+	          }
+	        })
+	      )
 	    ),
 	    accountSettings
 	  );
@@ -27398,7 +27413,7 @@
 	      onSetPassword = _ref4.onSetPassword;
 	
 	  var style = {
-	    width: 460,
+	    maxWidth: 460,
 	    marginLeft: 'auto',
 	    marginRight: 'auto',
 	    backgroundColor: _style2.COLOR_VERY_LIGHT,
