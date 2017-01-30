@@ -6,6 +6,9 @@ import {
 
   RIVER_SETTINGS_BASE_STYLE,
 
+  SIZE_DISPLAY_MODE_BUTTON,
+  SIZE_DISPLAY_MODE_BUTTON_END_SPACE,
+  SIZE_DISPLAY_MODE_BUTTON_MID_SPACE,
   SIZE_SPACER_HEIGHT,
 } from './style';
 import {
@@ -52,7 +55,7 @@ const AddFeedBox = ({addFeedToRiver}) => {
 
 const DisplayModeButton = ({text, enabled, click}) => {
   const butt = {
-    width: 100,
+    width: SIZE_DISPLAY_MODE_BUTTON,
     display: 'inline-block',
     textAlign: 'center',
     border: '2px solid ' + COLOR_VERY_DARK,
@@ -65,11 +68,11 @@ const DisplayModeButton = ({text, enabled, click}) => {
 
 const FeedDisplayModeBox = ({mode, setFeedMode}) => {
   const end_space = {
-    width: 10,
+    width: SIZE_DISPLAY_MODE_BUTTON_END_SPACE,
     display: 'inline-block',
   };
   const mid_space = {
-    width: 4,
+    width: SIZE_DISPLAY_MODE_BUTTON_MID_SPACE,
     display: 'inline-block',
   };
 

@@ -27176,9 +27176,9 @@
 	var SIZE_BUTTON_HEIGHT = exports.SIZE_BUTTON_HEIGHT = SIZE_BANNER_HEIGHT; // Buttons fill the banner top-to-bottom.
 	var SIZE_BUTTON_WIDTH = exports.SIZE_BUTTON_WIDTH = SIZE_BUTTON_HEIGHT; // Buttons are square.
 	
-	var SIZE_PROGRESS_HEIGHT = exports.SIZE_PROGRESS_HEIGHT = 10;
-	var SIZE_SPACER_HEIGHT = exports.SIZE_SPACER_HEIGHT = 10;
-	var SIZE_SPACER_WIDTH = exports.SIZE_SPACER_WIDTH = 10;
+	var SIZE_PROGRESS_HEIGHT = exports.SIZE_PROGRESS_HEIGHT = 5;
+	var SIZE_SPACER_HEIGHT = exports.SIZE_SPACER_HEIGHT = 2;
+	var SIZE_SPACER_WIDTH = exports.SIZE_SPACER_WIDTH = 2;
 	
 	var SIZE_PAGE_HEADER = exports.SIZE_PAGE_HEADER = SIZE_BANNER_HEIGHT + SIZE_PROGRESS_HEIGHT;
 	
@@ -27207,13 +27207,19 @@
 	//   | = Main                      S | SIZE_RIVER_TITLE_HEIGHT
 	//   +-------------------------------+
 	//   |                               |
-	var SIZE_RIVER_TITLE_TOP_SPACER = exports.SIZE_RIVER_TITLE_TOP_SPACER = SIZE_SPACER_HEIGHT;
+	var SIZE_RIVER_TITLE_TOP_SPACER = exports.SIZE_RIVER_TITLE_TOP_SPACER = 0; //SIZE_SPACER_HEIGHT;
 	var SIZE_RIVER_TITLE_HEIGHT = exports.SIZE_RIVER_TITLE_HEIGHT = SIZE_BANNER_HEIGHT;
 	var SIZE_RIVER_TITLE_FONT = exports.SIZE_RIVER_TITLE_FONT = 24;
 	var SIZE_RIVER_TITLE_PADDING_HORIZONTAL = exports.SIZE_RIVER_TITLE_PADDING_HORIZONTAL = SIZE_BUTTON_WIDTH;
 	var SIZE_RIVER_TITLE_PADDING_VERTICAL = exports.SIZE_RIVER_TITLE_PADDING_VERTICAL = (SIZE_RIVER_TITLE_HEIGHT - SIZE_RIVER_TITLE_FONT) / 2;
 	
 	var SIZE_RIVER_MODAL_TOP = exports.SIZE_RIVER_MODAL_TOP = SIZE_RIVER_TITLE_TOP_SPACER + SIZE_RIVER_TITLE_HEIGHT;
+	
+	var SIZE_DISPLAY_MODE_BUTTON_END_SPACE = exports.SIZE_DISPLAY_MODE_BUTTON_END_SPACE = 10;
+	var SIZE_DISPLAY_MODE_BUTTON_MID_SPACE = exports.SIZE_DISPLAY_MODE_BUTTON_MID_SPACE = 4;
+	var SIZE_DISPLAY_MODE_BUTTON = exports.SIZE_DISPLAY_MODE_BUTTON = (SIZE_COLUMN_WIDTH - 2 * SIZE_DISPLAY_MODE_BUTTON_END_SPACE - 2 * SIZE_DISPLAY_MODE_BUTTON_MID_SPACE) / 3;
+	
+	var SIZE_UPDATE_TOP = exports.SIZE_UPDATE_TOP = SIZE_RIVER_MODAL_TOP + SIZE_PROGRESS_HEIGHT;
 	
 	// ---- Layers
 	var Z_INDEX_BASE = exports.Z_INDEX_BASE = 0;
@@ -28572,7 +28578,6 @@
 	
 	  var style = {
 	    backgroundColor: _style.RIVER_COLUMN_BACKGROUND_COLOR,
-	    borderRadius: 10,
 	    border: '1px solid ' + _style.COLOR_VERY_DARK,
 	    height: '100%',
 	    width: '100%'
@@ -28878,7 +28883,7 @@
 	      click = _ref2.click;
 	
 	  var butt = {
-	    width: 100,
+	    width: _style.SIZE_DISPLAY_MODE_BUTTON,
 	    display: 'inline-block',
 	    textAlign: 'center',
 	    border: '2px solid ' + _style.COLOR_VERY_DARK,
@@ -28898,11 +28903,11 @@
 	      setFeedMode = _ref3.setFeedMode;
 	
 	  var end_space = {
-	    width: 10,
+	    width: _style.SIZE_DISPLAY_MODE_BUTTON_END_SPACE,
 	    display: 'inline-block'
 	  };
 	  var mid_space = {
-	    width: 4,
+	    width: _style.SIZE_DISPLAY_MODE_BUTTON_MID_SPACE,
 	    display: 'inline-block'
 	  };
 	
@@ -29418,7 +29423,11 @@
 	
 	  var divStyle = {
 	    height: _style.SIZE_RIVER_TITLE_HEIGHT,
-	    width: '100%',
+	    //width: SIZE_COLUMN_WIDTH,
+	    position: 'absolute',
+	    left: 0,
+	    right: 1, // ::shrug::
+	    borderTop: '1px solid ' + _style.COLOR_VERY_DARK,
 	
 	    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR
 	  };
@@ -29475,14 +29484,16 @@
 	
 	var _util = __webpack_require__(/*! ../util */ 223);
 	
+	var _style = __webpack_require__(/*! ./style */ 227);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	var RiverUpdates = function RiverUpdates(_ref) {
 	  var river = _ref.river,
 	      index = _ref.index;
 	
-	  var TOP_SPACE = 65;
-	  var SIDE_PADDING = 3;
+	  var TOP_SPACE = _style.SIZE_UPDATE_TOP;
+	  var SIDE_PADDING = _style.SIZE_SPACER_WIDTH;
 	
 	  var style = {
 	    overflowX: 'hidden',

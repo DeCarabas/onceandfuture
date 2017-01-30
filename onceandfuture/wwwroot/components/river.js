@@ -78,7 +78,6 @@ const RiverBase = ({
 }) => {
   const style = {
     backgroundColor: RIVER_COLUMN_BACKGROUND_COLOR,
-    borderRadius: 10,
     border: '1px solid ' + COLOR_VERY_DARK,
     height: '100%',
     width: '100%',

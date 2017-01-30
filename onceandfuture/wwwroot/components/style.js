@@ -51,9 +51,9 @@ export const SIZE_BANNER_HEIGHT = 36;                  // A nice height.
 export const SIZE_BUTTON_HEIGHT = SIZE_BANNER_HEIGHT;  // Buttons fill the banner top-to-bottom.
 export const SIZE_BUTTON_WIDTH = SIZE_BUTTON_HEIGHT;   // Buttons are square.
 
-export const SIZE_PROGRESS_HEIGHT = 10;
-export const SIZE_SPACER_HEIGHT = 10;
-export const SIZE_SPACER_WIDTH = 10;
+export const SIZE_PROGRESS_HEIGHT = 5;
+export const SIZE_SPACER_HEIGHT = 2;
+export const SIZE_SPACER_WIDTH = 2;
 
 export const SIZE_PAGE_HEADER = SIZE_BANNER_HEIGHT + SIZE_PROGRESS_HEIGHT;
 
@@ -83,7 +83,7 @@ export const SIZE_ANNOUNCER_PADDING_VERTICAL = (SIZE_BANNER_HEIGHT - SIZE_ANNOUN
 //   | = Main                      S | SIZE_RIVER_TITLE_HEIGHT
 //   +-------------------------------+
 //   |                               |
-export const SIZE_RIVER_TITLE_TOP_SPACER = SIZE_SPACER_HEIGHT;
+export const SIZE_RIVER_TITLE_TOP_SPACER = 0; //SIZE_SPACER_HEIGHT;
 export const SIZE_RIVER_TITLE_HEIGHT = SIZE_BANNER_HEIGHT;
 export const SIZE_RIVER_TITLE_FONT = 24;
 export const SIZE_RIVER_TITLE_PADDING_HORIZONTAL = SIZE_BUTTON_WIDTH;
@@ -91,6 +91,12 @@ export const SIZE_RIVER_TITLE_PADDING_VERTICAL = (SIZE_RIVER_TITLE_HEIGHT - SIZE
 
 export const SIZE_RIVER_MODAL_TOP = SIZE_RIVER_TITLE_TOP_SPACER + SIZE_RIVER_TITLE_HEIGHT;
 
+export const SIZE_DISPLAY_MODE_BUTTON_END_SPACE = 10;
+export const SIZE_DISPLAY_MODE_BUTTON_MID_SPACE = 4;
+export const SIZE_DISPLAY_MODE_BUTTON =
+  (SIZE_COLUMN_WIDTH - (2 * SIZE_DISPLAY_MODE_BUTTON_END_SPACE) - (2 * SIZE_DISPLAY_MODE_BUTTON_MID_SPACE)) / 3;
+
+export const SIZE_UPDATE_TOP = SIZE_RIVER_MODAL_TOP + SIZE_PROGRESS_HEIGHT;
 
 // ---- Layers
 export const Z_INDEX_BASE             = 0;

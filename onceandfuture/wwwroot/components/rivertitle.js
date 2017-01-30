@@ -1,7 +1,10 @@
 import React from 'react';
 import {
+  COLOR_VERY_DARK,
+
   RIVER_TITLE_BACKGROUND_COLOR,
 
+  SIZE_COLUMN_WIDTH,
   SIZE_RIVER_TITLE_FONT,
   SIZE_RIVER_TITLE_PADDING_HORIZONTAL,
   SIZE_RIVER_TITLE_PADDING_VERTICAL,
@@ -57,7 +60,11 @@ const RiverDragHandle = ({river}) => {
 const RiverTitle = ({river, onShowSettings, onHideSettings}) => {
   const divStyle = {
     height: SIZE_RIVER_TITLE_HEIGHT,
-    width: '100%',
+    //width: SIZE_COLUMN_WIDTH,
+    position: 'absolute',
+    left: 0,
+    right: 1, // ::shrug::
+    borderTop: '1px solid ' + COLOR_VERY_DARK,
 
     backgroundColor: RIVER_TITLE_BACKGROUND_COLOR,
   };
