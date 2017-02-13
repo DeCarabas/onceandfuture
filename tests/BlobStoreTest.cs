@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Linq;
-using System.Runtime.Serialization;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using onceandfuture;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -14,7 +11,7 @@ namespace tests
     {
         [TestMethod]
         public async Task BlobCompress()
-        {
+        {            
             string name = "compress-" + Guid.NewGuid().ToString("n");
             byte[] firstObject = new byte[1024];
             var random = new Random();

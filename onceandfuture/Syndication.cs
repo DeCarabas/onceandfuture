@@ -10,7 +10,6 @@
     using System.Net;
     using System.Net.Http;
     using System.Net.Http.Headers;
-    using System.Runtime.Caching;
     using System.Runtime.InteropServices;
     using System.Security.Cryptography;
     using System.Text;
@@ -951,12 +950,15 @@
                 AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip,
                 UseCookies = false,
                 UseDefaultCredentials = false,
+                MaxConnectionsPerServer = 1000,
             };
 
             HttpClient client = new HttpClient(handler, true);
             client.Timeout = TimeSpan.FromSeconds(15);
             client.MaxResponseContentBufferSize = TenMegabytes;
             client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
+            client.DefaultRequestHeaders.Connection.Clear();
+            client.DefaultRequestHeaders.ConnectionClose = false;
             return client;
         }
 
@@ -990,7 +992,7 @@
 
     public class RiverFeedParser
     {
-        /// <summaryThe number of updates to have in a river before archiving.</summary>
+        /// <summary>The number of updates to have in a river before archiving.</summary>
         const int UpdateLimit = 40;
 
         /// <summary>The number of updates to send to the archive.</summary>
@@ -1278,8 +1280,8 @@
                 await response.Content.LoadIntoBufferAsync();
                 using (Stream responseStream = await response.Content.ReadAsStreamAsync())
                 using (var textReader = new StreamReader(responseStream))
-                using (var reader = XmlReader.Create(textReader, null, responseUri.AbsoluteUri))
-                {
+                using (var reader = XmlReader.Create(textReader)) // TODO: BASE URI?
+                {                    
                     RiverFeed result = null;
                     XElement element = XElement.Load(reader, LoadOptions.SetBaseUri);
                     if (element.Name == XNames.RSS.Rss)

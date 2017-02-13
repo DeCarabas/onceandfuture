@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Runtime.Caching;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -15,6 +14,7 @@ using AngleSharp.Dom.Html;
 using AngleSharp.Parser.Html;
 using ImageSharp;
 using Serilog;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace onceandfuture
 {
@@ -212,11 +212,10 @@ namespace onceandfuture
         };
 
         static ThumbnailExtractor()
-        {
-            imageCache = new MemoryCache("ThumbMemoryCache", new NameValueCollection
+        {            
+            imageCache = new MemoryCache(new MemoryCacheOptions
             {
-                { "cacheMemoryLimitMegabytes", "100" },
-                { "physicalMemoryLimitPercentage", "10" },
+                CompactOnMemoryPressure = true,
             });
         }
 
@@ -571,26 +570,12 @@ namespace onceandfuture
             // Bypass the cache if the image is too big.
             if (image.Width * image.Height >= 5000) { return image; }
 
-            CacheItem existing = imageCache.AddOrGetExisting(
-                new CacheItem(imageUrl.Uri.AbsoluteUri, image),
-                new CacheItemPolicy { AbsoluteExpiration = DateTimeOffset.UtcNow + SuccessCacheLifetime });
-            if (existing == null) { return image; }
-
-            // N.B.: If we raced with another success this will just return the successful image. If we raced with
-            //       a failure this will return null, as appropriate. (We might race with an error because we cache
-            //       things like "image too oblong" and the like as well.)
-            return existing.Value as Image<Color>;
+            return imageCache.Set(imageUrl.Uri.AbsoluteUri, image, SuccessCacheLifetime);            
         }
 
         static void CacheError(ImageUrl imageUrl, string message)
         {
-            CacheItem existing = imageCache.AddOrGetExisting(
-                new CacheItem(imageUrl.Uri.AbsoluteUri, message),
-                new CacheItemPolicy { AbsoluteExpiration = DateTimeOffset.UtcNow + ErrorCacheLifetime });
-            if (existing != null)
-            {
-                existing.Value = message;
-            }
+            imageCache.Set(imageUrl.Uri.AbsoluteUri, message, ErrorCacheLifetime);
         }
 
         static Uri MakeThumbnailUrl(Uri baseUrl, string src)

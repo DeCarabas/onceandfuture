@@ -136,7 +136,7 @@
     {
         const int CookieSize = 32;
         static readonly ScryptEncoder Encoder = new ScryptEncoder();
-        static readonly RNGCryptoServiceProvider RandomGenerator = new RNGCryptoServiceProvider();
+        static readonly RandomNumberGenerator RandomGenerator = RandomNumberGenerator.Create();
 
         readonly byte[] bytes;
 
@@ -1347,21 +1347,6 @@
                     {
                         Name = "Process Architecture",
                         Value = RuntimeInformation.ProcessArchitecture.ToString()
-                    },
-                    new RuntimeProperty
-                    {
-                        Name = "Runtime Directory",
-                        Value = RuntimeEnvironment.GetRuntimeDirectory()
-                    },
-                    new RuntimeProperty
-                    {
-                        Name = "System Version",
-                        Value = RuntimeEnvironment.GetSystemVersion()
-                    },
-                    new RuntimeProperty
-                    {
-                        Name = "System Configuration File",
-                        Value = RuntimeEnvironment.SystemConfigurationFile
                     },
                 };
             }

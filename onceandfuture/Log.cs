@@ -210,11 +210,11 @@
                 url, timespan, retryCount);
         }
 
-        public static void PutObjectComplete(string bucket, string name, string type, Stopwatch timer, Stream stream)
+        public static void PutObjectComplete(string bucket, string name, string type, Stopwatch timer, long length)
         {
             Get().Verbose(
                 "Put Object: {BucketName}/{ObjectName} ({MimeType}, {ObjectLength} bytes) in {ElapsedMs}ms",
-                bucket, name, type, stream.Length, timer.ElapsedMilliseconds
+                bucket, name, type, length, timer.ElapsedMilliseconds
             );
         }
 
@@ -227,21 +227,18 @@
         }
 
         public static void PutObjectError(
-            string bucket, string name, string type, Exception error, Stopwatch timer, string code, string body)
+            string bucket, string name, string type, Stopwatch timer, string code, string body)
         {
             Get().Error(
-                error,
                 "Put Object: ERROR {BucketName}/{ObjectName} ({MimeType}) in {ElapsedMs}ms: {AWSErrorCode}: "+
                 "{ErrorBody}",
                 bucket, name, type, timer.ElapsedMilliseconds, code, body
             );
         }
 
-        public static void GetObjectError(
-            string bucket, string name, Exception error, Stopwatch timer, string code, string body)
+        public static void GetObjectError(string bucket, string name, Stopwatch timer, string code, string body)
         {
             Get().Error(
-                error,
                 "Get Object: ERROR {BucketName}/{ObjectName} in {ElapsedMs}ms: {AWSErrorCode}: {Body}",
                 bucket, name, timer.ElapsedMilliseconds, code, body
             );
