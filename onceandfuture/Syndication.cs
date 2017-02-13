@@ -22,6 +22,7 @@
     using Newtonsoft.Json;
     using Polly;
     using Polly.Retry;
+    using System.Collections.Concurrent;
 
     public static class Util
     {
@@ -377,38 +378,38 @@
             {
                 switch (node.NodeType)
                 {
-                case NodeType.Element:
-                    if (node.NodeName == "SCRIPT") { break; }
-                    if (node.NodeName == "FIGURE") { break; }
+                    case NodeType.Element:
+                        if (node.NodeName == "SCRIPT") { break; }
+                        if (node.NodeName == "FIGURE") { break; }
 
-                    foreach (INode child in node.ChildNodes)
-                    {
-                        if (!Visit(child)) { return false; }
-                    }
-                    if (node.NodeName == "P" || node.NodeName == "DIV" || node.NodeName == "BR")
-                    {
-                        AppendWhitespace();
-                    }
-                    break;
-
-                case NodeType.Text:
-                case NodeType.CharacterData:
-                case NodeType.EntityReference:
-                    for (int i = 0; i < node.TextContent.Length && builder.Length < 280; i++)
-                    {
-                        if (Char.IsWhiteSpace(node.TextContent[i]))
+                        foreach (INode child in node.ChildNodes)
+                        {
+                            if (!Visit(child)) { return false; }
+                        }
+                        if (node.NodeName == "P" || node.NodeName == "DIV" || node.NodeName == "BR")
                         {
                             AppendWhitespace();
                         }
-                        else
-                        {
-                            builder.Append(node.TextContent[i]);
-                        }
-                    }
-                    break;
+                        break;
 
-                default:
-                    break;
+                    case NodeType.Text:
+                    case NodeType.CharacterData:
+                    case NodeType.EntityReference:
+                        for (int i = 0; i < node.TextContent.Length && builder.Length < 280; i++)
+                        {
+                            if (Char.IsWhiteSpace(node.TextContent[i]))
+                            {
+                                AppendWhitespace();
+                            }
+                            else
+                            {
+                                builder.Append(node.TextContent[i]);
+                            }
+                        }
+                        break;
+
+                    default:
+                        break;
                 }
 
                 if (builder.Length > 280)
@@ -923,6 +924,7 @@
 
     static class Policies
     {
+        static ConcurrentDictionary<bool, HttpClient> clientCache = new ConcurrentDictionary<bool, HttpClient>();
         static Random random = new Random();
 
         public static readonly RetryPolicy HttpPolicy = Policy
@@ -943,23 +945,26 @@
 
         public static HttpClient CreateHttpClient(bool allowRedirect = true)
         {
-            const int TenMegabytes = 10 * 1024 * 1024;
-            var handler = new HttpClientHandler
+            return clientCache.GetOrAdd(allowRedirect, (ar) =>
             {
-                AllowAutoRedirect = allowRedirect,
-                AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip,
-                UseCookies = false,
-                UseDefaultCredentials = false,
-                MaxConnectionsPerServer = 1000,
-            };
+                const int TenMegabytes = 10 * 1024 * 1024;
+                var handler = new HttpClientHandler
+                {
+                    AllowAutoRedirect = ar,
+                    AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip,
+                    UseCookies = false,
+                    UseDefaultCredentials = false,
+                    MaxConnectionsPerServer = 1000,
+                };
 
-            HttpClient client = new HttpClient(handler, true);
-            client.Timeout = TimeSpan.FromSeconds(15);
-            client.MaxResponseContentBufferSize = TenMegabytes;
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
-            client.DefaultRequestHeaders.Connection.Clear();
-            client.DefaultRequestHeaders.ConnectionClose = false;
-            return client;
+                var client = new HttpClient(handler, true);
+                client.Timeout = TimeSpan.FromSeconds(15);
+                client.MaxResponseContentBufferSize = TenMegabytes;
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
+                client.DefaultRequestHeaders.Connection.Clear();
+                client.DefaultRequestHeaders.ConnectionClose = false;
+                return client;
+            });
         }
 
         static bool ValidateHttpRequestException(HttpRequestException hre)
@@ -1281,7 +1286,7 @@
                 using (Stream responseStream = await response.Content.ReadAsStreamAsync())
                 using (var textReader = new StreamReader(responseStream))
                 using (var reader = XmlReader.Create(textReader)) // TODO: BASE URI?
-                {                    
+                {
                     RiverFeed result = null;
                     XElement element = XElement.Load(reader, LoadOptions.SetBaseUri);
                     if (element.Name == XNames.RSS.Rss)

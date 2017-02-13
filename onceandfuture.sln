@@ -13,8 +13,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "onceandfuture", "onceandfut
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tests", "tests\tests.csproj", "{3865D63F-DF7F-471C-B1D1-3CA470F460DD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageSharp", "ImageSharp\ImageSharp.csproj", "{893F7911-4874-4CFB-9D46-84DF5EE909A7}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -30,10 +28,6 @@ Global
 		{3865D63F-DF7F-471C-B1D1-3CA470F460DD}.Debug|x64.Deploy.0 = Debug|x64
 		{3865D63F-DF7F-471C-B1D1-3CA470F460DD}.Release|x64.ActiveCfg = Release|x64
 		{3865D63F-DF7F-471C-B1D1-3CA470F460DD}.Release|x64.Build.0 = Release|x64
-		{893F7911-4874-4CFB-9D46-84DF5EE909A7}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{893F7911-4874-4CFB-9D46-84DF5EE909A7}.Debug|x64.Build.0 = Debug|Any CPU
-		{893F7911-4874-4CFB-9D46-84DF5EE909A7}.Release|x64.ActiveCfg = Release|Any CPU
-		{893F7911-4874-4CFB-9D46-84DF5EE909A7}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
