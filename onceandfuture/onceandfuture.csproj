@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -12,7 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="0.9.9" />
-    <PackageReference Include="AWSSDK.S3" Version="3.3.5.4" />
     <PackageReference Include="ImageSharp" Version="1.0.0-alpha2-00052" />
     <PackageReference Include="ImageSharp.Formats.Bmp" Version="1.0.0-alpha2-00052" />
     <PackageReference Include="ImageSharp.Formats.Gif" Version="1.0.0-alpha2-00052" />
