@@ -928,13 +928,12 @@
         static Random random = new Random();
 
         public static readonly RetryPolicy HttpPolicy = Policy
-            .Handle<HttpRequestException>(ValidateHttpRequestException)
+            .Handle<HttpRequestException>(ShouldRetryException)
             .Or<TaskCanceledException>()
-            .Or<WebException>(ValidateWebException)
+            .Or<WebException>(ShouldRetryException)
             .WaitAndRetryAsync(
                 retryCount: 3,
-                sleepDurationProvider: ExponentialRetryTimeWithJitter,
-                onRetry: (exc, ts, cnt, ctxt) => Log.HttpRetry(exc, ts, cnt, ctxt));
+                sleepDurationProvider: RetryTime);
 
         public static readonly JsonSerializerSettings SerializerSettings =
             new JsonSerializerSettings
@@ -961,21 +960,19 @@
                 client.Timeout = TimeSpan.FromSeconds(15);
                 client.MaxResponseContentBufferSize = TenMegabytes;
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
-                client.DefaultRequestHeaders.Connection.Clear();
-                client.DefaultRequestHeaders.ConnectionClose = false;
                 return client;
             });
         }
 
-        static bool ValidateHttpRequestException(HttpRequestException hre)
+        public static bool ShouldRetryException(HttpRequestException hre)
         {
             var iwe = hre.InnerException as WebException;
-            if (iwe != null) { return ValidateWebException(iwe); }
+            if (iwe != null) { return ShouldRetryException(iwe); }
 
             return true;
         }
 
-        static bool ValidateWebException(WebException iwe)
+        public static bool ShouldRetryException(WebException iwe)
         {
             if (iwe.Message.Contains("The remote name could not be resolved")) { return false; }
             if (iwe.Message.Contains("The server committed a protocol violation")) { return false; }
@@ -983,11 +980,14 @@
             return true;
         }
 
-        static TimeSpan ExponentialRetryTimeWithJitter(int retryAttempt)
+        public static TimeSpan RetryTime(int retryAttempt)
         {
             // var baseTime = TimeSpan.FromSeconds(Math.Pow(3, retryAttempt));
             var baseTime = TimeSpan.FromSeconds(5);
 
+            // Add jitter, so that if a whole bunch of requests fail all at once the retries
+            // are spaced out a little bit. This keeps us from repeatedly hammering at, say, 
+            // an overloaded server.
             int jitterInterval = (int)(baseTime.TotalMilliseconds / 2.0);
             var jitter = TimeSpan.FromMilliseconds(random.Next(-jitterInterval, jitterInterval));
 

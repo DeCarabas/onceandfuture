@@ -198,18 +198,7 @@
                 response.StatusCode, 
                 response.ReasonPhrase);
         }
-
-        public static void HttpRetry(
-            Exception exception, TimeSpan timespan, int retryCount, Context context)
-        {
-            object url;
-            context.TryGetValue("uri", out url);
-            Get().Warning(
-                exception,
-                "HTTP error detected from {TargetUrl}, sleeping {RetryDelay} before retry {RetryCount}",
-                url, timespan, retryCount);
-        }
-
+        
         public static void PutObjectComplete(string bucket, string name, string type, Stopwatch timer, long length)
         {
             Get().Verbose(
