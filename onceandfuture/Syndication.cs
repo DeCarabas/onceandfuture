@@ -1242,7 +1242,9 @@
                         break;
                     }
 
-                    requestUri = response.Headers.Location;
+                    Uri newUri = response.Headers.Location;
+                    if (!newUri.IsAbsoluteUri) { newUri = new Uri(requestUri, newUri); }
+                    requestUri = newUri;
                 }
 
                 if (response.StatusCode == HttpStatusCode.NotModified)
