@@ -8,9 +8,11 @@
     using System.Net;
     using System.Net.Http;
     using System.Runtime.CompilerServices;
+    using System.Threading.Tasks;
     using System.Xml;
     using Polly;
     using Serilog;
+    using Serilog.Events;
 
     static class Log
     {
@@ -71,44 +73,6 @@
         public static void EndGetFeedMovedPermanently(Uri uri, HttpResponseMessage response, Stopwatch loadTimer)
             => EndGetFeed(uri, "moved", null, response, null, loadTimer, null);
 
-        public static void ConsideringImage(Uri baseUrl, Uri uri, string kind, int area, float ratio)
-        {
-            Get().Information(
-                "{BaseUrl}: Considering image {ImageUrl} ({ThumbKind}) (area: {ImageArea}, ratio: {AspectRatio})",
-                baseUrl, uri, kind, area, ratio);
-        }
-
-        public static void GetObjectAccessDenied(string bucket, string key, Stopwatch timer)
-            => Get().Information(
-                "Object {key} access denied in S3 bucket {BucketName} ({ElapsedMs}ms)",
-                key, bucket, timer.ElapsedMilliseconds
-            );
-
-        public static void NewBestImage(Uri baseUrl, Uri uri, string kind, int area, float ratio)
-        {
-            Get().Information(
-                "{BaseUrl}: New best image: {ImageUrl} ({ThumbKind}) (area: {ImageArea}, ratio: {AspectRatio})",
-                baseUrl, uri, kind, area, ratio);
-        }
-
-        public static void ThumbnailErrorResponse(Uri baseUrl, Uri imageUri, string kind, HttpResponseMessage response)
-        {
-            Get().Error(
-                "{BaseUrl}: {ImageUrl} ({ThumbKind}): Error From Host: {HttpStatusCode} {ReasonPhrase}",
-                baseUrl, imageUri, kind, response.StatusCode, response.ReasonPhrase);
-        }
-
-        public static void InvalidThumbnailImageFormat(Uri baseUrl, Uri imageUri, string kind, Exception ae)
-        {
-            // N.B.: Logging the exception is pointless.
-            Get().Warning("{BaseUrl}: {ImageUrl} ({ThumbKind}): Is not a valid image", baseUrl, imageUri, kind);
-        }
-
-        public static void ThumbnailNetworkError(Uri baseUrl, Uri imageUri, string kind, Exception e)
-        {
-            Get().Error(e, "{BaseUrl}: {ImageUrl} ({ThumbKind}): Network Error", baseUrl, imageUri, kind);
-        }
-
         public static void FoundThumbnail(Uri baseUrl, Uri uri, string kind)
         {
             Get().Information("{BaseUrl}: Found thumbnail {ImageUrl} ({ThumbKind})", baseUrl, uri, kind);
@@ -145,19 +109,6 @@
             Get().Information("{BaseUrl}: Checking {Count} thumbnails...", baseUrl, length);
         }
 
-        public static void ThumbnailTooSmall(Uri baseUrl, Uri uri, string kind, int area)
-        {
-            Get().Information("{BaseUrl}: {ImageUrl} ({ThumbKind}): Too small ({ImageArea})", 
-                baseUrl, uri, kind, area);
-        }
-
-        public static void ThumbnailTooOblong(Uri baseUrl, Uri uri, string kind, float ratio)
-        {
-            Get().Information(
-                "{BaseUrl}: {ImageUrl} ({ThumbKind}): Too oblong ({AspectRatio})", 
-                baseUrl, uri, kind, ratio);
-        }
-
         public static void ThumbnailSuccessCacheHit(Uri baseUrl, Uri imageUrl)
         {
             Get().Information("{BaseUrl}: {ImageUrl}: Cached Success", baseUrl, imageUrl);
@@ -166,19 +117,14 @@
         public static void ThumbnailErrorCacheHit(Uri baseUrl, Uri imageUrl, object cachedObject)
         {
             Get().Information(
-                "{BaseUrl}: {ImageUrl}: Cached Error: {ErrorMessage}", 
-                baseUrl, 
-                imageUrl, 
+                "{BaseUrl}: {ImageUrl}: Cached Error: {ErrorMessage}",
+                baseUrl,
+                imageUrl,
                 (string)cachedObject);
         }
 
         public static void FeedTimeout(Uri uri, Stopwatch loadTimer, Exception error)
             => EndGetFeed(uri, "timeout", null, null, null, loadTimer, error);
-
-        public static void ThumbnailTimeout(Uri baseUrl, Uri imageUri, string kind)
-        {
-            Get().Error("{BaseUrl}: {ImageUrl} ({ThumbKind}): Timeout", baseUrl, imageUri, kind);
-        }
 
         public static void FindThumbnailNetworkError(Uri uri, Exception e)
         {
@@ -193,56 +139,14 @@
         public static void FindThumbnailServerError(Uri uri, HttpResponseMessage response)
         {
             Get().Error(
-                "{BaseUrl}: Server error: {HttpStatusCode} {ReasonPhrase}", 
-                uri, 
-                response.StatusCode, 
+                "{BaseUrl}: Server error: {HttpStatusCode} {ReasonPhrase}",
+                uri,
+                response.StatusCode,
                 response.ReasonPhrase);
         }
-        
-        public static void PutObjectComplete(string bucket, string name, string type, Stopwatch timer, long length)
-        {
-            Get().Verbose(
-                "Put Object: {BucketName}/{ObjectName} ({MimeType}, {ObjectLength} bytes) in {ElapsedMs}ms",
-                bucket, name, type, length, timer.ElapsedMilliseconds
-            );
-        }
-
-        public static void GetObjectComplete(string bucket, string name, Stopwatch timer)
-        {
-            Get().Verbose(
-                "Get Object: {BucketName}/{ObjectName} in {ElapsedMs}ms",
-                bucket, name, timer.ElapsedMilliseconds
-            );
-        }
-
-        public static void PutObjectError(
-            string bucket, string name, string type, Stopwatch timer, string code, string body)
-        {
-            Get().Error(
-                "Put Object: ERROR {BucketName}/{ObjectName} ({MimeType}) in {ElapsedMs}ms: {AWSErrorCode}: "+
-                "{ErrorBody}",
-                bucket, name, type, timer.ElapsedMilliseconds, code, body
-            );
-        }
-
-        public static void GetObjectError(string bucket, string name, Stopwatch timer, string code, string body)
-        {
-            Get().Error(
-                "Get Object: ERROR {BucketName}/{ObjectName} in {ElapsedMs}ms: {AWSErrorCode}: {Body}",
-                bucket, name, timer.ElapsedMilliseconds, code, body
-            );
-        }
-
-        public static void GetObjectNotFound(string bucket, string name, Stopwatch timer)
-            => Get().Information(
-                "Object {ObjectName} not found in S3 bucket {BucketName} ({ElapsedMs}ms)",
-                name, bucket, timer.ElapsedMilliseconds);
 
         public static void DetectFeedServerError(Uri uri, HttpResponseMessage response)
             => Get().Warning("Error detecting feed @ {Url}: {HttpStatusCode}", uri.AbsoluteUri, response.StatusCode);
-
-        public static void DetectFeedLoadFeedError(Uri feedUri, HttpStatusCode lastStatus)
-            => Get().Warning("Error loading detected feed @ {Url}: {HttpStatusCode}", feedUri.AbsoluteUri, lastStatus);
 
         public static void FindFeedBaseWasFeed(Uri baseUri)
             => Get().Debug("{BaseUrl}: Base URL was a feed.", baseUri.AbsoluteUri);
@@ -281,8 +185,8 @@
 
         public static void SplittingFeed(string id, River river)
             => Get().Verbose(
-                "{AggregateId}: Splitting feed with {FeedCount} items in it...", 
-                id, 
+                "{AggregateId}: Splitting feed with {FeedCount} items in it...",
+                id,
                 river.UpdatedFeeds.Feeds.Count);
 
         public static void AggregateRefreshed(string id, Stopwatch aggregateTimer)
@@ -301,9 +205,9 @@
 
         public static void AggregateNewUpdates(string id, Uri metadataOriginUrl, int newUpdatesLength)
             => Get().Debug(
-                "{AggregateId}: {FeedUrl}: Has {Count} new updates", 
-                id, 
-                metadataOriginUrl, 
+                "{AggregateId}: {FeedUrl}: Has {Count} new updates",
+                id,
+                metadataOriginUrl,
                 newUpdatesLength);
 
         public static void AggregateRefreshPulledRivers(string id, int riversLength)
@@ -311,5 +215,12 @@
 
         public static void AggregateRefreshStart(string id, int feedUrlsCount)
             => Get().Information("{AggregateId}: Refreshing aggregate with {FeedUrlCount} feeds", id, feedUrlsCount);
-    }    
+
+        public static void AsyncProgressTaskComplete(Task task, string description)
+            => Get().Write(
+                task.IsFaulted ? LogEventLevel.Error : LogEventLevel.Information,
+                task.Exception,
+                "Progress: Task '{Description}': {Status}",
+                description, task.Status.ToString());
+    }
 }

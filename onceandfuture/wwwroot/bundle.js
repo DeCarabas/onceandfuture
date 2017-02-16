@@ -25085,6 +25085,10 @@
 
 	'use strict';
 	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
 	var _extends = Object.assign || function (target) {
 	  for (var i = 1; i < arguments.length; i++) {
 	    var source = arguments[i];for (var key in source) {
@@ -25094,10 +25098,6 @@
 	    }
 	  }return target;
 	};
-	
-	Object.defineProperty(exports, "__esModule", {
-	  value: true
-	});
 	
 	var _core = __webpack_require__(/*! ./core */ 218);
 	
@@ -25131,17 +25131,17 @@
 	 * @returns {function} logger middleware
 	 */
 	function createLogger() {
-	  var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+	  var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 	
 	  var loggerOptions = _extends({}, _defaults2.default, options);
 	
-	  var logger = loggerOptions.logger;
-	  var transformer = loggerOptions.transformer;
-	  var stateTransformer = loggerOptions.stateTransformer;
-	  var errorTransformer = loggerOptions.errorTransformer;
-	  var predicate = loggerOptions.predicate;
-	  var logErrors = loggerOptions.logErrors;
-	  var diffPredicate = loggerOptions.diffPredicate;
+	  var logger = loggerOptions.logger,
+	      transformer = loggerOptions.transformer,
+	      stateTransformer = loggerOptions.stateTransformer,
+	      errorTransformer = loggerOptions.errorTransformer,
+	      predicate = loggerOptions.predicate,
+	      logErrors = loggerOptions.logErrors,
+	      diffPredicate = loggerOptions.diffPredicate;
 	
 	  // Return if 'console' object is not defined
 	
@@ -25178,7 +25178,7 @@
 	        logEntry.prevState = stateTransformer(getState());
 	        logEntry.action = action;
 	
-	        var returnedValue = undefined;
+	        var returnedValue = void 0;
 	        if (logErrors) {
 	          try {
 	            returnedValue = next(action);
@@ -25221,6 +25221,13 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
+	
+	var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
+	  return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+	} : function (obj) {
+	  return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+	};
+	
 	exports.printBuffer = printBuffer;
 	
 	var _helpers = __webpack_require__(/*! ./helpers */ 219);
@@ -25241,10 +25248,6 @@
 	  } else {
 	    return Array.from(arr);
 	  }
-	}
-	
-	function _typeof(obj) {
-	  return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj === 'undefined' ? 'undefined' : _typeof2(obj);
 	}
 	
 	/**
@@ -25269,40 +25272,38 @@
 	}
 	
 	function defaultTitleFormatter(options) {
-	  var timestamp = options.timestamp;
-	  var duration = options.duration;
+	  var timestamp = options.timestamp,
+	      duration = options.duration;
 	
 	  return function (action, time, took) {
 	    var parts = ['action'];
-	    if (timestamp) {
-	      parts.push('@ ' + time);
-	    }
-	    parts.push(action.type);
-	    if (duration) {
-	      parts.push('(in ' + took.toFixed(2) + ' ms)');
-	    }
+	
+	    if (timestamp) parts.push('@ ' + time);
+	    parts.push(String(action.type));
+	    if (duration) parts.push('(in ' + took.toFixed(2) + ' ms)');
+	
 	    return parts.join(' ');
 	  };
 	}
 	
 	function printBuffer(buffer, options) {
-	  var logger = options.logger;
-	  var actionTransformer = options.actionTransformer;
-	  var _options$titleFormatt = options.titleFormatter;
-	  var titleFormatter = _options$titleFormatt === undefined ? defaultTitleFormatter(options) : _options$titleFormatt;
-	  var collapsed = options.collapsed;
-	  var colors = options.colors;
-	  var level = options.level;
-	  var diff = options.diff;
+	  var logger = options.logger,
+	      actionTransformer = options.actionTransformer,
+	      _options$titleFormatt = options.titleFormatter,
+	      titleFormatter = _options$titleFormatt === undefined ? defaultTitleFormatter(options) : _options$titleFormatt,
+	      collapsed = options.collapsed,
+	      colors = options.colors,
+	      level = options.level,
+	      diff = options.diff;
 	
 	  buffer.forEach(function (logEntry, key) {
-	    var started = logEntry.started;
-	    var startedTime = logEntry.startedTime;
-	    var action = logEntry.action;
-	    var prevState = logEntry.prevState;
-	    var error = logEntry.error;
-	    var took = logEntry.took;
-	    var nextState = logEntry.nextState;
+	    var started = logEntry.started,
+	        startedTime = logEntry.startedTime,
+	        action = logEntry.action,
+	        prevState = logEntry.prevState,
+	        error = logEntry.error;
+	    var took = logEntry.took,
+	        nextState = logEntry.nextState;
 	
 	    var nextEntry = buffer[key + 1];
 	
@@ -25315,7 +25316,7 @@
 	    var formattedAction = actionTransformer(action);
 	    var isCollapsed = typeof collapsed === 'function' ? collapsed(function () {
 	      return nextState;
-	    }, action) : collapsed;
+	    }, action, logEntry) : collapsed;
 	
 	    var formattedTime = (0, _helpers.formatTime)(startedTime);
 	    var titleCSS = colors.title ? 'color: ' + colors.title(formattedAction) + ';' : null;
@@ -25360,7 +25361,7 @@
 	    try {
 	      logger.groupEnd();
 	    } catch (e) {
-	      logger.log('—— log end ——');
+	      logger.log("\u2014\u2014 log end \u2014\u2014");
 	    }
 	  });
 	}
@@ -25414,6 +25415,16 @@
 	  return obj && obj.__esModule ? obj : { default: obj };
 	}
 	
+	function _toConsumableArray(arr) {
+	  if (Array.isArray(arr)) {
+	    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) {
+	      arr2[i] = arr[i];
+	    }return arr2;
+	  } else {
+	    return Array.from(arr);
+	  }
+	}
+	
 	// https://github.com/flitbit/diff#differences
 	var dictionary = {
 	  'E': {
@@ -25439,24 +25450,24 @@
 	}
 	
 	function render(diff) {
-	  var kind = diff.kind;
-	  var path = diff.path;
-	  var lhs = diff.lhs;
-	  var rhs = diff.rhs;
-	  var index = diff.index;
-	  var item = diff.item;
+	  var kind = diff.kind,
+	      path = diff.path,
+	      lhs = diff.lhs,
+	      rhs = diff.rhs,
+	      index = diff.index,
+	      item = diff.item;
 	
 	  switch (kind) {
 	    case 'E':
-	      return path.join('.') + ' ' + lhs + ' → ' + rhs;
+	      return [path.join('.'), lhs, '\u2192', rhs];
 	    case 'N':
-	      return path.join('.') + ' ' + rhs;
+	      return [path.join('.'), rhs];
 	    case 'D':
-	      return '' + path.join('.');
+	      return [path.join('.')];
 	    case 'A':
 	      return [path.join('.') + '[' + index + ']', item];
 	    default:
-	      return null;
+	      return [];
 	  }
 	}
 	
@@ -25479,16 +25490,16 @@
 	
 	      var output = render(elem);
 	
-	      logger.log('%c ' + dictionary[kind].text, style(kind), output);
+	      logger.log.apply(logger, ['%c ' + dictionary[kind].text, style(kind)].concat(_toConsumableArray(output)));
 	    });
 	  } else {
-	    logger.log('—— no diff ——');
+	    logger.log('\u2014\u2014 no diff \u2014\u2014');
 	  }
 	
 	  try {
 	    logger.groupEnd();
 	  } catch (e) {
-	    logger.log('—— diff end —— ');
+	    logger.log('\u2014\u2014 diff end \u2014\u2014 ');
 	  }
 	}
 	module.exports = exports['default'];
@@ -25987,7 +25998,7 @@
 	  // Deprecated options
 	  transformer: undefined
 	};
-	module.exports = exports['default'];
+	module.exports = exports["default"];
 
 /***/ },
 /* 223 */

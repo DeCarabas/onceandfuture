@@ -511,6 +511,10 @@
             this.tasks = tasks;
             this.descriptions = descriptions;
 
+            Debug.Assert(
+                tasks.Length == descriptions.Length, 
+                "Task and description arrays must be the same");
+
             var callback = new Action<Task>(OnTaskCompleted);
             for (int i = 0; i < this.tasks.Length; i++)
             {
@@ -537,13 +541,20 @@
         {
             for (int i = 0; i < this.tasks.Length; i++)
             {
-                if (!this.tasks[i]?.IsCompleted ?? false) { return this.descriptions[i]; }
+                if (!this.tasks[i].IsCompleted) { return this.descriptions[i]; }
             }
             return "Done.";
         }
 
+        string GetTaskDescription(Task task)
+        {
+            int index = Array.IndexOf(this.tasks, task);
+            return (index >= 0) ? this.descriptions[index] : "??";
+        }
+
         void OnTaskCompleted(Task task)
         {
+            Log.AsyncProgressTaskComplete(task, GetTaskDescription(task));
             this.semaphore.Release();
         }
 
@@ -652,6 +663,7 @@
 
             Uri[] feeds = profile.Rivers.SelectMany(rd => rd.Feeds).Distinct().ToArray();
             Task<River>[] feedTasks = UpdateAllFeeds(feeds);
+            Task allFeedsTask = Task.WhenAll(feedTasks);
             Task<River>[] riverTasks = RefreshAllAggregates(user, profile, Task.WhenAll(feedTasks));
 
             List<Task> allTasks = new List<Task>(feedTasks.Length + riverTasks.Length);
@@ -1043,7 +1055,8 @@
             Task<River>[] feedTasks = new Task<River>[feeds.Length];
             for (int i = 0; i < feeds.Length; i++)
             {
-                feedTasks[i] = this.feedParser.FetchAndUpdateRiver(feeds[i]);
+                Uri feedUri = feeds[i];
+                feedTasks[i] = this.feedParser.FetchAndUpdateRiver(feedUri);
             }
             return feedTasks;
         }
