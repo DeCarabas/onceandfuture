@@ -1,12 +1,14 @@
 ﻿namespace onceandfuture
 {
     using Newtonsoft.Json;
+    using Polly;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Globalization;
     using System.IO;
     using System.IO.Compression;
+    using System.Net;
     using System.Net.Http;
     using System.Net.Http.Headers;
     using System.Security.Cryptography;
@@ -29,45 +31,46 @@
 
     public class BlobStore
     {
-        /// <summary>The set of accepted and valid Url path characters per RFC3986.</summary>
+        static readonly HttpClient Client = CreateHttpClient();
+        const string OriginalLengthHeader = "x-amz-meta-original-length";
         static string ValidPathCharacters = DetermineValidPathCharacters();
 
-        const string OriginalLength = "x-amz-meta-original-length";
+        static readonly Policy<HttpResponseMessage> HttpPolicy = Policy
+            .Handle<HttpRequestException>(Policies.ShouldRetryException)
+            .Or<TaskCanceledException>()
+            .Or<WebException>(Policies.ShouldRetryException)
+            .OrResult<HttpResponseMessage>(ShouldRetryFromResponse)
+            .WaitAndRetryAsync(retryCount: 3, sleepDurationProvider: Policies.RetryTime);
 
-        readonly string bucket;
-        readonly string subdir;
         readonly string accessKeyId;
-        readonly HttpClient httpClient;
+        readonly string bucket;
         readonly byte[] secretAccessKey;
+        readonly string subdir;
 
-        // In deployment, use this?
-        // Credentials stored in the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.
         public BlobStore(string bucket, string subdir)
         {
             this.bucket = bucket;
             this.subdir = subdir;
 
-            this.httpClient = Policies.CreateHttpClient();
-
             string accessKeyId = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
             string secretAccessKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
-            
+
             if (String.IsNullOrWhiteSpace(accessKeyId) || String.IsNullOrWhiteSpace(secretAccessKey))
             {
                 string credPath = Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".aws", "credentials");
                 if (File.Exists(credPath))
                 {
                     string[] lines = File.ReadAllLines(credPath);
-                    for(int i = 0; i < lines.Length; i++)
+                    for (int i = 0; i < lines.Length; i++)
                     {
                         string line = lines[i];
                         if (line.StartsWith("aws_access_key_id", StringComparison.OrdinalIgnoreCase))
                         {
-                            accessKeyId = line.Split('=')[1].Trim();
+                            accessKeyId = line.Split(new[] { '=' }, 2)[1].Trim();
                         }
                         if (line.StartsWith("aws_secret_access_key", StringComparison.OrdinalIgnoreCase))
                         {
-                            secretAccessKey = line.Split('=')[1].Trim();
+                            secretAccessKey = line.Split(new[] { '=' }, 2)[1].Trim();
                         }
                     }
                 }
@@ -76,6 +79,26 @@
             this.accessKeyId = accessKeyId;
             this.secretAccessKey = Encoding.UTF8.GetBytes(secretAccessKey);
         }
+
+        static HttpClient CreateHttpClient()
+        {
+            const int TenMegabytes = 10 * 1024 * 1024;
+            var handler = new HttpClientHandler
+            {
+                AllowAutoRedirect = true,
+                UseCookies = false,
+                UseDefaultCredentials = false,
+                MaxConnectionsPerServer = 1000,
+            };
+
+            var client = new HttpClient(handler, true);
+            client.Timeout = TimeSpan.FromSeconds(15);
+            client.MaxResponseContentBufferSize = TenMegabytes;
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("TheOnceAndFuture/1.0");
+            return client;
+        }
+
+        // TODO: Centralize logging
 
         public Uri GetObjectUri(string name)
         {
@@ -98,27 +121,26 @@
         public async Task<byte[]> GetObject(string name)
         {
             ObjectKey key = KeyForName(name);
-            byte[] result = await GetObjectInternal(key);
+            byte[] result = await GetObject(key);
             if (result == null)
             {
                 // In time all data will be moved to the new scheme, but until then...
-                result = await GetObjectInternal(new ObjectKey(key: name));
+                result = await GetObject(new ObjectKey(key: name));
             }
             return result;
         }
 
-        async Task<byte[]> GetObjectInternal(ObjectKey key)
+        public async Task<byte[]> GetObject(ObjectKey key)
         {
             Stopwatch timer = Stopwatch.StartNew();
-            var request = new HttpRequestMessage
+            Func<HttpRequestMessage> request = () => new HttpRequestMessage
             {
                 RequestUri = GetObjectUri(key),
                 Method = HttpMethod.Get,
                 Headers = { { "Date", DateTimeOffset.UtcNow.ToString("r") } }
             };
-            AuthenticateRequest(request);
 
-            using (HttpResponseMessage response = await this.httpClient.SendAsync(request))
+            using (HttpResponseMessage response = await SendAsync(request))
             {
                 if (!response.IsSuccessStatusCode)
                 {
@@ -138,7 +160,7 @@
                 }
 
                 long length = response.Content.Headers.ContentLength ?? 0;
-                string ol = response.Headers.Value(OriginalLength);
+                string ol = response.Headers.Value(OriginalLengthHeader);
                 if (!String.IsNullOrWhiteSpace(ol))
                 {
                     length = long.Parse(ol);
@@ -173,14 +195,16 @@
         public async Task PutObject(string name, string type, MemoryStream stream, bool compress = false)
         {
             ObjectKey key = KeyForName(name);
-            await PutObjectInternal(key, type, stream, compress);
+            await PutObject(key, type, stream, compress);
         }
 
-        public async Task PutObjectInternal(ObjectKey key, string type, MemoryStream stream, bool compress)
+        public async Task PutObject(ObjectKey key, string type, MemoryStream stream, bool compress)
         {
             Stopwatch timer = Stopwatch.StartNew();
+            long objectLength = stream.Length;
             string encoding = null;
             Stream sourceStream = stream;
+
             if (compress)
             {
                 var tempStream = new MemoryStream();
@@ -193,19 +217,17 @@
                 encoding = "gzip";
             }
 
-            long objectLength = stream.Length;
-            var request = new HttpRequestMessage
+            Func<HttpRequestMessage> request = () => new HttpRequestMessage
             {
                 RequestUri = GetObjectUri(key),
                 Method = HttpMethod.Put,
                 Headers =
                 {
                     { "Date", DateTimeOffset.UtcNow.ToString("r") },
-                    { OriginalLength, objectLength.ToString() },
+                    { OriginalLengthHeader, objectLength.ToString() },
                 },
                 Content = new StreamContent(sourceStream)
                 {
-                    
                     Headers =
                     {
                         { "Content-Type", type },
@@ -213,9 +235,8 @@
                     },
                 },
             };
-            AuthenticateRequest(request);
 
-            using (HttpResponseMessage response = await this.httpClient.SendAsync(request))
+            using (HttpResponseMessage response = await SendAsync(request))
             {
                 if (!response.IsSuccessStatusCode)
                 {
@@ -231,7 +252,7 @@
         /// <param name="request"></param>
         /// <returns></returns>
         /// <remarks>See http://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html#ConstructingTheAuthenticationHeader for more.</remarks>
-        void AuthenticateRequest(HttpRequestMessage request)
+        HttpRequestMessage AuthenticateRequest(HttpRequestMessage request)
         {
             string httpVerb = request.Method.ToString().ToUpperInvariant();
             string contentMD5 = request.Content?.Headers?.Value("Content-MD5") ?? String.Empty;
@@ -261,9 +282,11 @@
                 string signature = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(stringToSign)));
                 request.Headers.Add("Authorization", "AWS " + accessKeyId + ":" + signature);
             }
+
+            return request;
         }
 
-        async Task<S3Error> DecodeError(HttpResponseMessage response)
+        static async Task<S3Error> DecodeError(HttpResponseMessage response)
         {
             string body = await response.Content.ReadAsStringAsync();
             XDocument doc = XDocument.Load(new StringReader(body));
@@ -271,12 +294,7 @@
 
             return new S3Error { Code = code, ResponseBody = body };
         }
-                
-        ObjectKey KeyForName(string name) => new ObjectKey(this.subdir, name);
 
-        // Checks which path characters should not be encoded
-        // This set will be different for .NET 4 and .NET 4.5, as
-        // per http://msdn.microsoft.com/en-us/library/hh367887%28v=vs.110%29.aspx
         static string DetermineValidPathCharacters()
         {
             const string basePathCharacters = "/:'()!*[]$";
@@ -289,6 +307,29 @@
                     sb.Append(c);
             }
             return sb.ToString();
+        }
+
+        ObjectKey KeyForName(string name) => new ObjectKey(this.subdir, name);
+
+        Task<HttpResponseMessage> SendAsync(Func<HttpRequestMessage> request)
+        {
+            return HttpPolicy.ExecuteAsync(async () =>
+            {
+                HttpRequestMessage message = AuthenticateRequest(request());
+                HttpResponseMessage response = await Client.SendAsync(message);
+                if (!response.IsSuccessStatusCode) { await response.Content.LoadIntoBufferAsync(); }
+                return response;
+            });
+        }
+
+        static bool ShouldRetryFromResponse(HttpResponseMessage response)
+        {
+            if (response.IsSuccessStatusCode) { return false; }
+            S3Error error = DecodeError(response).Result;
+
+            if (error.Code == "RequestTimeout") { return true; }
+
+            return false;
         }
 
         static string UrlEncode(string data, bool path)

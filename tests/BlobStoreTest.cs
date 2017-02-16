@@ -50,7 +50,7 @@ namespace tests
             var store = new BlobStore("onceandfuture-test", "fallback");
 
             // Write with the old scheme...
-            await store.PutObjectInternal(
+            await store.PutObject(
                 new BlobStore.ObjectKey(key: name),
                 "application/octet-stream", 
                 new MemoryStream(firstObject), 
