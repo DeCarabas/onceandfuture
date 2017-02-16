@@ -2,6 +2,7 @@
 {
     using Newtonsoft.Json;
     using Polly;
+    using Serilog;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
@@ -44,11 +45,18 @@
 
         readonly string accessKeyId;
         readonly string bucket;
+        readonly ILogger logger;
         readonly byte[] secretAccessKey;
         readonly string subdir;
 
+
         public BlobStore(string bucket, string subdir)
         {
+            this.logger = Serilog.Log
+                .ForContext(HoneycombSink.DatasetPropertyKey, "Storage")
+                .ForContext("bucket", bucket)
+                .ForContext("subdir", subdir);
+
             this.bucket = bucket;
             this.subdir = subdir;
 
@@ -98,8 +106,6 @@
             return client;
         }
 
-        // TODO: Centralize logging
-
         public Uri GetObjectUri(string name)
         {
             return new Uri(String.Concat(
@@ -140,57 +146,86 @@
                 Headers = { { "Date", DateTimeOffset.UtcNow.ToString("r") } }
             };
 
-            using (HttpResponseMessage response = await SendAsync(request))
+            string contentType = null;
+            long? contentLength = null;
+            long? objectLength = null;
+            try
             {
-                if (!response.IsSuccessStatusCode)
+                using (HttpResponseMessage response = await SendAsync(request))
                 {
-                    S3Error error = await DecodeError(response);
-                    if (error.Code == "NoSuchKey")
+                    if (!response.IsSuccessStatusCode)
                     {
-                        Log.GetObjectNotFound(this.bucket, key.Key, timer);
-                        return null;
-                    }
-                    if (error.Code == "AccessDenied")
-                    {
-                        Log.GetObjectAccessDenied(this.bucket, key.Key, timer);
-                        return null;
-                    }
-                    Log.GetObjectError(this.bucket, key.Key, timer, error.Code, error.ResponseBody);
-                    response.EnsureSuccessStatusCode();
-                }
-
-                long length = response.Content.Headers.ContentLength ?? 0;
-                string ol = response.Headers.Value(OriginalLengthHeader);
-                if (!String.IsNullOrWhiteSpace(ol))
-                {
-                    length = long.Parse(ol);
-                }
-
-                byte[] data = new byte[length];
-                using (Stream responseStream = await response.Content.ReadAsStreamAsync())
-                {
-                    if (response.Content.Headers.ContentEncoding.Contains("gzip"))
-                    {
-                        var targetStream = new MemoryStream(data);
-                        var sourceStream = new GZipStream(responseStream, CompressionMode.Decompress);
-                        await sourceStream.CopyToAsync(targetStream);
-                    }
-                    else
-                    {
-                        int cursor = 0;
-                        while (cursor != data.Length)
+                        S3Error error = await DecodeError(response);
+                        LogOperation("Get", key, null, null, null, timer, OperationStatus.Error, error.ResponseBody);
+                        if (error.Code == "NoSuchKey")
                         {
-                            int read = await responseStream.ReadAsync(data, cursor, data.Length - cursor);
-                            if (read == 0) { break; }
-                            cursor += read;
+                            return null;
+                        }
+                        if (error.Code == "AccessDenied")
+                        {
+                            return null;
+                        }
+                        throw new S3Exception("Get", key, error);
+                    }
+
+                    contentType = response.Content.Headers.ContentType.ToString();
+                    contentLength = response.Content.Headers.ContentLength ?? 0;
+                    objectLength = contentLength;
+                    string ol = response.Headers.Value(OriginalLengthHeader);
+                    if (!String.IsNullOrWhiteSpace(ol))
+                    {
+                        objectLength = long.Parse(ol);
+                    }
+
+                    byte[] data = new byte[objectLength.Value];
+                    using (Stream responseStream = await response.Content.ReadAsStreamAsync())
+                    {
+                        if (response.Content.Headers.ContentEncoding.Contains("gzip"))
+                        {
+                            var targetStream = new MemoryStream(data);
+                            var sourceStream = new GZipStream(responseStream, CompressionMode.Decompress);
+                            await sourceStream.CopyToAsync(targetStream);
+                        }
+                        else
+                        {
+                            int cursor = 0;
+                            while (cursor != data.Length)
+                            {
+                                int read = await responseStream.ReadAsync(data, cursor, data.Length - cursor);
+                                if (read == 0) { break; }
+                                cursor += read;
+                            }
                         }
                     }
-                }
 
-                Log.GetObjectComplete(this.bucket, key.Key, timer);
-                return data;
+                    LogOperation(
+                        "Get", 
+                        key, 
+                        contentType, 
+                        objectLength, 
+                        contentLength, 
+                        timer, 
+                        OperationStatus.OK, 
+                        null);
+                    return data;
+                }
+            }
+            catch (S3Exception) { throw; }
+            catch (Exception e)
+            {
+                LogOperation(
+                    "Get", 
+                    key, 
+                    contentType, 
+                    objectLength, 
+                    contentLength, 
+                    timer, 
+                    OperationStatus.Exception, 
+                    e.ToString());
+                throw;
             }
         }
+
 
         public async Task PutObject(string name, string type, MemoryStream stream, bool compress = false)
         {
@@ -202,49 +237,77 @@
         {
             Stopwatch timer = Stopwatch.StartNew();
             long objectLength = stream.Length;
+            long contentLength = objectLength;
             string encoding = null;
             Stream sourceStream = stream;
 
-            if (compress)
+            try
             {
-                var tempStream = new MemoryStream();
-                using (var compressStream = new GZipStream(tempStream, CompressionMode.Compress, leaveOpen: true))
+                if (compress)
                 {
-                    stream.CopyTo(compressStream);
+                    var tempStream = new MemoryStream();
+                    using (var compressStream = new GZipStream(tempStream, CompressionMode.Compress, leaveOpen: true))
+                    {
+                        stream.CopyTo(compressStream);
+                    }
+                    tempStream.Position = 0;
+                    sourceStream = tempStream;
+                    encoding = "gzip";
                 }
-                tempStream.Position = 0;
-                sourceStream = tempStream;
-                encoding = "gzip";
-            }
+                contentLength = sourceStream.Length;
 
-            Func<HttpRequestMessage> request = () => new HttpRequestMessage
-            {
-                RequestUri = GetObjectUri(key),
-                Method = HttpMethod.Put,
-                Headers =
+                Func<HttpRequestMessage> request = () => new HttpRequestMessage
                 {
-                    { "Date", DateTimeOffset.UtcNow.ToString("r") },
-                    { OriginalLengthHeader, objectLength.ToString() },
-                },
-                Content = new StreamContent(sourceStream)
-                {
+                    RequestUri = GetObjectUri(key),
+                    Method = HttpMethod.Put,
                     Headers =
                     {
-                        { "Content-Type", type },
-                        { "Content-Encoding", encoding },
+                        { "Date", DateTimeOffset.UtcNow.ToString("r") },
+                        { OriginalLengthHeader, objectLength.ToString() },
                     },
-                },
-            };
+                    Content = new StreamContent(sourceStream)
+                    {
+                        Headers =
+                        {
+                            { "Content-Type", type },
+                            { "Content-Encoding", encoding },
+                        },
+                    },
+                };
 
-            using (HttpResponseMessage response = await SendAsync(request))
-            {
-                if (!response.IsSuccessStatusCode)
+                using (HttpResponseMessage response = await SendAsync(request))
                 {
-                    S3Error error = await DecodeError(response);
-                    Log.PutObjectError(this.bucket, key.Key, type, timer, error.Code, error.ResponseBody);
-                    response.EnsureSuccessStatusCode();
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        S3Error error = await DecodeError(response);
+                        LogOperation(
+                            "Put", 
+                            key, 
+                            type, 
+                            objectLength, 
+                            sourceStream.Length, 
+                            timer, 
+                            OperationStatus.Error, 
+                            error.ResponseBody);
+                        throw new S3Exception("Put", key, error);
+                    }
+
+                    LogOperation("Put", key, type, objectLength, contentLength, timer, OperationStatus.OK, null);
                 }
-                Log.PutObjectComplete(this.bucket, key.Key, type, timer, objectLength);
+            }
+            catch (S3Exception) { throw; }
+            catch (Exception e)
+            {
+                LogOperation(
+                    "Put",
+                    key,
+                    type,
+                    objectLength,
+                    contentLength,
+                    timer,
+                    OperationStatus.Exception,
+                    e.ToString());
+                throw;
             }
         }
 
@@ -311,6 +374,22 @@
 
         ObjectKey KeyForName(string name) => new ObjectKey(this.subdir, name);
 
+        void LogOperation(
+            string operation,
+            ObjectKey key,
+            string contentType,
+            long? objectSize,
+            long? storageSize,
+            Stopwatch timer,
+            OperationStatus status,
+            string details
+        )
+        {
+            this.logger.Information(
+                "{Operation} {Key} ({ContentType} {ObjectBytes}bytes/{StorageBytes}compressed): {ElapsedMs}ms: {Status}: {Details}",
+                operation, key.ToString(), contentType, objectSize, storageSize, timer.ElapsedMilliseconds, status.ToString(), details);
+        }
+
         Task<HttpResponseMessage> SendAsync(Func<HttpRequestMessage> request)
         {
             return HttpPolicy.ExecuteAsync(async () =>
@@ -369,6 +448,28 @@
         {
             public string Code { get; set; }
             public string ResponseBody { get; set; }
+        }
+
+        class S3Exception : Exception
+        {
+            public S3Exception(string operation, ObjectKey key, S3Error error)
+                : base(String.Format("An error occurred accessing S3 {0} {1}: {2}", operation, key, error.Code))
+            {
+                Operation = operation;
+                Key = key;
+                Error = error;
+            }
+
+            public string Operation { get; }
+            public ObjectKey Key { get; }
+            public S3Error Error { get; }
+        }
+
+        enum OperationStatus
+        {
+            OK,
+            Error,
+            Exception
         }
     }
 
