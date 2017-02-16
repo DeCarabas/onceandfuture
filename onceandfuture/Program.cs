@@ -23,11 +23,13 @@
             .AddVerb("update", "Update one or more feeds.", DoUpdate, v => v
                 .AddOption("feed", "The single feed URL to update.", o => o.AcceptValue())
                 .AddOption("user", "The user to update feeds for.", o => o.AcceptValue())
+                .AddOption("river", "The river to update.", o => o.AcceptValue())
             )
             .AddVerb("show", "Show items in one or more feeds.", DoShow, v => v
                 .AddOption("feed", "The single feed URL to show.", o => o.AcceptValue())
                 .AddOption("user", "The user to show for.", o => o.AcceptValue())
-                .AddOption("noload", "Do not load the feed from the feed store first.")
+                .AddOption("river", "The ID of the aggregated river to show.", o => o.AcceptValue())
+                .AddOption("noload", "Fetch from the internet rather than loading from the store.")
             )
             .AddVerb("sub", "Subscribe to a feed.", DoSubscribe, v => v
                 .AddOption("user", "The user to add a subscription for.", o => o.IsRequired())
@@ -132,9 +134,13 @@
             {
                 return DoShowAll(args);
             }
+            else if (args["river"].Value != null)
+            {
+                return DoShowRiver(args);
+            }
             else
             {
-                Console.Error.WriteLine("Must specify either user or feed.");
+                Console.Error.WriteLine("Must specify user, feed, or river.");
                 return -1;
             }
         }
@@ -172,11 +178,30 @@
                 Console.WriteLine("No data for {0}", feedUrl);
             }
 
-            Console.WriteLine("(Press enter to continue)");
-            Console.ReadLine();
+            return 0;
+        }
+
+        static int DoShowRiver(ParsedOpts args)
+        {
+            string aggregateId = args["river"].Value;
+            var aggregateStore = new AggregateRiverStore();
+
+            River river = aggregateStore.LoadAggregate(aggregateId).Result;
+            if (river.UpdatedFeeds.Feeds.Count > 0)
+            {
+                foreach (RiverFeed feed in river.UpdatedFeeds.Feeds)
+                {
+                    DumpFeed(feed);
+                }
+            }
+            else
+            {
+                Console.WriteLine("No data for {0}", aggregateId);
+            }
 
             return 0;
         }
+
 
         static int DoShowAll(ParsedOpts args)
         {
@@ -199,9 +224,6 @@
                 {
                     Console.WriteLine("No data for {0}", rd.Name);
                 }
-
-                Console.WriteLine("(Press enter to continue)");
-                Console.ReadLine();
             }
 
             return 0;
@@ -215,7 +237,14 @@
             }
             else if (args["user"].Value != null)
             {
-                return DoUpdateForUser(args);
+                if (args["river"].Value != null)
+                {
+                    return DoUpdateForRiver(args);
+                }
+                else
+                {
+                    return DoUpdateForUser(args);
+                }                
             }
             else
             {
@@ -239,6 +268,28 @@
             Stopwatch loadTimer = Stopwatch.StartNew();
             parser.FetchAndUpdateRiver(feedUrl).Wait();
             Console.WriteLine("Refreshed {0} in {1}", feedUrl, loadTimer.Elapsed);
+            return 0;
+        }
+
+        static int DoUpdateForRiver(ParsedOpts args)
+        {
+            string user = args["user"].Value;
+            string river = args["river"].Value;
+
+            var subscriptionStore = new UserProfileStore();
+            var parser = new RiverFeedParser();
+
+            Console.WriteLine("Refreshing for {0}/{1}...", user, river);
+            Stopwatch loadTimer = Stopwatch.StartNew();
+
+            UserProfile profile = subscriptionStore.GetProfileFor(user).Result;
+            var tasks = 
+                from rd in profile.Rivers
+                where rd.Id == river
+                select parser.RefreshAggregateRiverWithFeeds(rd.Id, rd.Feeds);
+            Task.WhenAll(tasks).Wait();
+
+            Console.WriteLine("Refreshed {0} rivers in {1}", profile.Rivers.Count, loadTimer.Elapsed);
             return 0;
         }
 
@@ -450,7 +501,8 @@
             {
                 Console.WriteLine("{0}", riverFeed.FeedTitle);
                 Console.WriteLine(new String('=', riverFeed.FeedTitle.Length));
-                Console.WriteLine(riverFeed.FeedDescription);
+                Console.WriteLine("Updated: {0}", riverFeed.WhenLastUpdate);
+                Console.WriteLine("Description: {0}", riverFeed.FeedDescription);
                 Console.WriteLine();
 
                 foreach (RiverItem item in riverFeed.Items)
