@@ -36,14 +36,30 @@ export const UPDATE_TITLE_FONT_SIZE = 14;
 export const ICON_FONT_SIZE = 18;
 
 // ---- Sizes
+
+// This is always accurate according to tests.
+const is_portrait = window.innerHeight > window.innerWidth;
+let ideal_width = screen.width;
+let ideal_height = screen.height;
+if (ideal_width > ideal_height && is_portrait) {
+  // Some browsers don't report portrait/landscape correctly.
+  const tmp = ideal_width;
+  ideal_width = ideal_height;
+  ideal_height = tmp;
+}
+
+export const SIZE_SCREEN_WIDTH = '100%'; //ideal_width;
+export const SIZE_SCREEN_HEIGHT = '100%'; //ideal_height;
+
+
 // Generally, sizes and positions should be defined here, not computed
 // locally in the component.
 
 // ---------------------------------------------------------------------- -
 //    RIVER                                                     | R | U | 36px  SIZE_BANNER_HEIGHT
 // ---------------------------------------------------------------------- -
-// =====================================                                  10px  SIZE_PROGRESS_HEIGHT
-//  10px              10px (SIZE_SPACER_WIDTH)                            10px  SIZE_SPACER_HEIGHT
+// =====================================                                  2px   SIZE_PROGRESS_HEIGHT
+//  2px               2px (SIZE_SPACER_WIDTH)                             2px   SIZE_SPACER_HEIGHT
 // ||     360px      ||      360px (SIZE_COLUMN_WIDTH)
 //   +--------------+  +--------------+                                         SIZE_COLUMN_TOP
 //   |              |  |              |

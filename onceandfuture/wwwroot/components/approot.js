@@ -5,6 +5,9 @@ import {
   SANS_FONTS,
   TEXT_FONT_SIZE,
   APP_BACKGROUND_COLOR,
+
+  SIZE_SCREEN_WIDTH,
+  SIZE_SCREEN_HEIGHT,
 } from './style';
 
 // We have this thing because we need the background color to scroll. I think normally we'd just put the background
@@ -16,8 +19,8 @@ const AppBackground = () => {
     position: 'fixed',
     top: 0,
     left: 0,
-    width: '100%',
-    height: '100%',
+    width: SIZE_SCREEN_WIDTH,
+    height: SIZE_SCREEN_HEIGHT,
   };
   return <div style={bgstyle} />;
 }
@@ -27,7 +30,7 @@ const AppRoot = () => {
     color: APP_TEXT_COLOR,
     fontFamily: SANS_FONTS,
     fontSize: TEXT_FONT_SIZE,
-    height: '100%',
+    height: SIZE_SCREEN_HEIGHT,
   };
   return <div style={appstyle} >
     <AppBackground />

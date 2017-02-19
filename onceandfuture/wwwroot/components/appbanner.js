@@ -37,7 +37,7 @@ const Announcer = ({message}) => {
   const announcer_style = {
     position: 'absolute',
     top: 0,
-    width: '100%',
+    width: '100vw',
     height: SIZE_ANNOUNCER_HEIGHT,
     fontSize: SIZE_ANNOUNCER_FONT,
     paddingTop: SIZE_ANNOUNCER_PADDING_VERTICAL,

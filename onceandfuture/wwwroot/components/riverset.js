@@ -6,6 +6,8 @@ import {
   SIZE_BUTTON_HEIGHT,
   SIZE_COLUMN_TOP,
   SIZE_COLUMN_WIDTH,
+  SIZE_SCREEN_HEIGHT,
+  SIZE_SCREEN_WIDTH,
   SIZE_SPACER_WIDTH,
   SIZE_SPACER_HEIGHT,
   SIZE_PAGE_HEADER,
@@ -54,7 +56,7 @@ const AccountSettingsContainer = () =>  {
   const style = {
     position: 'absolute',
     top: SIZE_COLUMN_TOP,
-    width: '100%',
+    width: SIZE_SCREEN_WIDTH,
   };
 
   return <div style={style}>
@@ -73,7 +75,7 @@ const RiverSetBase = ({
 }) => {
   const top_bar_style = {
     position: 'fixed',
-    top: 0, left: 0, width: '100%',
+    top: 0, left: 0, width: SIZE_SCREEN_WIDTH,
     zIndex: Z_INDEX_BANNER,
     height: SIZE_PAGE_HEADER,
   };
@@ -85,8 +87,8 @@ const RiverSetBase = ({
   const river_container_style = {
     position: 'absolute',
     overflowX: 'auto',
-    width: '100%',
-    height: '100%',
+    width: SIZE_SCREEN_WIDTH,
+    height: SIZE_SCREEN_HEIGHT,
   };
 
   let accountSettings = <span />;

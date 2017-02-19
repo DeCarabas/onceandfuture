@@ -26912,8 +26912,8 @@
 	    position: 'fixed',
 	    top: 0,
 	    left: 0,
-	    width: '100%',
-	    height: '100%'
+	    width: _style.SIZE_SCREEN_WIDTH,
+	    height: _style.SIZE_SCREEN_HEIGHT
 	  };
 	  return _react2.default.createElement('div', { style: bgstyle });
 	};
@@ -26923,7 +26923,7 @@
 	    color: _style.APP_TEXT_COLOR,
 	    fontFamily: _style.SANS_FONTS,
 	    fontSize: _style.TEXT_FONT_SIZE,
-	    height: '100%'
+	    height: _style.SIZE_SCREEN_HEIGHT
 	  };
 	  return _react2.default.createElement(
 	    'div',
@@ -27022,7 +27022,7 @@
 	  var style = {
 	    position: 'absolute',
 	    top: _style.SIZE_COLUMN_TOP,
-	    width: '100%'
+	    width: _style.SIZE_SCREEN_WIDTH
 	  };
 	
 	  return _react2.default.createElement(
@@ -27043,7 +27043,7 @@
 	
 	  var top_bar_style = {
 	    position: 'fixed',
-	    top: 0, left: 0, width: '100%',
+	    top: 0, left: 0, width: _style.SIZE_SCREEN_WIDTH,
 	    zIndex: _style.Z_INDEX_BANNER,
 	    height: _style.SIZE_PAGE_HEADER
 	  };
@@ -27055,8 +27055,8 @@
 	  var river_container_style = {
 	    position: 'absolute',
 	    overflowX: 'auto',
-	    width: '100%',
-	    height: '100%'
+	    width: _style.SIZE_SCREEN_WIDTH,
+	    height: _style.SIZE_SCREEN_HEIGHT
 	  };
 	
 	  var accountSettings = _react2.default.createElement('span', null);
@@ -27172,14 +27172,30 @@
 	var ICON_FONT_SIZE = exports.ICON_FONT_SIZE = 18;
 	
 	// ---- Sizes
+	
+	// This is always accurate according to tests.
+	var is_portrait = window.innerHeight > window.innerWidth;
+	var ideal_width = screen.width;
+	var ideal_height = screen.height;
+	if (ideal_width > ideal_height && is_portrait) {
+	  // Some browsers don't report portrait/landscape correctly.
+	  var tmp = ideal_width;
+	  ideal_width = ideal_height;
+	  ideal_height = tmp;
+	}
+	
+	var SIZE_SCREEN_WIDTH = exports.SIZE_SCREEN_WIDTH = '100%'; //ideal_width;
+	var SIZE_SCREEN_HEIGHT = exports.SIZE_SCREEN_HEIGHT = '100%'; //ideal_height;
+	
+	
 	// Generally, sizes and positions should be defined here, not computed
 	// locally in the component.
 	
 	// ---------------------------------------------------------------------- -
 	//    RIVER                                                     | R | U | 36px  SIZE_BANNER_HEIGHT
 	// ---------------------------------------------------------------------- -
-	// =====================================                                  10px  SIZE_PROGRESS_HEIGHT
-	//  10px              10px (SIZE_SPACER_WIDTH)                            10px  SIZE_SPACER_HEIGHT
+	// =====================================                                  2px   SIZE_PROGRESS_HEIGHT
+	//  2px               2px (SIZE_SPACER_WIDTH)                             2px   SIZE_SPACER_HEIGHT
 	// ||     360px      ||      360px (SIZE_COLUMN_WIDTH)
 	//   +--------------+  +--------------+                                         SIZE_COLUMN_TOP
 	//   |              |  |              |
@@ -28014,7 +28030,7 @@
 	  var announcer_style = {
 	    position: 'absolute',
 	    top: 0,
-	    width: '100%',
+	    width: '100vw',
 	    height: _style.SIZE_ANNOUNCER_HEIGHT,
 	    fontSize: _style.SIZE_ANNOUNCER_FONT,
 	    paddingTop: _style.SIZE_ANNOUNCER_PADDING_VERTICAL,
