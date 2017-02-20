@@ -11,10 +11,46 @@ const MsPerHour = MsPerMinute * MinutesPerHour;
 const MsPerDay = MsPerHour * HoursPerDay;
 const MsPerWeek = MsPerDay * DaysPerWeek;
 
+class RelTime extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { now: Date.now() };
+  }
 
-const RelTime = ({time}) => {
+  componentDidMount() {
+    const interval = this.nextIntervalMs(Date.now());
+    this.timerID = setTimeout(() => this.tick(), interval);
+  }
+
+  componentWillUnmount() {
+    clearTimeout(this.timerID);
+  }
+
+  tick() {
+    const now = Date.now();
+    const interval = this.nextIntervalMs(now);
+
+    this.setState({ now: now });
+    this.timerID = setTimeout(() => this.tick(), interval);
+  }
+
+  nextIntervalMs(now) {
+    const parsed = Date.parse(this.props.time);
+    const delta = now - parsed;
+    if (delta > MsPerWeek) { return MsPerWeek; }
+    if (delta > MsPerDay) { return MsPerDay; }
+    if (delta > MsPerHour) { return MsPerHour; }
+
+    // Watching the seconds tick by is fun and all, but let's not go
+    // crazy. Minute-by-minute updates are fine, and don't ruin anything
+    // really.
+    return MsPerMinute;
+  }
+
+  render() {
+    const time = this.props.time;
     const parsed = Date.parse(time);
-    const delta = Date.now() - parsed;
+    const delta = this.state.now - parsed;
 
     var unit, value;
     if (delta > MsPerWeek) {
@@ -40,6 +76,7 @@ const RelTime = ({time}) => {
     const sentence = value + " " + unit + " ago";
 
     return <span>{sentence}</span>;
+  }
 }
 
 export default RelTime;

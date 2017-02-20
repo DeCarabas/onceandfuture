@@ -8753,14 +8753,22 @@ if (process.env.NODE_ENV !== 'production' && typeof isCrushed.name === 'string' 
 
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+  value: true
 });
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _react = __webpack_require__(/*! react */ 4);
 
 var _react2 = _interopRequireDefault(_react);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var MsPerSecond = 1000;
 var SecondsPerMinute = 60;
@@ -8773,43 +8781,108 @@ var MsPerHour = MsPerMinute * MinutesPerHour;
 var MsPerDay = MsPerHour * HoursPerDay;
 var MsPerWeek = MsPerDay * DaysPerWeek;
 
-var RelTime = function RelTime(_ref) {
-    var time = _ref.time;
+var RelTime = function (_React$Component) {
+  _inherits(RelTime, _React$Component);
 
-    var parsed = Date.parse(time);
-    var delta = Date.now() - parsed;
+  function RelTime(props) {
+    _classCallCheck(this, RelTime);
 
-    var unit, value;
-    if (delta > MsPerWeek) {
+    var _this = _possibleConstructorReturn(this, (RelTime.__proto__ || Object.getPrototypeOf(RelTime)).call(this, props));
+
+    _this.state = { now: Date.now() };
+    return _this;
+  }
+
+  _createClass(RelTime, [{
+    key: 'componentDidMount',
+    value: function componentDidMount() {
+      var _this2 = this;
+
+      var interval = this.nextIntervalMs(Date.now());
+      this.timerID = setTimeout(function () {
+        return _this2.tick();
+      }, interval);
+    }
+  }, {
+    key: 'componentWillUnmount',
+    value: function componentWillUnmount() {
+      clearTimeout(this.timerID);
+    }
+  }, {
+    key: 'tick',
+    value: function tick() {
+      var _this3 = this;
+
+      var now = Date.now();
+      var interval = this.nextIntervalMs(now);
+
+      this.setState({ now: now });
+      this.timerID = setTimeout(function () {
+        return _this3.tick();
+      }, interval);
+    }
+  }, {
+    key: 'nextIntervalMs',
+    value: function nextIntervalMs(now) {
+      var parsed = Date.parse(this.props.time);
+      var delta = now - parsed;
+      if (delta > MsPerWeek) {
+        return MsPerWeek;
+      }
+      if (delta > MsPerDay) {
+        return MsPerDay;
+      }
+      if (delta > MsPerHour) {
+        return MsPerHour;
+      }
+
+      // Watching the seconds tick by is fun and all, but let's not go
+      // crazy. Minute-by-minute updates are fine, and don't ruin anything
+      // really.
+      return MsPerMinute;
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      var time = this.props.time;
+      var parsed = Date.parse(time);
+      var delta = this.state.now - parsed;
+
+      var unit, value;
+      if (delta > MsPerWeek) {
         value = Math.round(delta / MsPerWeek);
         unit = 'week';
-    } else if (delta > MsPerDay) {
+      } else if (delta > MsPerDay) {
         value = Math.round(delta / MsPerDay);
         unit = 'day';
-    } else if (delta > MsPerHour) {
+      } else if (delta > MsPerHour) {
         value = Math.round(delta / MsPerHour);
         unit = 'hour';
-    } else if (delta > MsPerMinute) {
+      } else if (delta > MsPerMinute) {
         value = Math.round(delta / MsPerMinute);
         unit = 'minute';
-    } else if (delta > MsPerSecond) {
+      } else if (delta > MsPerSecond) {
         value = Math.round(delta / MsPerSecond);
         unit = 'second';
-    } else {
+      } else {
         return "just now";
-    }
+      }
 
-    if (value > 1) {
+      if (value > 1) {
         unit = unit + "s";
-    }
-    var sentence = value + " " + unit + " ago";
+      }
+      var sentence = value + " " + unit + " ago";
 
-    return _react2.default.createElement(
+      return _react2.default.createElement(
         'span',
         null,
         sentence
-    );
-};
+      );
+    }
+  }]);
+
+  return RelTime;
+}(_react2.default.Component);
 
 exports.default = RelTime;
 
