@@ -6,13 +6,16 @@ module.exports = {
     filename: 'bundle.js',
     pathinfo: true,
   },
-  debug: true,
   devtool: 'source-map',
   module: {
-    loaders: [
+    rules: [
       {
         test: /\.jsx?$/,
-        loaders: ['babel?cacheDirectory']
+        exclude: /(node_modules|bower_components)/,
+        loader: 'babel-loader',
+        options: {
+          cacheDirectory: true,
+        },
       }
     ]
   }

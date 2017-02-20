@@ -8,12 +8,16 @@ module.exports = {
   },
   devtool: 'source-map',
   module: {
-    loaders: [
+    rules: [
       {
         test: /\.jsx?$/,
-        loaders: ['babel?cacheDirectory']
-      }
-    ]
+        exclude: /(node_modules|bower_components)/,
+        loader: 'babel-loader',
+        options: {
+          cacheDirectory: true,
+        },
+      },
+    ],
   },
   plugins: [
     new webpack.DefinePlugin({
@@ -22,9 +26,12 @@ module.exports = {
       }
     }),
     new webpack.optimize.UglifyJsPlugin({
-      compress:{
-        warnings: true
-      }
+      compress: {
+        dead_code: true,
+        drop_debugger: true,
+        warnings: true,
+      },
+      sourceMap: true,
     })
   ]
 };
