@@ -52,30 +52,35 @@ class RelTime extends React.Component {
     const parsed = Date.parse(time);
     const delta = this.state.now - parsed;
 
+    const sentence = this.sentenceForDelta(delta);
+
+    return <span>{sentence}</span>;
+  }
+
+  sentenceForDelta(delta) {
     var unit, value;
     if (delta > MsPerWeek) {
-        value = Math.round(delta / MsPerWeek);
-        unit = 'week';
+      value = Math.round(delta / MsPerWeek);
+      unit = 'week';
     } else if (delta > MsPerDay) {
-        value = Math.round(delta / MsPerDay);
-        unit = 'day';
+      value = Math.round(delta / MsPerDay);
+      if (value === 1) { return "yesterday"; }
+      unit = 'day';
     } else if (delta > MsPerHour) {
-        value = Math.round(delta / MsPerHour);
-        unit = 'hour';
+      value = Math.round(delta / MsPerHour);
+      unit = 'hour';
     } else if (delta > MsPerMinute) {
-        value = Math.round(delta / MsPerMinute);
-        unit = 'minute';
+      value = Math.round(delta / MsPerMinute);
+      unit = 'minute';
     } else if (delta > MsPerSecond) {
-        value = Math.round(delta / MsPerSecond);
-        unit = 'second';
+      value = Math.round(delta / MsPerSecond);
+      unit = 'second';
     } else {
-        return "just now";
+      return "just now";
     }
 
     if (value > 1) { unit = unit + "s"; }
-    const sentence = value + " " + unit + " ago";
-
-    return <span>{sentence}</span>;
+    return value + " " + unit + " ago";
   }
 }
 

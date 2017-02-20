@@ -8848,12 +8848,26 @@ var RelTime = function (_React$Component) {
       var parsed = Date.parse(time);
       var delta = this.state.now - parsed;
 
+      var sentence = this.sentenceForDelta(delta);
+
+      return _react2.default.createElement(
+        'span',
+        null,
+        sentence
+      );
+    }
+  }, {
+    key: 'sentenceForDelta',
+    value: function sentenceForDelta(delta) {
       var unit, value;
       if (delta > MsPerWeek) {
         value = Math.round(delta / MsPerWeek);
         unit = 'week';
       } else if (delta > MsPerDay) {
         value = Math.round(delta / MsPerDay);
+        if (value === 1) {
+          return "yesterday";
+        }
         unit = 'day';
       } else if (delta > MsPerHour) {
         value = Math.round(delta / MsPerHour);
@@ -8871,13 +8885,7 @@ var RelTime = function (_React$Component) {
       if (value > 1) {
         unit = unit + "s";
       }
-      var sentence = value + " " + unit + " ago";
-
-      return _react2.default.createElement(
-        'span',
-        null,
-        sentence
-      );
+      return value + " " + unit + " ago";
     }
   }]);
 
