@@ -998,10 +998,10 @@
     public class RiverFeedParser
     {
         /// <summary>The number of updates to have in a river before archiving.</summary>
-        const int UpdateLimit = 200;
+        const int UpdateLimit = 40;
 
         /// <summary>The number of updates to send to the archive.</summary>
-        const int UpdateSize = 175;
+        const int UpdateSize = 20;
 
         static readonly HttpClient client = Policies.CreateHttpClient(allowRedirect: false);
 

@@ -25,6 +25,7 @@
     using Newtonsoft.Json;
     using Scrypt;
     using Serilog;
+    using Microsoft.AspNetCore.ResponseCompression;
 
     public class Fault
     {
@@ -412,7 +413,7 @@
             public string Token;
             public DateTimeOffset ExpireAt;
         }
-    }
+    }    
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
     public class EnforceAuthenticationAttribute : Attribute, IAsyncAuthorizationFilter
@@ -437,7 +438,7 @@
             }
         }
     }
-
+        
     public class AppController : Controller
     {
         readonly AuthenticationManager authenticationManager;
@@ -1471,6 +1472,20 @@
             // enable MVC framework
             services.AddMvc();
 
+            // enable response compression
+            services.AddResponseCompression(options =>
+            {
+                // N.B.: This enables some known security holes, so be careful. In particular,
+                //       if some part of the request is echoed in the response body then a 
+                //       compression oracle can be used to decode the rest of the body. (See 
+                //       the CRIME, BREACH, and HEIST attacks.) 
+                //
+                //       We still enable this because it's too huge a win to not do, and we 
+                //       only put secrets in the headers which are not subject to compression 
+                //       anyway. (I understand that these count as famous last words.)
+                options.EnableForHttps = true;
+            });
+
             var aggStore = new AggregateRiverStore();
             var feedStore = new RiverFeedStore();
             var thumbStore = new RiverThumbnailStore();
@@ -1505,6 +1520,9 @@
                 packer.Start();
                 appLifetime.ApplicationStopping.Register(packer.Stop);
             }
+
+            // compress responses
+            app.UseResponseCompression();
 
             // serve static files from wwwroot/*
             app.UseStaticFiles();
