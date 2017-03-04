@@ -19,10 +19,8 @@ import UserMenu from './usermenu';
 const BannerTitle = ({title}) => {
   const head_style = {
     position: 'absolute',
-    top: 0, left: 0,
-    height: SIZE_BANNER_HEIGHT,
-    paddingTop: SIZE_BANNER_TITLE_PADDING_VERTICAL,
-    paddingBottom: SIZE_BANNER_TITLE_PADDING_VERTICAL,
+    top: '50%', left: 0,
+    transform: 'translateY(-50%)',
     paddingLeft: SIZE_BANNER_TITLE_PADDING_HORIZONTAL,
     fontSize: SIZE_BANNER_TITLE_FONT,
 
@@ -36,12 +34,10 @@ const BannerTitle = ({title}) => {
 const Announcer = ({message}) => {
   const announcer_style = {
     position: 'absolute',
-    top: 0,
+    top: '50%',
+    transform: 'translateY(-50%)',
     width: '100vw',
-    height: SIZE_ANNOUNCER_HEIGHT,
     fontSize: SIZE_ANNOUNCER_FONT,
-    paddingTop: SIZE_ANNOUNCER_PADDING_VERTICAL,
-    paddingBottom: SIZE_ANNOUNCER_PADDING_VERTICAL,
 
     display: 'inline-block',
     textAlign: 'center',

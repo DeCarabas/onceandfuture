@@ -13479,10 +13479,8 @@ var BannerTitle = function BannerTitle(_ref) {
 
   var head_style = {
     position: 'absolute',
-    top: 0, left: 0,
-    height: _style.SIZE_BANNER_HEIGHT,
-    paddingTop: _style.SIZE_BANNER_TITLE_PADDING_VERTICAL,
-    paddingBottom: _style.SIZE_BANNER_TITLE_PADDING_VERTICAL,
+    top: '50%', left: 0,
+    transform: 'translateY(-50%)',
     paddingLeft: _style.SIZE_BANNER_TITLE_PADDING_HORIZONTAL,
     fontSize: _style.SIZE_BANNER_TITLE_FONT,
 
@@ -13502,12 +13500,10 @@ var Announcer = function Announcer(_ref2) {
 
   var announcer_style = {
     position: 'absolute',
-    top: 0,
+    top: '50%',
+    transform: 'translateY(-50%)',
     width: '100vw',
-    height: _style.SIZE_ANNOUNCER_HEIGHT,
     fontSize: _style.SIZE_ANNOUNCER_FONT,
-    paddingTop: _style.SIZE_ANNOUNCER_PADDING_VERTICAL,
-    paddingBottom: _style.SIZE_ANNOUNCER_PADDING_VERTICAL,
 
     display: 'inline-block',
     textAlign: 'center'
@@ -14890,6 +14886,10 @@ var RiverSettingsButton = function RiverSettingsButton(_ref) {
       onShowSettings = _ref.onShowSettings,
       onHideSettings = _ref.onHideSettings;
 
+  // N.B. you might be tempted to style this with transform: translate() to
+  // match the style of the title in the center; but this puts the tooltip in
+  // its own stacking context and it gets sorted under all the other elements.
+  //
   var style = {
     position: 'absolute',
     right: 0, top: 0
@@ -14918,6 +14918,10 @@ var RiverSettingsButton = function RiverSettingsButton(_ref) {
 var RiverDragHandle = function RiverDragHandle(_ref2) {
   var river = _ref2.river;
 
+  // N.B. you might be tempted to style this with transform: translate() to
+  // match the style of the title in the center; but this puts the tooltip in
+  // its own stacking context and it gets sorted under all the other elements.
+  //
   var style = {
     position: 'absolute',
     left: 0, top: 0
@@ -14958,12 +14962,10 @@ var RiverTitle = function RiverTitle(_ref3) {
 
   var style = {
     position: 'absolute',
-    left: _style.SIZE_RIVER_TITLE_PADDING_HORIZONTAL,
-    height: '100%',
-    paddingTop: _style.SIZE_RIVER_TITLE_PADDING_VERTICAL,
-    paddingBottom: _style.SIZE_RIVER_TITLE_PADDING_VERTICAL,
+    fontSize: _style.SIZE_RIVER_TITLE_FONT,
     marginTop: 0,
-    fontSize: _style.SIZE_RIVER_TITLE_FONT
+    left: '50%', top: '50%',
+    transform: 'translateX(-50%) translateY(-50%)'
   };
 
   return _react2.default.createElement(
