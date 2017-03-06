@@ -35,12 +35,12 @@ const AmbiguousFeedDialogBase = ({address, feeds, addFeedToRiver, onHideSettings
   const rows = feeds.map(
     (f, i) => {
       let subscribeStyle = subscribeStyleBase;
-      let className = 'fa fa-plus';
+      let imgName = '/plus.opt.svg';
       let toolTip = 'Subscribe to this feed.';
       let clickHandler = () => addFeedToRiver(f.feedUrl);
 
       if (f.isSubscribed) {
-        className = 'fa fa-ban';
+        imgName = '/ban.opt.svg';
         toolTip = 'You are already subscribed to this feed.';
         subscribeStyle = Object.assign({}, subscribeStyle, {
           cursor: null,
@@ -53,7 +53,7 @@ const AmbiguousFeedDialogBase = ({address, feeds, addFeedToRiver, onHideSettings
           <td>{f.title}</td>
           <td style={subscribeStyle} onClick={clickHandler}>
             <Tooltip tip={toolTip} position='left'>
-              <i className={className} aria-hidden="true" />
+              <img src={imgName} width={12} height={12} />
             </Tooltip>
           </td>
         </tr>

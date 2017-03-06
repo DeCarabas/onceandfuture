@@ -13336,14 +13336,14 @@ var AmbiguousFeedDialogBase = function AmbiguousFeedDialogBase(_ref) {
 
   var rows = feeds.map(function (f, i) {
     var subscribeStyle = subscribeStyleBase;
-    var className = 'fa fa-plus';
+    var imgName = '/plus.opt.svg';
     var toolTip = 'Subscribe to this feed.';
     var clickHandler = function clickHandler() {
       return addFeedToRiver(f.feedUrl);
     };
 
     if (f.isSubscribed) {
-      className = 'fa fa-ban';
+      imgName = '/ban.opt.svg';
       toolTip = 'You are already subscribed to this feed.';
       subscribeStyle = Object.assign({}, subscribeStyle, {
         cursor: null
@@ -13365,7 +13365,7 @@ var AmbiguousFeedDialogBase = function AmbiguousFeedDialogBase(_ref) {
         _react2.default.createElement(
           _tooltip2.default,
           { tip: toolTip, position: 'left' },
-          _react2.default.createElement('i', { className: className, 'aria-hidden': 'true' })
+          _react2.default.createElement('img', { src: imgName, width: 12, height: 12 })
         )
       )
     );
