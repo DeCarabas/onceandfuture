@@ -16,12 +16,20 @@ const IconButton = ({cursor, tip, tipPosition, icon, onClick}) => {
     cursor: cursor || 'pointer',
     display: 'block',
   };
-  const className = "fa " + icon;
+
+  var icon_content;
+  if (icon.startsWith('fa')) {
+    const classname = 'fa ' + icon;
+    icon_content = <i className={classname} />;
+  } else {
+    icon_content = <img width={SIZE_BUTTON_FONT} height={SIZE_BUTTON_FONT} src={icon} />;
+  }
+
   tipPosition = tipPosition || 'right';
 
   return <div onClick={onClick} style={style}>
       <Tooltip position={tipPosition} tip={tip}>
-        <i className={className} />
+        {icon_content}
       </Tooltip>
   </div>;
 }

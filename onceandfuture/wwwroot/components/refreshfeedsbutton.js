@@ -15,7 +15,7 @@ const RefreshFeedsButtonBase = ({loading, onRefresh, user}) => {
   };
 
   return <div style={style}>
-    <IconButton onClick={onClick} icon="fa-refresh" tip="Refresh all feeds." tipPosition="bottomleft" />
+    <IconButton onClick={onClick} icon="/refresh.opt.svg" tip="Refresh all feeds." tipPosition="bottomleft" />
   </div>;
 }
 

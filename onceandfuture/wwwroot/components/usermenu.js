@@ -59,7 +59,7 @@ const UserMenuBase = function({
     <IconButton
       tip={tip}
       tipPosition="bottomleft"
-      icon="fa-user"
+      icon="/user.opt.svg"
       onClick={onToggle}
     />
     <Menu

@@ -4667,7 +4667,15 @@ var IconButton = function IconButton(_ref) {
     cursor: cursor || 'pointer',
     display: 'block'
   };
-  var className = "fa " + icon;
+
+  var icon_content;
+  if (icon.startsWith('fa')) {
+    var classname = 'fa ' + icon;
+    icon_content = _react2.default.createElement('i', { className: classname });
+  } else {
+    icon_content = _react2.default.createElement('img', { width: _style.SIZE_BUTTON_FONT, height: _style.SIZE_BUTTON_FONT, src: icon });
+  }
+
   tipPosition = tipPosition || 'right';
 
   return _react2.default.createElement(
@@ -4676,7 +4684,7 @@ var IconButton = function IconButton(_ref) {
     _react2.default.createElement(
       _tooltip2.default,
       { position: tipPosition, tip: tip },
-      _react2.default.createElement('i', { className: className })
+      icon_content
     )
   );
 };
@@ -13610,7 +13618,7 @@ var RefreshFeedsButtonBase = function RefreshFeedsButtonBase(_ref) {
   return _react2.default.createElement(
     'div',
     { style: style },
-    _react2.default.createElement(_iconbutton2.default, { onClick: onClick, icon: 'fa-refresh', tip: 'Refresh all feeds.', tipPosition: 'bottomleft' })
+    _react2.default.createElement(_iconbutton2.default, { onClick: onClick, icon: '/refresh.opt.svg', tip: 'Refresh all feeds.', tipPosition: 'bottomleft' })
   );
 };
 
@@ -14899,11 +14907,11 @@ var RiverSettingsButton = function RiverSettingsButton(_ref) {
 
   var icon, onClick, tip;
   if (is_settings) {
-    icon = 'fa-chevron-up';
+    icon = '/up-chevron.opt.svg';
     onClick = onHideSettings;
     tip = 'Close the settings panel.';
   } else {
-    icon = 'fa-gear';
+    icon = '/gear.opt.svg';
     onClick = onShowSettings;
     tip = 'Show the settings panel for this feed.';
   }
@@ -14939,7 +14947,7 @@ var RiverDragHandle = function RiverDragHandle(_ref2) {
     _react2.default.createElement(_iconbutton2.default, {
       cursor: 'move',
       tip: 'Drag this onto another column to re-order it.',
-      icon: 'fa-bars'
+      icon: '/bars.opt.svg'
     })
   );
 };
@@ -15146,7 +15154,7 @@ var UserMenuBase = function UserMenuBase(_ref2) {
     _react2.default.createElement(_iconbutton2.default, {
       tip: tip,
       tipPosition: 'bottomleft',
-      icon: 'fa-user',
+      icon: '/user.opt.svg',
       onClick: onToggle
     }),
     _react2.default.createElement(Menu, {

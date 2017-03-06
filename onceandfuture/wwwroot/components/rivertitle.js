@@ -23,11 +23,11 @@ const RiverSettingsButton = ({river, onShowSettings, onHideSettings}) => {
 
   var icon, onClick, tip;
   if (is_settings) {
-    icon = 'fa-chevron-up';
+    icon = '/up-chevron.opt.svg';
     onClick = onHideSettings;
     tip = 'Close the settings panel.';
   } else {
-    icon = 'fa-gear';
+    icon = '/gear.opt.svg';
     onClick = onShowSettings;
     tip = 'Show the settings panel for this feed.';
   }
@@ -57,7 +57,7 @@ const RiverDragHandle = ({river}) => {
     <IconButton
       cursor='move'
       tip='Drag this onto another column to re-order it.'
-      icon='fa-bars'
+      icon='/bars.opt.svg'
     />
   </div>;
 };
