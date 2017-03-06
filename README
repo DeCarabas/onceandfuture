@@ -32,7 +32,6 @@ Tests:
   to mock the web and return fake images, &c.)
 
 Shipping:
-- Re-pack font awesome fonts
 - Implement ATOM cache timeout and RSS skip hours and the like to poll more
   intelligently.
 
