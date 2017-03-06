@@ -2,8 +2,8 @@ import React from 'react';
 import { connect } from 'react-redux';
 import { accountSettingsHide, accountSettingsShow, addRiver, } from '../actions';
 import {
-  SIZE_BUTTON_WIDTH,
-  SIZE_BUTTON_HEIGHT,
+  SIZE_BUTTON_FONT,
+  SIZE_BUTTON_PADDING,
   SIZE_COLUMN_TOP,
   SIZE_COLUMN_WIDTH,
   SIZE_SCREEN_HEIGHT,
@@ -17,25 +17,23 @@ import {
 import AccountSettings from './accountsettings';
 import AppBanner from './appbanner';
 import River from './river';
+import Tooltip from './tooltip';
 
-const columnLeft =(index) => index * (SIZE_COLUMN_WIDTH + SIZE_SPACER_WIDTH) + SIZE_SPACER_WIDTH;
+const columnLeft = (index) => index * (SIZE_COLUMN_WIDTH + SIZE_SPACER_WIDTH) + SIZE_SPACER_WIDTH;
 
 export const AddRiverButton = ({index, onAddRiver}) => {
   const column_style = {
     position: 'absolute',
-    top: SIZE_COLUMN_TOP,
+    top: SIZE_COLUMN_TOP + 1,
     left: columnLeft(index),
-    width: SIZE_BUTTON_WIDTH,
-    height: SIZE_BUTTON_HEIGHT,
-    fontSize: SIZE_BUTTON_HEIGHT,
-
-    textAlign: 'center',
-    paddingTop: 13,
+    padding: SIZE_BUTTON_PADDING,
     cursor: 'pointer',
   };
 
   return <div style={column_style} onClick={onAddRiver}>
-      <i className="fa fa-plus-square" />
+    <Tooltip tip='Add a new river.' position='left'>
+      <img src="/round-plus.opt.svg" width={SIZE_BUTTON_FONT} height={SIZE_BUTTON_FONT} />
+    </Tooltip>
   </div>;
 };
 

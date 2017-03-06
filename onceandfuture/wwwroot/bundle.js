@@ -13107,7 +13107,7 @@ var HeaderBox = function HeaderBox(_ref) {
     _react2.default.createElement(
       'div',
       { style: b_style },
-      _react2.default.createElement(_iconbutton2.default, { tip: 'Close', icon: 'fa-window-close', onClick: onClose })
+      _react2.default.createElement(_iconbutton2.default, { tip: 'Close', icon: '/cross.opt.svg', onClick: onClose })
     )
   );
 };
@@ -14235,6 +14235,10 @@ var _river = __webpack_require__(/*! ./river */ 113);
 
 var _river2 = _interopRequireDefault(_river);
 
+var _tooltip = __webpack_require__(/*! ./tooltip */ 39);
+
+var _tooltip2 = _interopRequireDefault(_tooltip);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var columnLeft = function columnLeft(index) {
@@ -14247,21 +14251,20 @@ var AddRiverButton = exports.AddRiverButton = function AddRiverButton(_ref) {
 
   var column_style = {
     position: 'absolute',
-    top: _style.SIZE_COLUMN_TOP,
+    top: _style.SIZE_COLUMN_TOP + 1,
     left: columnLeft(index),
-    width: _style.SIZE_BUTTON_WIDTH,
-    height: _style.SIZE_BUTTON_HEIGHT,
-    fontSize: _style.SIZE_BUTTON_HEIGHT,
-
-    textAlign: 'center',
-    paddingTop: 13,
+    padding: _style.SIZE_BUTTON_PADDING,
     cursor: 'pointer'
   };
 
   return _react2.default.createElement(
     'div',
     { style: column_style, onClick: onAddRiver },
-    _react2.default.createElement('i', { className: 'fa fa-plus-square' })
+    _react2.default.createElement(
+      _tooltip2.default,
+      { tip: 'Add a new river.', position: 'left' },
+      _react2.default.createElement('img', { src: '/round-plus.opt.svg', width: _style.SIZE_BUTTON_FONT, height: _style.SIZE_BUTTON_FONT })
+    )
   );
 };
 
@@ -14659,7 +14662,7 @@ var RiverSource = function RiverSource(_ref6) {
       _react2.default.createElement(
         _tooltip2.default,
         { tip: tooltip, position: 'left' },
-        _react2.default.createElement('i', { className: 'fa fa-remove', 'aria-hidden': 'true' })
+        _react2.default.createElement('img', { src: '/cross.opt.svg', width: 8, height: 8 })
       )
     )
   );

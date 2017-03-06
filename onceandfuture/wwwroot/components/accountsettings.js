@@ -41,7 +41,7 @@ const HeaderBox = ({onClose}) => {
   return <div style={style}>
     <h2 style={h_style}>Account Settings</h2>
     <div style={b_style}>
-      <IconButton tip="Close" icon="fa-window-close" onClick={onClose} />
+      <IconButton tip="Close" icon="/cross.opt.svg" onClick={onClose} />
     </div>
   </div>;
 }

@@ -140,7 +140,7 @@ const RiverSource = ({source, deleteSource}) => {
     <td style={timeStyle}><RelTime time={source.lastUpdated} /></td>
     <td style={unsubscribeStyle} onClick={() => deleteSource(source.id, source.feedUrl)}>
       <Tooltip tip={tooltip} position='left'>
-        <i className="fa fa-remove" aria-hidden="true" />
+        <img src="/cross.opt.svg" width={8} height={8} />
       </Tooltip>
     </td>
   </tr>;
