@@ -1,22 +1,20 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { refreshAllFeeds } from '../actions';
-import {
-  APP_TEXT_COLOR,
-  RIVER_TITLE_BACKGROUND_COLOR,
-} from './style';
 import IconButton from './iconbutton';
 
 
 const RefreshFeedsButtonBase = ({loading, onRefresh, user}) => {
-  const onClick = loading ? () => {} : () => onRefresh(user);
-  const style = {
-    color: loading ? RIVER_TITLE_BACKGROUND_COLOR : APP_TEXT_COLOR
-  };
-
-  return <div style={style}>
-    <IconButton onClick={onClick} icon="/refresh.opt.svg" tip="Refresh all feeds." tipPosition="bottomleft" />
-  </div>;
+  if (loading) {
+    return <div />;
+  } else {
+    return <IconButton
+        onClick={() => onRefresh(user)}
+        icon="/refresh.opt.svg"
+        tip="Refresh all feeds."
+        tipPosition="bottomleft"
+      />;
+  }
 }
 
 const mapStateToProps = (state) => {

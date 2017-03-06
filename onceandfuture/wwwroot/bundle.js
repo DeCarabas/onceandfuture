@@ -13595,8 +13595,6 @@ var _reactRedux = __webpack_require__(/*! react-redux */ 13);
 
 var _actions = __webpack_require__(/*! ../actions */ 12);
 
-var _style = __webpack_require__(/*! ./style */ 6);
-
 var _iconbutton = __webpack_require__(/*! ./iconbutton */ 30);
 
 var _iconbutton2 = _interopRequireDefault(_iconbutton);
@@ -13608,18 +13606,18 @@ var RefreshFeedsButtonBase = function RefreshFeedsButtonBase(_ref) {
       onRefresh = _ref.onRefresh,
       user = _ref.user;
 
-  var onClick = loading ? function () {} : function () {
-    return onRefresh(user);
-  };
-  var style = {
-    color: loading ? _style.RIVER_TITLE_BACKGROUND_COLOR : _style.APP_TEXT_COLOR
-  };
-
-  return _react2.default.createElement(
-    'div',
-    { style: style },
-    _react2.default.createElement(_iconbutton2.default, { onClick: onClick, icon: '/refresh.opt.svg', tip: 'Refresh all feeds.', tipPosition: 'bottomleft' })
-  );
+  if (loading) {
+    return _react2.default.createElement('div', null);
+  } else {
+    return _react2.default.createElement(_iconbutton2.default, {
+      onClick: function onClick() {
+        return onRefresh(user);
+      },
+      icon: '/refresh.opt.svg',
+      tip: 'Refresh all feeds.',
+      tipPosition: 'bottomleft'
+    });
+  }
 };
 
 var mapStateToProps = function mapStateToProps(state) {
