@@ -45,11 +45,13 @@ const UserMenuBase = function({
   onSignOut,
 }) {
   let style = {};
+  let img = "/user.opt.svg";
   if (visible) {
     style = Object.assign({}, style, {
       backgroundColor: COLOR_VERY_DARK,
       color: COLOR_VERY_LIGHT,
     });
+    img = "/user-invert.opt.svg";
   }
 
   const onSignOutClick = () => onSignOut(user);
@@ -59,7 +61,7 @@ const UserMenuBase = function({
     <IconButton
       tip={tip}
       tipPosition="bottomleft"
-      icon="/user.opt.svg"
+      icon={img}
       onClick={onToggle}
     />
     <Menu

@@ -15137,11 +15137,13 @@ var UserMenuBase = function UserMenuBase(_ref2) {
       onSignOut = _ref2.onSignOut;
 
   var style = {};
+  var img = "/user.opt.svg";
   if (visible) {
     style = Object.assign({}, style, {
       backgroundColor: _style.COLOR_VERY_DARK,
       color: _style.COLOR_VERY_LIGHT
     });
+    img = "/user-invert.opt.svg";
   }
 
   var onSignOutClick = function onSignOutClick() {
@@ -15155,7 +15157,7 @@ var UserMenuBase = function UserMenuBase(_ref2) {
     _react2.default.createElement(_iconbutton2.default, {
       tip: tip,
       tipPosition: 'bottomleft',
-      icon: '/user.opt.svg',
+      icon: img,
       onClick: onToggle
     }),
     _react2.default.createElement(Menu, {
