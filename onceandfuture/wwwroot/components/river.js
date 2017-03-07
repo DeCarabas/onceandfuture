@@ -55,7 +55,8 @@ const RiverTitlePosition = ({river, onShowSettings, onHideSettings}) => {
   const style = {
     position: 'absolute',
     top: SIZE_RIVER_TITLE_TOP_SPACER,
-    width: '100%',
+    left: 0, right: 0,
+    border: '1px solid transparent',
   };
 
   return <div style={style}>

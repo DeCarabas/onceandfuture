@@ -13730,7 +13730,8 @@ var RiverTitlePosition = function RiverTitlePosition(_ref) {
   var style = {
     position: 'absolute',
     top: _style.SIZE_RIVER_TITLE_TOP_SPACER,
-    width: '100%'
+    left: 0, right: 0,
+    border: '1px solid transparent'
   };
 
   return _react2.default.createElement(
@@ -14963,8 +14964,7 @@ var RiverTitle = function RiverTitle(_ref3) {
     //width: SIZE_COLUMN_WIDTH,
     position: 'absolute',
     left: 0,
-    right: 1, // ::shrug::
-    borderTop: '1px solid ' + _style.COLOR_VERY_DARK,
+    right: 0, // ::shrug::
 
     backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR
   };

@@ -68,8 +68,7 @@ const RiverTitle = ({river, onShowSettings, onHideSettings}) => {
     //width: SIZE_COLUMN_WIDTH,
     position: 'absolute',
     left: 0,
-    right: 1, // ::shrug::
-    borderTop: '1px solid ' + COLOR_VERY_DARK,
+    right: 0, // ::shrug::
 
     backgroundColor: RIVER_TITLE_BACKGROUND_COLOR,
   };
