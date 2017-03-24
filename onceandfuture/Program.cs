@@ -15,6 +15,8 @@
     using Serilog;
     using Serilog.Events;
 
+    using System.Reflection;
+
     class Program
     {
         static ProgramOpts Options = new ProgramOpts()
@@ -122,6 +124,22 @@
                     new ImageSharp.Formats.GifFormat(),
             };
             foreach (var fmt in formats) { ImageSharp.Configuration.Default.AddImageFormat(fmt); }
+
+            // THE WORST HACK: Limit the size of the DecodedBlockArray pool since it's a huge memory consumer.
+            // See https://github.com/JimBobSquarePants/ImageSharp/issues/151
+            //
+            Type jpegType = typeof(ImageSharp.Formats.JpegFormat);
+            Assembly imageSharp = jpegType.GetTypeInfo().Assembly;
+
+            Type decodedBlock = imageSharp.GetType("ImageSharp.Formats.Jpg.DecodedBlock");
+            Type decodedBlockArrayPool = typeof(System.Buffers.ArrayPool<object>).GetGenericTypeDefinition().MakeGenericType(decodedBlock);
+            object newPool = decodedBlockArrayPool
+                .GetRuntimeMethod("Create", new[] { typeof(int), typeof(int) })
+                .Invoke(null, new object[] { (int)4096, (int)20 });
+            
+            TypeInfo decodedBlockArray = imageSharp.GetType("ImageSharp.Formats.Jpg.DecodedBlockArray").GetTypeInfo();
+            FieldInfo arrayPoolField = decodedBlockArray.GetField("ArrayPool", BindingFlags.Static | BindingFlags.NonPublic);
+            arrayPoolField.SetValue(null, newPool);
         }
 
         static int DoShow(ParsedOpts args)
