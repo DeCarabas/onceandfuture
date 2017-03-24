@@ -1,11 +1,3 @@
-Notes on Building:
-==================
-
-Right now our Dockerfile builds Mono from Doty's private base image that is
-pre-staged with a built copy of Mono, from source, in /opt/mono. At some point
-we'll want to convert to using packages or something, but for now it's what
-we got.
-
 Todo:
 =======
 
