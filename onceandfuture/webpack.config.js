@@ -2,7 +2,7 @@
 module.exports = {
   entry: './wwwroot/main.js',
   output: {
-    path: 'wwwroot',
+    path: __dirname  + '/wwwroot',
     filename: 'bundle.js',
     pathinfo: true,
   },

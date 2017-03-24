@@ -131,13 +131,13 @@
             Type jpegType = typeof(ImageSharp.Formats.JpegFormat);
             Assembly imageSharp = jpegType.GetTypeInfo().Assembly;
 
-            Type decodedBlock = imageSharp.GetType("ImageSharp.Formats.Jpg.DecodedBlock");
+            Type decodedBlock = imageSharp.GetType("ImageSharp.Formats.Jpg.DecodedBlock", throwOnError: true);
             Type decodedBlockArrayPool = typeof(System.Buffers.ArrayPool<object>).GetGenericTypeDefinition().MakeGenericType(decodedBlock);
             object newPool = decodedBlockArrayPool
                 .GetRuntimeMethod("Create", new[] { typeof(int), typeof(int) })
                 .Invoke(null, new object[] { (int)4096, (int)20 });
-            
-            TypeInfo decodedBlockArray = imageSharp.GetType("ImageSharp.Formats.Jpg.DecodedBlockArray").GetTypeInfo();
+
+            Type decodedBlockArray = imageSharp.GetType("ImageSharp.Formats.Jpg.DecodedBlockArray", throwOnError: true);
             FieldInfo arrayPoolField = decodedBlockArray.GetField("ArrayPool", BindingFlags.Static | BindingFlags.NonPublic);
             arrayPoolField.SetValue(null, newPool);
         }
@@ -262,7 +262,7 @@
                 else
                 {
                     return DoUpdateForUser(args);
-                }                
+                }
             }
             else
             {
@@ -301,7 +301,7 @@
             Stopwatch loadTimer = Stopwatch.StartNew();
 
             UserProfile profile = subscriptionStore.GetProfileFor(user).Result;
-            var tasks = 
+            var tasks =
                 from rd in profile.Rivers
                 where rd.Id == river
                 select parser.RefreshAggregateRiverWithFeeds(rd.Id, rd.Feeds);
