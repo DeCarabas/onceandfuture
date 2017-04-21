@@ -5,4 +5,4 @@ COPY ./onceandfuture .
 
 RUN bash ./build-image.sh
 
-ENTRYPOINT dotnet run --configuration="Release" -- serve --environment=Production --url=http://0.0.0.0:$PORT -vvvv
+ENTRYPOINT dotnet run --configuration="Release" -- serve --environment=Production --url=http://0.0.0.0:$PORT

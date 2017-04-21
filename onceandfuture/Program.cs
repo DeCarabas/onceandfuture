@@ -103,7 +103,7 @@
 
         static void ConfigureGlobalSettings(ParsedOpts parsedArgs)
         {
-            var logLevel = (LogEventLevel)Math.Max((int)(LogEventLevel.Error - parsedArgs["verbose"].Count), 0);
+            var logLevel = (LogEventLevel)Math.Max((int)(LogEventLevel.Information - parsedArgs["verbose"].Count), 0);
             var logConfig = new LoggerConfiguration()
                 .Enrich.FromLogContext()
                 .MinimumLevel.Is(logLevel)
@@ -219,7 +219,6 @@
 
             return 0;
         }
-
 
         static int DoShowAll(ParsedOpts args)
         {
