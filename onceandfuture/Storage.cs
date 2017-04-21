@@ -151,6 +151,8 @@
             long? objectLength = null;
             try
             {
+                bool isCompressed;
+                MemoryStream responseBuffer;
                 using (HttpResponseMessage response = await SendAsync(request))
                 {
                     if (!response.IsSuccessStatusCode)
@@ -177,38 +179,35 @@
                         objectLength = long.Parse(ol);
                     }
 
-                    byte[] data = new byte[objectLength.Value];
-                    using (Stream responseStream = await response.Content.ReadAsStreamAsync())
-                    {
-                        if (response.Content.Headers.ContentEncoding.Contains("gzip"))
-                        {
-                            var targetStream = new MemoryStream(data);
-                            var sourceStream = new GZipStream(responseStream, CompressionMode.Decompress);
-                            await sourceStream.CopyToAsync(targetStream);
-                        }
-                        else
-                        {
-                            int cursor = 0;
-                            while (cursor != data.Length)
-                            {
-                                int read = await responseStream.ReadAsync(data, cursor, data.Length - cursor);
-                                if (read == 0) { break; }
-                                cursor += read;
-                            }
-                        }
-                    }
+                    responseBuffer = new MemoryStream();
+                    await response.Content.CopyToAsync(responseBuffer);
+                    responseBuffer.Position = 0;
 
-                    LogOperation(
-                        "Get", 
-                        key, 
-                        contentType, 
-                        objectLength, 
-                        contentLength, 
-                        timer, 
-                        OperationStatus.OK, 
-                        null);
-                    return data;
+                    isCompressed = response.Content.Headers.ContentEncoding.Contains("gzip");
                 }
+
+                byte[] data = new byte[objectLength.Value];
+                if (isCompressed)
+                {
+                    var sourceStream = new GZipStream(responseBuffer, CompressionMode.Decompress);
+                    var targetStream = new MemoryStream(data);
+                    sourceStream.CopyTo(targetStream);
+                }
+                else
+                {
+                    responseBuffer.Read(data, 0, data.Length);
+                }                
+
+                LogOperation(
+                    "Get", 
+                    key, 
+                    contentType, 
+                    objectLength, 
+                    contentLength, 
+                    timer, 
+                    OperationStatus.OK, 
+                    null);
+                return data;
             }
             catch (S3Exception) { throw; }
             catch (Exception e)
