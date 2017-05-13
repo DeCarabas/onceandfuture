@@ -101,13 +101,20 @@
             }
         }
 
+        static bool IsHealthPingEvent(LogEvent le) 
+            => le.Properties.ContainsKey("RequestPath") 
+            && le.Properties["RequestPath"].ToString() == "\"/health/ping\"";
+
         static void ConfigureGlobalSettings(ParsedOpts parsedArgs)
         {
             var logLevel = (LogEventLevel)Math.Max((int)(LogEventLevel.Information - parsedArgs["verbose"].Count), 0);
             var logConfig = new LoggerConfiguration()
                 .Enrich.FromLogContext()
                 .MinimumLevel.Is(logLevel)
-                .WriteTo.LiterateConsole();
+                .Filter.ByExcluding(e => IsHealthPingEvent(e))
+                .WriteTo.LiterateConsole(
+                    outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3} {RequestId}] {Message}{NewLine}{Exception}"
+                );
             string honeycomb_key = Environment.GetEnvironmentVariable("HONEYCOMB_KEY");
             if (honeycomb_key != null)
             {
