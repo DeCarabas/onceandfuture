@@ -1,21 +1,20 @@
 ﻿namespace onceandfuture
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.IO;
-    using System.Linq;
-    using System.Net;
-    using System.Net.Http;
-    using System.Threading.Tasks;
     using ImageSharp;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.Configuration;
     using Serilog;
     using Serilog.Events;
-
+    using Serilog.Formatting.Compact;
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using System.Net;
     using System.Reflection;
+    using System.Threading.Tasks;
 
     class Program
     {
@@ -105,16 +104,32 @@
             => le.Properties.ContainsKey("RequestPath") 
             && le.Properties["RequestPath"].ToString() == "\"/health/ping\"";
 
+        static bool IsDevelopmentEnvironment(ParsedOpts parsedArgs)
+        {
+            if (!parsedArgs.Opts.ContainsKey("environment")) { return true; }
+            if (parsedArgs["environment"].Value.ToLowerInvariant() == "development") { return true; }
+            return false;
+        }
+
         static void ConfigureGlobalSettings(ParsedOpts parsedArgs)
         {
             var logLevel = (LogEventLevel)Math.Max((int)(LogEventLevel.Information - parsedArgs["verbose"].Count), 0);
             var logConfig = new LoggerConfiguration()
                 .Enrich.FromLogContext()
                 .MinimumLevel.Is(logLevel)
-                .Filter.ByExcluding(e => IsHealthPingEvent(e))
-                .WriteTo.LiterateConsole(
+                .Filter.ByExcluding(e => IsHealthPingEvent(e));
+
+            if (IsDevelopmentEnvironment(parsedArgs))
+            {
+                logConfig.WriteTo.LiterateConsole(
                     outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3} {RequestId}] {Message}{NewLine}{Exception}"
                 );
+            }
+            else
+            {
+                logConfig.WriteTo.Console(new RenderedCompactJsonFormatter());
+            }
+
             string honeycomb_key = Environment.GetEnvironmentVariable("HONEYCOMB_KEY");
             if (honeycomb_key != null)
             {
