@@ -6,7 +6,7 @@
     using System.IO;
     using System.Text;
 
-    class ParsedOpts
+    public class ParsedOpts
     {
         public string Error;
         public VerbDef Verb;
@@ -15,7 +15,7 @@
         public Opt this[string key] => this.Opts[key];
     }
 
-    class Opt
+    public class Opt
     {
         public string Value;
         public int Count;
@@ -30,7 +30,7 @@
         public OptDef Option { get; }
     }
 
-    class ProgramOpts
+    public class ProgramOpts
     {
         public List<OptDef> Options { get; } = new List<OptDef>();
         public Dictionary<string, VerbDef> Verbs { get; } = new Dictionary<string, VerbDef>();
@@ -300,7 +300,7 @@
         }
     }
 
-    class VerbDef
+    public class VerbDef
     {
         public string Name { get; }
         public string Help { get; }
@@ -323,7 +323,7 @@
         }
     }
 
-    class OptDef
+    public class OptDef
     {
         public char Short;
         public string Long;
