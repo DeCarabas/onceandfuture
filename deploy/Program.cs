@@ -46,15 +46,14 @@ namespace deploy
             return String.Format("{0}/{1}/{2}", BuildDate, BuildTime, Commit);
         }
     }
-
+    
     class Program
     {
-        static AmazonCloudFormationClient cloudFormationClient
-            = new AmazonCloudFormationClient(RegionEndpoint.USWest2);
-        static AmazonAutoScalingClient autoScalingClient
-            = new AmazonAutoScalingClient(RegionEndpoint.USWest2);
-        static AmazonElasticLoadBalancingV2Client elbClient
-            = new AmazonElasticLoadBalancingV2Client(RegionEndpoint.USWest2);
+        static readonly RegionEndpoint region = RegionEndpoint.USWest2;
+        static readonly AmazonCloudFormationClient cloudFormationClient = new AmazonCloudFormationClient(region);
+        static readonly AmazonAutoScalingClient autoScalingClient = new AmazonAutoScalingClient(region);
+        static readonly AmazonElasticLoadBalancingV2Client elbClient = new AmazonElasticLoadBalancingV2Client(region);
+        static readonly AmazonS3Client s3client = new AmazonS3Client(RegionEndpoint.USWest2);
 
         static ProgramOpts Options = new ProgramOpts()
             .AddOption("help", "Display this help.", o => o.Flag('?'))
@@ -531,8 +530,7 @@ namespace deploy
         }
 
         static BuildTag GetLastBuild()
-        {
-            var s3client = new AmazonS3Client(RegionEndpoint.USWest2);
+        {            
             List<S3Object> allObjects = new List<S3Object>();
             string nextMarker = null;
             do
