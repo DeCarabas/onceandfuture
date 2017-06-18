@@ -190,7 +190,7 @@ namespace OnceAndFuture
     {
         // ImageSharp consumes tons of resources, and so we want to gate the amount of concurrent JPEG decoding we do.
         // Right now we constrain to 1; let's see if that helps anything.
-        const int MaximumConcurrentLoads = 1;
+        const int MaximumConcurrentLoads = 1;        
 
         static readonly SemaphoreSlim loadGate = new SemaphoreSlim(MaximumConcurrentLoads);
 
@@ -214,8 +214,6 @@ namespace OnceAndFuture
 
         static readonly HttpClient client = Policies.CreateHttpClient();
         static readonly MemoryCache imageCache;
-
-
 
         static readonly string[] BadThumbnails = new string[]
         {
@@ -580,6 +578,13 @@ namespace OnceAndFuture
                     {
                         ThumbnailLog.LogThumbnail(referrer, imageUrl.Uri, imageUrl.Kind, null, response.ReasonPhrase);
                         CacheError(imageUrl, response.ReasonPhrase);
+                        return null;
+                    }
+
+                    if (Policies.ImageResponseTooBig(response))
+                    {
+                        ThumbnailLog.LogThumbnail(referrer, imageUrl.Uri, imageUrl.Kind, null, "ImageTooBig");
+                        CacheError(imageUrl, "ImageTooBig");
                         return null;
                     }
 

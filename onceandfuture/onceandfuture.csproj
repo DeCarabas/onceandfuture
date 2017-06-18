@@ -28,4 +28,7 @@
     <PackageReference Include="Serilog.Sinks.Literate" Version="2.1.0" />
     <PackageReference Include="Serilog.Sinks.PeriodicBatching" Version="2.1.0" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Syndication\" />
+  </ItemGroup>
 </Project>
