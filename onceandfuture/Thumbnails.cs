@@ -16,7 +16,7 @@ using ImageSharp;
 using Serilog;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace onceandfuture
+namespace OnceAndFuture
 {
     static class ThumbnailLog
     {

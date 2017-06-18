@@ -1,4 +1,4 @@
-﻿namespace onceandfuture
+﻿namespace OnceAndFuture
 {
     using System;
     using System.CodeDom.Compiler;

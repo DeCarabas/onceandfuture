@@ -1,4 +1,4 @@
-﻿namespace onceandfuture
+﻿namespace OnceAndFuture
 {
     using ImageSharp;
     using Microsoft.AspNetCore.Builder;

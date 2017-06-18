@@ -1,4 +1,4 @@
-﻿namespace onceandfuture
+﻿namespace OnceAndFuture
 {
     static class Murmur3
     {

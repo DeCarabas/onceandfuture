@@ -1,4 +1,4 @@
-﻿namespace onceandfuture
+﻿namespace OnceAndFuture
 {
     using Newtonsoft.Json;
     using Polly;
