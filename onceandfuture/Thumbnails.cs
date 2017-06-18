@@ -1,20 +1,20 @@
-﻿using System;
+﻿using AngleSharp.Dom;
+using AngleSharp.Dom.Html;
+using AngleSharp.Parser.Html;
+using ImageSharp;
+using Microsoft.Extensions.Caching.Memory;
+using Serilog;
+using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using AngleSharp.Dom;
-using AngleSharp.Dom.Html;
-using AngleSharp.Parser.Html;
-using ImageSharp;
-using Serilog;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace OnceAndFuture
 {
@@ -26,7 +26,7 @@ namespace OnceAndFuture
             Uri referrer,
             Uri thumbnailUri,
             string kind,
-            Image<Color> image,
+            Image<Rgba32> image,
             string judgement,
             Exception exception = null)
         {
@@ -54,11 +54,11 @@ namespace OnceAndFuture
     {
         const int MaximumSlice = 10;
 
-        static byte[] ToGreyscale(Image<Color> image)
+        static byte[] ToGreyscale(Image<Rgba32> image)
         {
-            Color[] pixels = new Image<Color>(image).Grayscale().Pixels;
+            Span<Rgba32> pixels = new Image<Rgba32>(image).Grayscale().Pixels;
             byte[] bytes = new byte[pixels.Length];
-            for(int i = 0; i < bytes.Length; i++) { bytes[i] = pixels[i].R; }
+            for (int i = 0; i < bytes.Length; i++) { bytes[i] = pixels[i].R; }
             return bytes;
         }
 
@@ -167,7 +167,7 @@ namespace OnceAndFuture
             }
         }
 
-        public static Image<Color> Crop(Image<Color> image, int targetSize)
+        public static Image<Rgba32> Crop(Image<Rgba32> image, int targetSize)
         {
             byte[] values = ToGreyscale(image);
             int width = image.Width;
@@ -186,6 +186,26 @@ namespace OnceAndFuture
         }
     }
 
+    static class ThumbnailGate
+    {
+        // ImageSharp consumes tons of resources, and so we want to gate the amount of concurrent JPEG decoding we do.
+        // Right now we constrain to 1; let's see if that helps anything.
+        const int MaximumConcurrentLoads = 1;
+
+        static readonly SemaphoreSlim loadGate = new SemaphoreSlim(MaximumConcurrentLoads);
+
+        public static async Task<IDisposable> Enter()
+        {
+            await loadGate.WaitAsync();
+            return new SemaphoreLock();
+        }
+
+        class SemaphoreLock : IDisposable
+        {
+            public void Dispose() => loadGate.Release();
+        }
+    }
+
     class ThumbnailExtractor
     {
         const int ThumbnailSize = 312;
@@ -194,6 +214,8 @@ namespace OnceAndFuture
 
         static readonly HttpClient client = Policies.CreateHttpClient();
         static readonly MemoryCache imageCache;
+
+
 
         static readonly string[] BadThumbnails = new string[]
         {
@@ -212,11 +234,46 @@ namespace OnceAndFuture
         };
 
         static ThumbnailExtractor()
-        {            
+        {
             imageCache = new MemoryCache(new MemoryCacheOptions
             {
                 CompactOnMemoryPressure = true,
             });
+        }
+
+        public static void ConfigureProcess()
+        {
+            var formats = new ImageSharp.Formats.IImageFormat[]
+            {
+                    new ImageSharp.Formats.BmpFormat(),
+                    new ImageSharp.Formats.PngFormat(),
+                    new ImageSharp.Formats.JpegFormat(),
+                    new ImageSharp.Formats.GifFormat(),
+            };
+            foreach (var fmt in formats) { ImageSharp.Configuration.Default.AddImageFormat(fmt); }
+
+            // THE WORST HACK: Limit the size of the DecodedBlockArray pool since it's a huge memory consumer.
+            // See https://github.com/JimBobSquarePants/ImageSharp/issues/151
+            //
+            // This stopped working after I updated because DUH, trying to figure out the best new way.
+            //
+            //Type jpegType = typeof(ImageSharp.Formats.JpegFormat);
+            //Assembly imageSharp = jpegType.GetTypeInfo().Assembly;
+
+            //Type decodedBlock = imageSharp
+            //    .GetType("ImageSharp.Formats.Jpg.DecodedBlock", throwOnError: true);
+            //Type decodedBlockArrayPool = typeof(System.Buffers.ArrayPool<object>)
+            //    .GetGenericTypeDefinition()
+            //    .MakeGenericType(decodedBlock);
+            //object newPool = decodedBlockArrayPool
+            //    .GetRuntimeMethod("Create", new[] { typeof(int), typeof(int) })
+            //    .Invoke(null, new object[] { (int)4096, (int)20 });
+
+            //Type decodedBlockArray = imageSharp
+            //    .GetType("ImageSharp.Formats.Jpg.DecodedBlockArray", throwOnError: true);
+            //FieldInfo arrayPoolField = decodedBlockArray
+            //    .GetField("ArrayPool", BindingFlags.Static | BindingFlags.NonPublic);
+            //arrayPoolField.SetValue(null, newPool);
         }
 
         public async Task<RiverItem[]> LoadItemThumbnailsAsync(Uri baseUri, RiverItem[] items)
@@ -245,7 +302,7 @@ namespace OnceAndFuture
         async Task<RiverItem> GetItemThumbnailAsync(Uri baseUri, RiverItem item)
         {
             Uri itemLink = Util.Rebase(item.Link, baseUri);
-            Image<Color> sourceImage = null;
+            Image<Rgba32> sourceImage = null;
 
             // We might already have found a thumbnail...
             if (item.Thumbnail != null)
@@ -281,19 +338,19 @@ namespace OnceAndFuture
             }
 
             if (sourceImage == null) { return item; }
-            Image<Color> thumbnail = MakeThumbnail(sourceImage);
+            Image<Rgba32> thumbnail = MakeThumbnail(sourceImage);
 
             Uri thumbnailUri = await this.thumbnailStore.StoreImage(thumbnail);
             return item.With(
                 thumbnail: new RiverItemThumbnail(thumbnailUri, thumbnail.Width, thumbnail.Height));
         }
 
-        public static Image<Color> MakeThumbnail(Image<Color> sourceImage)
+        public static Image<Rgba32> MakeThumbnail(Image<Rgba32> sourceImage)
         {
             return EntropyCropper.Crop(sourceImage, ThumbnailSize);
         }
 
-        public static async Task<Image<Color>> FindImageAsync(Uri uri)
+        public static async Task<Image<Rgba32>> FindImageAsync(Uri uri)
         {
             try
             {
@@ -312,7 +369,7 @@ namespace OnceAndFuture
                     if (mediaType.Contains("image"))
                     {
                         var iu = new ImageUrl { Uri = uri, Kind = "Direct" };
-                        Image<Color> result = await FetchThumbnailAsync(iu, uri);
+                        Image<Rgba32> result = await FetchThumbnailAsync(iu, uri);
                         if (result != null) { ThumbnailLog.LogThumbnail(uri, uri, iu.Kind, result, "Best"); }
                         return result;
                     }
@@ -345,7 +402,7 @@ namespace OnceAndFuture
             return null;
         }
 
-        static async Task<Image<Color>> FindThumbnailInSoupAsync(Uri baseUrl, IHtmlDocument document)
+        static async Task<Image<Rgba32>> FindThumbnailInSoupAsync(Uri baseUrl, IHtmlDocument document)
         {
             // These get preferential treatment; if we find them then great otherwise we have to search the whole doc.
             // (Note that they also still have to pass the URL filter.)
@@ -374,22 +431,22 @@ namespace OnceAndFuture
 
             Stopwatch loadTimer = Stopwatch.StartNew();
             Log.BeginGetThumbsFromSoup(baseUrl, imageUrls.Length);
-            var potentialThumbnails = new Task<Image<Color>>[imageUrls.Length];
+            var potentialThumbnails = new Task<Image<Rgba32>>[imageUrls.Length];
             for (int i = 0; i < potentialThumbnails.Length; i++)
             {
                 potentialThumbnails[i] = FetchThumbnailAsync(imageUrls[i], baseUrl);
             }
 
-            Image<Color>[] images = await Task.WhenAll(potentialThumbnails);
+            Image<Rgba32>[] images = await Task.WhenAll(potentialThumbnails);
             Log.EndGetThumbsFromSoup(baseUrl, imageUrls.Length, loadTimer);
 
             ImageUrl bestImageUrl = null;
-            Image<Color> bestImage = null;
+            Image<Rgba32> bestImage = null;
             int bestArea = 0;
             for (int i = 0; i < images.Length; i++)
             {
                 ImageUrl imageUrl = imageUrls[i];
-                Image<Color> image = images[i];
+                Image<Rgba32> image = images[i];
                 if (image == null) { continue; } // It was invalid.
 
                 int width = image.Width;
@@ -494,7 +551,7 @@ namespace OnceAndFuture
         static readonly TimeSpan ErrorCacheLifetime = TimeSpan.FromSeconds(30);
         static readonly TimeSpan SuccessCacheLifetime = TimeSpan.FromHours(1);
 
-        static async Task<Image<Color>> FetchThumbnailAsync(ImageUrl imageUrl, Uri referrer)
+        static async Task<Image<Rgba32>> FetchThumbnailAsync(ImageUrl imageUrl, Uri referrer)
         {
             try
             {
@@ -508,10 +565,10 @@ namespace OnceAndFuture
                         Log.ThumbnailErrorCacheHit(referrer, imageUrl.Uri, cachedObject);
                         return null;
                     }
-                    if (cachedObject is Image<Color>)
+                    if (cachedObject is Image<Rgba32>)
                     {
                         Log.ThumbnailSuccessCacheHit(referrer, imageUrl.Uri);
-                        return (Image<Color>)cachedObject;
+                        return (Image<Rgba32>)cachedObject;
                     }
 
                     var request = new HttpRequestMessage(HttpMethod.Get, imageUrl.Uri);
@@ -527,20 +584,20 @@ namespace OnceAndFuture
                     }
 
                     byte[] imageBytes = await response.Content.ReadAsByteArrayAsync();
-                    using (var stream = new MemoryStream(imageBytes))
+                    try
                     {
                         // TODO: Record the original image and the result of loading somewhere.
-                        try
+                        using (await ThumbnailGate.Enter())
                         {
-                            var streamImage = new Image<Color>(stream);
+                            Image<Rgba32> streamImage = Image.Load(imageBytes);
                             return CacheSuccess(imageUrl, streamImage);
                         }
-                        catch (Exception ae)
-                        {
-                            ThumbnailLog.LogThumbnail(referrer, imageUrl.Uri, imageUrl.Kind, null, "LoadException");
-                            CacheError(imageUrl, ae.Message);
-                            return null;
-                        }
+                    }
+                    catch (Exception ae)
+                    {
+                        ThumbnailLog.LogThumbnail(referrer, imageUrl.Uri, imageUrl.Kind, null, "LoadException");
+                        CacheError(imageUrl, ae.Message);
+                        return null;
                     }
                 },
                 new Dictionary<string, object> { { "uri", imageUrl.Uri } });
@@ -565,12 +622,12 @@ namespace OnceAndFuture
             }
         }
 
-        static Image<Color> CacheSuccess(ImageUrl imageUrl, Image<Color> image)
+        static Image<Rgba32> CacheSuccess(ImageUrl imageUrl, Image<Rgba32> image)
         {
             // Bypass the cache if the image is too big.
             if (image.Width * image.Height >= 5000) { return image; }
 
-            return imageCache.Set(imageUrl.Uri.AbsoluteUri, image, SuccessCacheLifetime);            
+            return imageCache.Set(imageUrl.Uri.AbsoluteUri, image, SuccessCacheLifetime);
         }
 
         static void CacheError(ImageUrl imageUrl, string message)
@@ -624,7 +681,7 @@ namespace OnceAndFuture
     {
         readonly BlobStore blobStore = new BlobStore("onceandfuture-thumbs", "thumbs");
 
-        public async Task<Uri> StoreImage(Image<Color> image)
+        public async Task<Uri> StoreImage(Image<Rgba32> image)
         {
             MemoryStream stream = new MemoryStream();
             image.SaveAsJpeg(stream);

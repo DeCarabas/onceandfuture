@@ -1228,7 +1228,7 @@
             try
             {
                 byte[] bytes = await LoadFileBytes("dummy.png");
-                Image<Color> img = new Image<Color>(new MemoryStream(bytes));
+                Image<Rgba32> img = Image.Load(bytes);
                 /* Uri uri = */
                 await this.thumbnailStore.StoreImage(img);
                 // TODO: validate URI makes an image.
@@ -1250,7 +1250,7 @@
             try
             {
                 byte[] bytes = await LoadFileBytes("dummy.png");
-                Image<Color> img = new Image<Color>(new MemoryStream(bytes));
+                Image<Rgba32> img = Image.Load(bytes);
 
                 /* var dstImage =*/
                 ThumbnailExtractor.MakeThumbnail(img);

@@ -13,7 +13,6 @@
     using System.IO;
     using System.Linq;
     using System.Net;
-    using System.Reflection;
     using System.Threading.Tasks;
 
     class Program
@@ -100,8 +99,8 @@
             }
         }
 
-        static bool IsHealthPingEvent(LogEvent le) 
-            => le.Properties.ContainsKey("RequestPath") 
+        static bool IsHealthPingEvent(LogEvent le)
+            => le.Properties.ContainsKey("RequestPath")
             && le.Properties["RequestPath"].ToString() == "\"/health/ping\"";
 
         static bool IsDevelopmentEnvironment(ParsedOpts parsedArgs)
@@ -138,30 +137,7 @@
             }
             Serilog.Log.Logger = logConfig.CreateLogger();
 
-            var formats = new ImageSharp.Formats.IImageFormat[]
-            {
-                    new ImageSharp.Formats.BmpFormat(),
-                    new ImageSharp.Formats.PngFormat(),
-                    new ImageSharp.Formats.JpegFormat(),
-                    new ImageSharp.Formats.GifFormat(),
-            };
-            foreach (var fmt in formats) { ImageSharp.Configuration.Default.AddImageFormat(fmt); }
-
-            // THE WORST HACK: Limit the size of the DecodedBlockArray pool since it's a huge memory consumer.
-            // See https://github.com/JimBobSquarePants/ImageSharp/issues/151
-            //
-            Type jpegType = typeof(ImageSharp.Formats.JpegFormat);
-            Assembly imageSharp = jpegType.GetTypeInfo().Assembly;
-
-            Type decodedBlock = imageSharp.GetType("ImageSharp.Formats.Jpg.DecodedBlock", throwOnError: true);
-            Type decodedBlockArrayPool = typeof(System.Buffers.ArrayPool<object>).GetGenericTypeDefinition().MakeGenericType(decodedBlock);
-            object newPool = decodedBlockArrayPool
-                .GetRuntimeMethod("Create", new[] { typeof(int), typeof(int) })
-                .Invoke(null, new object[] { (int)4096, (int)20 });
-
-            Type decodedBlockArray = imageSharp.GetType("ImageSharp.Formats.Jpg.DecodedBlockArray", throwOnError: true);
-            FieldInfo arrayPoolField = decodedBlockArray.GetField("ArrayPool", BindingFlags.Static | BindingFlags.NonPublic);
-            arrayPoolField.SetValue(null, newPool);
+            ThumbnailExtractor.ConfigureProcess();
         }
 
         static int DoShow(ParsedOpts args)
@@ -519,14 +495,14 @@
         {
             Uri url = new Uri(args["url"].Value);
 
-            Image<Color> sourceImage = ThumbnailExtractor.FindImageAsync(url).Result;
+            Image<Rgba32> sourceImage = ThumbnailExtractor.FindImageAsync(url).Result;
             if (sourceImage == null)
             {
                 Console.Error.WriteLine("No image found @ {0}.", url);
                 return 1;
             }
 
-            Image<Color> thumb = ThumbnailExtractor.MakeThumbnail(sourceImage);
+            Image<Rgba32> thumb = ThumbnailExtractor.MakeThumbnail(sourceImage);
             using (var stream = File.Create(args["out"].Value))
             {
                 thumb.SaveAsPng(stream);
