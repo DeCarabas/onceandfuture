@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp1.1</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
+    <RootNamespace>OnceAndFuture.Deployment</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

@@ -8,18 +8,15 @@ using Amazon.ElasticLoadBalancingV2.Model;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Newtonsoft.Json;
-using OnceAndFuture;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 
-namespace deploy
+namespace OnceAndFuture.Deployment
 {
     static class Configuration
     {
@@ -35,18 +32,20 @@ namespace deploy
         public const string Port = "8080";
     }
 
-    class BuildTag
+    class BuildVersion
     {
         public string BuildDate;
         public string BuildTime;
         public string Commit;
+
+        public string Release => Commit.Substring(0, 7);
 
         public override string ToString()
         {
             return String.Format("{0}/{1}/{2}", BuildDate, BuildTime, Commit);
         }
     }
-    
+
     class Program
     {
         static readonly RegionEndpoint region = RegionEndpoint.USWest2;
@@ -65,108 +64,14 @@ namespace deploy
             )
             ;
 
-        static string GetReleaseId(string commit) => commit.Substring(0, 7);
-
-        static object CreateBuildStartupScript(string stackName, BuildTag build)
+        static string CreateStack(DateTime startTime, BuildVersion build, StackBase stack)
         {
-            Template startupTemplate = new Template(File.ReadAllText("builder.sh"));
-
-            string script = startupTemplate.Format(new Dictionary<string, object>
-            {
-                { "STACKNAME", stackName },
-                { "APP", Configuration.Application },
-                { "SHA", build.Commit },
-                { "S3_BUCKET", Configuration.BaseBucketName },
-                { "BUILD_DATE", build.BuildDate },
-                { "BUILD_TIME", build.BuildTime },
-                { "GIT_URL", Configuration.GitUrl },
-                { "GIT_KEY", Configuration.GithubKey },
-            });
-            script = script.Replace("\r\n", "\n");
-
-            using (var scriptOut = new MemoryStream())
-            {
-                using (var gzs = new GZipStream(scriptOut, CompressionLevel.Optimal, leaveOpen: true))
-                {
-                    byte[] scriptBytes = Encoding.UTF8.GetBytes(script);
-                    gzs.Write(scriptBytes, 0, scriptBytes.Length);
-                    gzs.Flush();
-                }
-
-                byte[] bytes = new byte[scriptOut.Length];
-                scriptOut.Position = 0;
-                scriptOut.Read(bytes, 0, bytes.Length);
-
-                // File.WriteAllBytes("build.sh.gz", bytes);
-                return Convert.ToBase64String(bytes);
-            }
-        }
-
-        static string CreateBuildTemplate(string stackName, BuildTag build)
-        {
-            var template = new
-            {
-                AWSTemplateFormatVersion = "2010-09-09",
-                Description = "A Dotyliner build stack. Do not manually delete.",
-                Resources = new
-                {
-                    BuilderInstance = new
-                    {
-                        Type = "AWS::EC2::Instance",
-                        Properties = new
-                        {
-                            UserData = CreateBuildStartupScript(stackName, build),
-                            Tags = new[] { new { Key = "Name", Value = new { Ref = "AWS::StackName" } } },
-                            InstanceInitiatedShutdownBehavior = "terminate",
-                            ImageId = "ami-8ca83fec",
-                            BlockDeviceMappings = new[]
-                            {
-                                new
-                                {
-                                    DeviceName = "/dev/xvda",
-                                    Ebs = new
-                                    {
-                                        DeleteOnTermination = true,
-                                        SnapshotId ="snap-066b5016ee2261563",
-                                        VolumeSize = 8,
-                                        VolumeType = "gp2"
-                                    },
-                                }
-                            },
-                            IamInstanceProfile = "qa-onceandfuture-BuilderIAMInstanceProfile-1CY8JHUXVJRAX", // TODO PROD
-                            InstanceType = "t2.medium",
-                            NetworkInterfaces = new[]
-                            {
-                                new
-                                {
-                                    SubnetId = "subnet-951b6fcd",
-                                    DeviceIndex = 0,
-                                    GroupSet = new[] { "sg-488bd131" }, // TODO PROD
-                                    DeleteOnTermination = true,
-                                    AssociatePublicIpAddress = true,
-                                },
-                            },
-                        },
-                        CreationPolicy = new { ResourceSignal = new { Count = 1, Timeout = "PT30M" } },
-                    },
-                },
-            };
-
-            using (var w = new StringWriter())
-            {
-                JsonSerializer.Create().Serialize(w, template);
-                return w.ToString();
-            }
-        }
-
-        static string CreateBuildStack(DateTime startTime, BuildTag build)
-        {
-            Console.WriteLine("Creating builder stack for commit {0}", build.Commit);
+            Console.WriteLine("Creating {0} stack for build {1}", stack.StackType, build);
             string stackName = String.Join("-", new string[] {
-                "builder",
+                stack.Environment,
                 Configuration.Application,
                 "doty",
-                GetReleaseId(build.Commit),
+                build.Release,
                 startTime.Year.ToString(),
                 startTime.Month.ToString(),
                 startTime.Day.ToString(),
@@ -176,181 +81,19 @@ namespace deploy
             });
 
             //string template = CreateBuildTemplate(stackName, commit);
-            //File.WriteAllText("debug-build-template.json", template);
+            //string outFile = String.Format("debug-{0}-{1}-template.json", stack.StackType, stack.Environment);
+            //File.WriteAllText(outFile, template);
 
-            Console.WriteLine("Creating stack {0}", stackName);
+            Console.WriteLine("    Creating stack {0}", stackName);
 
             CreateStackResponse response = cloudFormationClient.CreateStackAsync(new CreateStackRequest
             {
                 OnFailure = OnFailure.DELETE,
                 StackName = stackName,
-                TemplateBody = CreateBuildTemplate(stackName, build),
+                Parameters = stack.Parameters,
+                TemplateBody = stack.GetTemplate(stackName, build),
                 TimeoutInMinutes = 20,
-                Tags =
-                {
-                    new Amazon.CloudFormation.Model.Tag { Key = "application", Value = Configuration.Application },
-                    new Amazon.CloudFormation.Model.Tag { Key = "commit", Value = build.Commit },
-                    new Amazon.CloudFormation.Model.Tag { Key = "stack-type", Value = "builder" },
-                },
-            }).Result;
-
-            string stackId = response.StackId;
-            Console.WriteLine("Created {0}", stackId);
-            return stackId;
-        }
-
-        static string CreateReleaseStartupScript(string stackName, string environment, BuildTag tag)
-        {
-            List<Dictionary<string, object>> secrets = LoadSecrets(environment);
-            Template startupTemplate = new Template(File.ReadAllText("startup.sh"));
-
-            string script = startupTemplate.Format(new Dictionary<string, object>
-            {
-                { "STACKNAME", stackName },
-                { "APP", Configuration.Application },
-                { "ENV", environment },
-                { "RELEASE", GetReleaseId(tag.Commit) },
-                { "SHA", tag.Commit },
-                { "PORT", Configuration.Port },
-                { "S3_BUCKET", Configuration.BaseBucketName },
-                { "SECRETS", secrets },
-                { "BUILD_DATE", tag.BuildDate },
-                { "BUILD_TIME", tag.BuildTime },
-            });
-            script = script.Replace("\r\n", "\n");
-
-            using (var scriptOut = new MemoryStream())
-            {
-                using (var gzs = new GZipStream(scriptOut, CompressionLevel.Optimal, leaveOpen: true))
-                {
-                    byte[] scriptBytes = Encoding.UTF8.GetBytes(script);
-                    gzs.Write(scriptBytes, 0, scriptBytes.Length);
-                    gzs.Flush();
-                }
-
-                byte[] bytes = new byte[scriptOut.Length];
-                scriptOut.Position = 0;
-                scriptOut.Read(bytes, 0, bytes.Length);
-
-                //File.WriteAllBytes("blah.sh.gz", bytes);
-                return Convert.ToBase64String(bytes);
-            }
-        }
-
-        static string CreateReleaseTemplate(string stackName, string environment, BuildTag build)
-        {
-            var template = new
-            {
-                AWSTemplateFormatVersion = "2010-09-09",
-                Description = "A Dotyliner release stack. Do not manually delete.",
-                Parameters = new
-                {
-                    Size = new { Description = "The number of instances to run.", Type = "Number" },
-                },
-                Resources = new
-                {
-                    LaunchConfiguration = new
-                    {
-                        Type = "AWS::AutoScaling::LaunchConfiguration",
-                        Properties = new
-                        {
-                            AssociatePublicIpAddress = true,
-                            BlockDeviceMappings = new[]
-                            {
-                                new
-                                {
-                                    DeviceName = "/dev/xvda",
-                                    Ebs = new
-                                    {
-                                        DeleteOnTermination = true,
-                                        SnapshotId ="snap-066b5016ee2261563",
-                                        VolumeSize = 8,
-                                        VolumeType = "gp2"
-                                    },
-                                }
-                            },
-                            IamInstanceProfile = "qa-onceandfuture-IAMInstanceProfile-16NZXY5JUOMO2", // TODO PROD
-                            ImageId = "ami-8ca83fec",
-                            InstanceType = "t2.micro",
-                            SecurityGroups = new[] { "sg-2b8bd152" }, // TODO PROD
-                            UserData = CreateReleaseStartupScript(stackName, environment, build),
-                            KeyName = "standard key what",
-                        }
-                    },
-                    AutoScalingGroup = new
-                    {
-                        Type = "AWS::AutoScaling::AutoScalingGroup",
-                        Properties = new
-                        {
-                            MinSize = new { Ref = "Size" },
-                            TargetGroupARNs = new[]
-                            {
-                                "arn:aws:elasticloadbalancing:us-west-2:964037288281:targetgroup/qa-onceandfuture/b4affac402d6d901",
-                            },
-                            MetricsCollection = new[] { new { Granularity = "1Minute" } },
-                            DesiredCapacity = new { Ref = "Size" },
-                            Tags = new[] { new { Key = "Name", Value = new { Ref = "AWS::StackName" }, PropagateAtLaunch = true } },
-                            VPCZoneIdentifier = new[] { "subnet-d79b7ab0", "subnet-76546f00", "subnet-951b6fcd" },
-                            HealthCheckType = "EC2",
-                            MaxSize = new { Ref = "Size" },
-                            LaunchConfigurationName = new { Ref = "LaunchConfiguration" }
-                        },
-                        CreationPolicy = new
-                        {
-                            ResourceSignal = new
-                            {
-                                Count = new { Ref = "Size" },
-                                Timeout = "PT15M",
-                            },
-                        },
-                    },
-                },
-            };
-
-            using (var w = new StringWriter())
-            {
-                JsonSerializer.Create().Serialize(w, template);
-                return w.ToString();
-            }
-        }
-
-        static string CreateReleaseStack(DateTime startTime, string environment, BuildTag build)
-        {
-            string stackName = String.Join("-", new string[] {
-                environment,
-                "onceandfuture",
-                "doty",
-                GetReleaseId(build.Commit),
-                startTime.Year.ToString(),
-                startTime.Month.ToString(),
-                startTime.Day.ToString(),
-                startTime.Hour.ToString(),
-                startTime.Minute.ToString(),
-                startTime.Second.ToString(),
-            });
-
-            //string template = CreateTemplate(stackName, environment, commit);
-            //File.WriteAllText("debug-template.json", template);
-
-            Console.WriteLine("Creating stack {0}", stackName);
-
-            CreateStackResponse response = cloudFormationClient.CreateStackAsync(new CreateStackRequest
-            {
-                Parameters = {
-                    new Parameter { ParameterKey = "Size", ParameterValue = "1" },
-                },
-                OnFailure = OnFailure.ROLLBACK,
-                StackName = stackName,
-                TemplateBody = CreateReleaseTemplate(stackName, environment, build),
-                TimeoutInMinutes = 20,
-                Tags =
-                {
-                    new Amazon.CloudFormation.Model.Tag { Key = "environment", Value = environment },
-                    new Amazon.CloudFormation.Model.Tag { Key = "application", Value = Configuration.Application },
-                    new Amazon.CloudFormation.Model.Tag { Key = "release", Value = GetReleaseId(build.Commit) },
-                    new Amazon.CloudFormation.Model.Tag { Key = "stack-type", Value = "release" },
-                    new Amazon.CloudFormation.Model.Tag { Key = "deploy", Value = "49b" },
-                },
+                Tags = stack.GetTags(build),
             }).Result;
 
             string stackId = response.StackId;
@@ -476,7 +219,8 @@ namespace deploy
                 TargetGroupArn = targetGroup,
             }).Result;
 
-            Dictionary<string, TargetHealthDescription> healths = response3.TargetHealthDescriptions.ToDictionary(k => k.Target.Id);
+            Dictionary<string, TargetHealthDescription> healths;
+            healths = response3.TargetHealthDescriptions.ToDictionary(k => k.Target.Id);
             foreach (Instance instance in instances)
             {
                 if (!healths.TryGetValue(instance.InstanceId, out TargetHealthDescription health))
@@ -529,8 +273,8 @@ namespace deploy
             ).ToList();
         }
 
-        static BuildTag GetLastBuild()
-        {            
+        static BuildVersion GetLastBuild()
+        {
             List<S3Object> allObjects = new List<S3Object>();
             string nextMarker = null;
             do
@@ -553,7 +297,7 @@ namespace deploy
 
             var imageRegex = new Regex("artifacts/onceandfuture/([0-9]+)/([0-9]+Z)/([a-f0-9]+).tar.lz4");
             Match match = imageRegex.Match(newest.Key);
-            return new BuildTag
+            return new BuildVersion
             {
                 BuildDate = match.Groups[1].Value,
                 BuildTime = match.Groups[2].Value,
@@ -585,20 +329,24 @@ namespace deploy
 
             DateTime startTime = DateTime.Now;
 
-            BuildTag build = GetLastBuild();
-            if (build.Commit == commit)
+            if (!args["force"].Flag)
             {
-                Console.WriteLine("Latest build is for this commit, nothing to do.");
-                return 0;
+                BuildVersion lastBuild = GetLastBuild();
+                if (lastBuild.Commit == commit)
+                {
+                    Console.WriteLine("Latest build is for this commit, nothing to do.");
+                    return 0;
+                }
+
             }
 
             DateTime now = DateTime.UtcNow;
             string buildDate = String.Format("{0:D4}{1:D2}{2:D2}", now.Year, now.Month, now.Day);
             string buildTime = String.Format("{0:D2}{1:D2}{2:D2}Z", now.Hour, now.Minute, now.Second);
-            build = new BuildTag { BuildDate = buildDate, BuildTime = buildTime, Commit = commit };
+            var build = new BuildVersion { BuildDate = buildDate, BuildTime = buildTime, Commit = commit };
 
             Console.WriteLine("Building {0}", build);
-            string stackId = CreateBuildStack(startTime, build);
+            string stackId = CreateStack(startTime, build, new BuildStack());
             bool succeeded = WaitForStackCreated(stackId);
             DeleteStack(stackId);
             Console.WriteLine("BUILD {0}", succeeded ? "SUCCESS" : "FAILED");
@@ -610,7 +358,7 @@ namespace deploy
             const string environment = "qa";
 
             DateTime startTime = DateTime.Now;
-            BuildTag build = GetLastBuild();
+            BuildVersion build = GetLastBuild();
 
             Console.WriteLine("Deploying {0} to {1} @ {2}", build, environment, startTime);
             string[] oldStackIds = GetOldReleaseStacks(environment);
@@ -623,7 +371,7 @@ namespace deploy
                 }
             }
 
-            string stackId = CreateReleaseStack(startTime, environment, build);
+            string stackId = CreateStack(startTime, build, new ReleaseStack(environment));
             bool succeeded = WaitForStackCreated(stackId) && WaitForStackHealthy(stackId);
             if (succeeded)
             {

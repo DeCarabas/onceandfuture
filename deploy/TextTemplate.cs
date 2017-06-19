@@ -4,13 +4,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace deploy
+namespace OnceAndFuture.Deployment
 {
-    class Template
+    class TextTemplate
     {
         readonly List<TemplateSection> sections = new List<TemplateSection>();
 
-        public Template(string text)
+        public TextTemplate(string text)
         {
             this.sections = ParseTemplate(text);
         }
