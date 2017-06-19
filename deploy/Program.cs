@@ -64,36 +64,24 @@ namespace OnceAndFuture.Deployment
             )
             ;
 
-        static string CreateStack(DateTime startTime, BuildVersion build, StackBase stack)
+        static string CreateStack(StackBase stack)
         {
-            Console.WriteLine("Creating {0} stack for build {1}", stack.StackType, build);
-            string stackName = String.Join("-", new string[] {
-                stack.Environment,
-                Configuration.Application,
-                "doty",
-                build.Release,
-                startTime.Year.ToString(),
-                startTime.Month.ToString(),
-                startTime.Day.ToString(),
-                startTime.Hour.ToString(),
-                startTime.Minute.ToString(),
-                startTime.Second.ToString(),
-            });
+            Console.WriteLine("Creating {0} stack for build {1}", stack.StackType, stack.Version);
 
             //string template = CreateBuildTemplate(stackName, commit);
             //string outFile = String.Format("debug-{0}-{1}-template.json", stack.StackType, stack.Environment);
             //File.WriteAllText(outFile, template);
 
-            Console.WriteLine("    Creating stack {0}", stackName);
+            Console.WriteLine("    Creating stack {0}", stack.Name);
 
             CreateStackResponse response = cloudFormationClient.CreateStackAsync(new CreateStackRequest
             {
                 OnFailure = OnFailure.DELETE,
-                StackName = stackName,
+                StackName = stack.Name,
                 Parameters = stack.Parameters,
-                TemplateBody = stack.GetTemplate(stackName, build),
+                TemplateBody = stack.GetTemplate(),
                 TimeoutInMinutes = 20,
-                Tags = stack.GetTags(build),
+                Tags = stack.Tags,
             }).Result;
 
             string stackId = response.StackId;
@@ -273,7 +261,7 @@ namespace OnceAndFuture.Deployment
             ).ToList();
         }
 
-        static BuildVersion GetLastBuild()
+        static BuildVersion GetLastVersion()
         {
             List<S3Object> allObjects = new List<S3Object>();
             string nextMarker = null;
@@ -331,22 +319,21 @@ namespace OnceAndFuture.Deployment
 
             if (!args["force"].Flag)
             {
-                BuildVersion lastBuild = GetLastBuild();
-                if (lastBuild.Commit == commit)
+                BuildVersion lastVersion = GetLastVersion();
+                if (lastVersion.Commit == commit)
                 {
                     Console.WriteLine("Latest build is for this commit, nothing to do.");
                     return 0;
                 }
-
             }
 
             DateTime now = DateTime.UtcNow;
             string buildDate = String.Format("{0:D4}{1:D2}{2:D2}", now.Year, now.Month, now.Day);
             string buildTime = String.Format("{0:D2}{1:D2}{2:D2}Z", now.Hour, now.Minute, now.Second);
-            var build = new BuildVersion { BuildDate = buildDate, BuildTime = buildTime, Commit = commit };
+            var version = new BuildVersion { BuildDate = buildDate, BuildTime = buildTime, Commit = commit };
 
-            Console.WriteLine("Building {0}", build);
-            string stackId = CreateStack(startTime, build, new BuildStack());
+            Console.WriteLine("Building {0}", version);
+            string stackId = CreateStack(new BuildStack(version));
             bool succeeded = WaitForStackCreated(stackId);
             DeleteStack(stackId);
             Console.WriteLine("BUILD {0}", succeeded ? "SUCCESS" : "FAILED");
@@ -358,9 +345,9 @@ namespace OnceAndFuture.Deployment
             const string environment = "qa";
 
             DateTime startTime = DateTime.Now;
-            BuildVersion build = GetLastBuild();
+            BuildVersion version = GetLastVersion();
 
-            Console.WriteLine("Deploying {0} to {1} @ {2}", build, environment, startTime);
+            Console.WriteLine("Deploying {0} to {1} @ {2}", version, environment, startTime);
             string[] oldStackIds = GetOldReleaseStacks(environment);
             if (oldStackIds.Length > 0)
             {
@@ -371,7 +358,7 @@ namespace OnceAndFuture.Deployment
                 }
             }
 
-            string stackId = CreateStack(startTime, build, new ReleaseStack(environment));
+            string stackId = CreateStack(new ReleaseStack(version, environment));
             bool succeeded = WaitForStackCreated(stackId) && WaitForStackHealthy(stackId);
             if (succeeded)
             {

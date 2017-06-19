@@ -11,34 +11,68 @@ namespace OnceAndFuture.Deployment
 {
     abstract class StackBase
     {
-        public abstract string Environment { get; }
+        readonly string name;
+        readonly BuildVersion version;
+
+        protected StackBase(BuildVersion build)
+        {
+            this.version = build;
+
+            DateTime startTime = DateTime.Now;
+            this.name = String.Join("-", new string[] {
+                Environment,
+                Configuration.Application,
+                "doty",
+                build.Release,
+                startTime.Year.ToString(),
+                startTime.Month.ToString(),
+                startTime.Day.ToString(),
+                startTime.Hour.ToString(),
+                startTime.Minute.ToString(),
+                startTime.Second.ToString(),
+            });
+        }
+
+        public string Name => this.name;
 
         public abstract string StackType { get; }
 
+        public abstract string Environment { get; }
+
         public virtual List<Parameter> Parameters => new List<Parameter>();
 
-        public virtual List<Tag> GetTags(BuildVersion build)
-        {
-            return new List<Tag> {
-                new Amazon.CloudFormation.Model.Tag { Key = "application", Value = Configuration.Application },
-                new Amazon.CloudFormation.Model.Tag { Key = "commit", Value = build.Commit },
-                new Amazon.CloudFormation.Model.Tag { Key = "environment", Value = Environment },
-                new Amazon.CloudFormation.Model.Tag { Key = "stack-type", Value = "builder" },
+        public virtual List<Tag> Tags =>
+            new List<Tag> {
+                new Tag { Key = "application", Value = Configuration.Application },
+                new Tag { Key = "commit", Value = Version.Commit },
+                new Tag { Key = "environment", Value = Environment },
+                new Tag { Key = "stack-type", Value = "builder" },
             };
-        }
 
-        public abstract string GetTemplate(string stackName, BuildVersion build);
+        protected abstract object Template { get; }
+
+        public BuildVersion Version => this.version;
+
+        public string GetTemplate()
+        {
+            using (var w = new StringWriter())
+            {
+                JsonSerializer.Create().Serialize(w, Template);
+                return w.ToString();
+            }
+        }
     }
 
     class BuildStack : StackBase
     {
-        public override string Environment => "build";
+        public BuildStack(BuildVersion build) : base(build) { }
 
         public override string StackType => "builder";
 
-        public override string GetTemplate(string stackName, BuildVersion build)
-        {
-            var template = new
+        public override string Environment => "build";
+
+        protected override object Template =>
+            new
             {
                 AWSTemplateFormatVersion = "2010-09-09",
                 Description = "A Dotyliner build stack. Do not manually delete.",
@@ -49,7 +83,7 @@ namespace OnceAndFuture.Deployment
                         Type = "AWS::EC2::Instance",
                         Properties = new
                         {
-                            UserData = this.CreateStartupScript(stackName, build),
+                            UserData = this.CreateStartupScript(),
                             Tags = new[] { new { Key = "Name", Value = new { Ref = "AWS::StackName" } } },
                             InstanceInitiatedShutdownBehavior = "terminate",
                             ImageId = "ami-8ca83fec",
@@ -86,25 +120,18 @@ namespace OnceAndFuture.Deployment
                 },
             };
 
-            using (var w = new StringWriter())
-            {
-                JsonSerializer.Create().Serialize(w, template);
-                return w.ToString();
-            }
-        }
-
-        string CreateStartupScript(string stackName, BuildVersion build)
+        string CreateStartupScript()
         {
             TextTemplate startupTemplate = new TextTemplate(File.ReadAllText("builder.sh"));
 
             string script = startupTemplate.Format(new Dictionary<string, object>
             {
-                { "STACKNAME", stackName },
+                { "STACKNAME", Name },
                 { "APP", Configuration.Application },
-                { "SHA", build.Commit },
+                { "SHA", Version.Commit },
                 { "S3_BUCKET", Configuration.BaseBucketName },
-                { "BUILD_DATE", build.BuildDate },
-                { "BUILD_TIME", build.BuildTime },
+                { "BUILD_DATE", Version.BuildDate },
+                { "BUILD_TIME", Version.BuildTime },
                 { "GIT_URL", Configuration.GitUrl },
                 { "GIT_KEY", Configuration.GithubKey },
             });
@@ -133,23 +160,24 @@ namespace OnceAndFuture.Deployment
     {
         readonly string environment;
 
-        public ReleaseStack(string environment)
+        public ReleaseStack(BuildVersion build, string environment)
+            : base(build)
         {
             this.environment = environment;
         }
 
-        public override string Environment => this.environment;
-
-        public override List<Parameter> Parameters => new List<Parameter>
-        {
-            new Parameter { ParameterKey="Size", ParameterValue="1" },
-        };
-
         public override string StackType => "release";
 
-        public override string GetTemplate(string stackName, BuildVersion build)
-        {
-            var template = new
+        public override string Environment => this.environment;
+
+        public override List<Parameter> Parameters =>
+            new List<Parameter>
+            {
+                new Parameter { ParameterKey="Size", ParameterValue="1" },
+            };
+
+        protected override object Template =>
+            new
             {
                 AWSTemplateFormatVersion = "2010-09-09",
                 Description = "A Dotyliner release stack. Do not manually delete.",
@@ -183,7 +211,7 @@ namespace OnceAndFuture.Deployment
                             ImageId = "ami-8ca83fec",
                             InstanceType = "t2.micro",
                             SecurityGroups = new[] { "sg-2b8bd152" }, // TODO PROD
-                            UserData = CreateReleaseStartupScript(stackName, build),
+                            UserData = CreateReleaseStartupScript(),
                             KeyName = "standard key what",
                         }
                     },
@@ -219,30 +247,23 @@ namespace OnceAndFuture.Deployment
                 },
             };
 
-            using (var w = new StringWriter())
-            {
-                JsonSerializer.Create().Serialize(w, template);
-                return w.ToString();
-            }
-        }
-
-        string CreateReleaseStartupScript(string stackName, BuildVersion tag)
+        string CreateReleaseStartupScript()
         {
             List<Dictionary<string, object>> secrets = LoadSecrets();
             TextTemplate startupTemplate = new TextTemplate(File.ReadAllText("startup.sh"));
 
             string script = startupTemplate.Format(new Dictionary<string, object>
             {
-                { "STACKNAME", stackName },
+                { "STACKNAME", Name },
                 { "APP", Configuration.Application },
                 { "ENV", this.environment },
-                { "RELEASE", tag.Release },
-                { "SHA", tag.Commit },
+                { "RELEASE", Version.Release },
+                { "SHA", Version.Commit },
                 { "PORT", Configuration.Port },
                 { "S3_BUCKET", Configuration.BaseBucketName },
                 { "SECRETS", secrets },
-                { "BUILD_DATE", tag.BuildDate },
-                { "BUILD_TIME", tag.BuildTime },
+                { "BUILD_DATE", Version.BuildDate },
+                { "BUILD_TIME", Version.BuildTime },
             });
             script = script.Replace("\r\n", "\n");
 
