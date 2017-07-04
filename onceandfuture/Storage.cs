@@ -575,7 +575,8 @@
                 using (NpgsqlCommand cmd = connection.CreateCommand())
                 {
                     cmd.CommandText = String.Format("SELECT document FROM {0} WHERE id = @id", this.table);
-                    cmd.Parameters.AddWithValue("id", id);
+                    cmd.Parameters.AddWithValue("id", NpgsqlDbType.Varchar, id);
+                    cmd.Prepare();
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
                         if (await reader.ReadAsync())
@@ -623,8 +624,9 @@
                         ",
                         this.table
                     );
-                    cmd.Parameters.AddWithValue("id", id);
+                    cmd.Parameters.AddWithValue("id", NpgsqlDbType.Varchar, id);
                     cmd.Parameters.AddWithValue("text", NpgsqlDbType.Json, text);
+                    cmd.Prepare();
                     await cmd.ExecuteNonQueryAsync();
                 }
             }
