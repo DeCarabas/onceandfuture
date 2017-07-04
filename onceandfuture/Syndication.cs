@@ -872,7 +872,7 @@
 
     public class RiverFeedStore : DocumentStore<Uri, River>
     {
-        public RiverFeedStore() : base(new BlobStore("onceandfuture", "feeds")) { }
+        public RiverFeedStore() : base(new BlobStore("onceandfuture", "feeds"), "feeds") { }   
 
         protected override River GetDefaultValue(Uri id) => new River(metadata: new RiverFeedMeta(originUrl: id));
         protected override string GetObjectID(Uri id) => Util.HashString(id.AbsoluteUri);
@@ -908,7 +908,7 @@
 
     public class AggregateRiverStore : DocumentStore<string, River>
     {
-        public AggregateRiverStore() : base(new BlobStore("onceandfuture", "aggregates")) { }
+        public AggregateRiverStore() : base(new BlobStore("onceandfuture", "aggregates"), "aggregates") { }
 
         protected override River GetDefaultValue(string id) =>
             new River(metadata: new RiverFeedMeta(originUrl: new Uri("aggregate:/" + id)));

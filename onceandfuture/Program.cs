@@ -1,9 +1,12 @@
 ﻿namespace OnceAndFuture
 {
+    using Amazon.KeyManagementService;
     using ImageSharp;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.Configuration;
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
     using Serilog;
     using Serilog.Events;
     using Serilog.Formatting.Compact;
@@ -123,6 +126,8 @@
                 logConfig.WriteTo.LiterateConsole(
                     outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3} {RequestId}] {Message}{NewLine}{Exception}"
                 );
+
+                LoadEnvironmentVariables(parsedArgs);
             }
             else
             {
@@ -138,6 +143,45 @@
             Serilog.Log.Logger = logConfig.CreateLogger();
 
             ThumbnailExtractor.ConfigureProcess();
+        }
+
+        static void LoadEnvironmentVariables(ParsedOpts parsedArgs)
+        {
+            // Assumes you're running from the source tree, since production doesn't have the deployment tool.
+            string env = parsedArgs["environment"].Value.ToLowerInvariant();
+            string secretsFile = System.IO.Path.Combine("..", "deploy", "secrets.json");
+            if (File.Exists(secretsFile))
+            {
+                Console.WriteLine("Reading secrets from the secret file...");
+                var client = new AmazonKeyManagementServiceClient(Amazon.RegionEndpoint.USWest2);
+                var secretList = JsonConvert.DeserializeObject<JArray>(File.ReadAllText(secretsFile));
+                foreach (JObject secret in secretList)
+                {
+                    string targetEnvironment = secret.Value<string>("env");
+                    if (targetEnvironment == "all" || targetEnvironment == env)
+                    {
+                        string name = secret.Value<string>("name");
+                        string value = secret.Value<string>("value");
+
+                        Console.WriteLine("Decrypting {0}", name);
+                        var response = client.DecryptAsync(new Amazon.KeyManagementService.Model.DecryptRequest
+                        {
+                            CiphertextBlob = new MemoryStream(Convert.FromBase64String(value)),
+                            EncryptionContext =
+                            {
+                                {"application", "onceandfuture"},
+                            },
+                        }).Result;
+
+                        byte[] bytes = new byte[response.Plaintext.Length];
+                        response.Plaintext.Read(bytes, 0, bytes.Length);
+                        string plainValue = System.Text.Encoding.UTF8.GetString(bytes).Trim();
+
+                        Console.WriteLine("Setting {0}", name);
+                        System.Environment.SetEnvironmentVariable(name, plainValue);
+                    }
+                }
+            }
         }
 
         static int DoShow(ParsedOpts args)

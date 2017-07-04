@@ -1,6 +1,8 @@
 ﻿namespace OnceAndFuture
 {
     using Newtonsoft.Json;
+    using Npgsql;
+    using NpgsqlTypes;
     using Polly;
     using Serilog;
     using System;
@@ -196,16 +198,16 @@
                 else
                 {
                     responseBuffer.Read(data, 0, data.Length);
-                }                
+                }
 
                 LogOperation(
-                    "Get", 
-                    key, 
-                    contentType, 
-                    objectLength, 
-                    contentLength, 
-                    timer, 
-                    OperationStatus.OK, 
+                    "Get",
+                    key,
+                    contentType,
+                    objectLength,
+                    contentLength,
+                    timer,
+                    OperationStatus.OK,
                     null);
                 return data;
             }
@@ -213,13 +215,13 @@
             catch (Exception e)
             {
                 LogOperation(
-                    "Get", 
-                    key, 
-                    contentType, 
-                    objectLength, 
-                    contentLength, 
-                    timer, 
-                    OperationStatus.Exception, 
+                    "Get",
+                    key,
+                    contentType,
+                    objectLength,
+                    contentLength,
+                    timer,
+                    OperationStatus.Exception,
                     e.ToString());
                 throw;
             }
@@ -280,13 +282,13 @@
                     {
                         S3Error error = await DecodeError(response);
                         LogOperation(
-                            "Put", 
-                            key, 
-                            type, 
-                            objectLength, 
-                            sourceStream.Length, 
-                            timer, 
-                            OperationStatus.Error, 
+                            "Put",
+                            key,
+                            type,
+                            objectLength,
+                            sourceStream.Length,
+                            timer,
+                            OperationStatus.Error,
                             error.ResponseBody);
                         throw new S3Exception("Put", key, error);
                     }
@@ -472,13 +474,15 @@
         }
     }
 
-    public abstract class DocumentStore<TDocumentID, TDocument>
+    public abstract class DocumentStore<TDocumentID, TDocument> where TDocument : class
     {
         readonly BlobStore blobStore;
+        readonly string table;
 
-        protected DocumentStore(BlobStore blobStore)
+        protected DocumentStore(BlobStore blobStore, string table)
         {
             this.blobStore = blobStore;
+            this.table = table;
         }
 
         protected abstract string GetObjectID(TDocumentID id);
@@ -487,8 +491,17 @@
         protected async Task<TDocument> GetDocument(TDocumentID docid)
         {
             string id = GetObjectID(docid);
+
+            TDocument document = await GetDocumentFromDatabase(id);
+            if (document == null) { document = await GetDocumentFromBlobStore(id); }
+            if (document == null) { document = GetDefaultValue(docid); }
+            return document;
+        }
+
+        private async Task<TDocument> GetDocumentFromBlobStore(string id)
+        {
             byte[] blob = await this.blobStore.GetObject(id);
-            if (blob == null) { return GetDefaultValue(docid); }
+            if (blob == null) { return null; }
 
             using (var memoryStream = new MemoryStream(blob))
             using (var reader = new StreamReader(memoryStream, Encoding.UTF8))
@@ -498,13 +511,75 @@
             }
         }
 
+        NpgsqlConnection CreateConnection()
+        {
+            string connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
+            return new NpgsqlConnection(connectionString);
+        }
+
+        async Task<TDocument> GetDocumentFromDatabase(string id)
+        {
+            using (var connection = CreateConnection())
+            {
+                await connection.OpenAsync();
+                using (NpgsqlCommand cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = String.Format("SELECT document FROM {0} WHERE id = @id", this.table);
+                    Serilog.Log.Information("Running {sql}", cmd.CommandText);
+                    cmd.Parameters.AddWithValue("id", id);
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            string text = reader.GetString(0);
+                            return JsonConvert.DeserializeObject<TDocument>(text, Policies.SerializerSettings);
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
         protected async Task WriteDocument(TDocumentID docid, TDocument document)
         {
             string id = GetObjectID(docid);
-            byte[] data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(document, Policies.SerializerSettings));
+            string text = JsonConvert.SerializeObject(document, Policies.SerializerSettings);
+
+            await WriteDocumentToDatabase(id, text);
+            await WriteDocumentToBlobStore(id, text);
+        }
+
+        async Task WriteDocumentToBlobStore(string id, string text)
+        {
+            byte[] data = Encoding.UTF8.GetBytes(text);
             using (var memoryStream = new MemoryStream(data))
             {
                 await this.blobStore.PutObject(id, "application/json", memoryStream, compress: true);
+            }
+        }
+
+        async Task WriteDocumentToDatabase(string id, string text)
+        {
+            using (var connection = CreateConnection())
+            {
+                await connection.OpenAsync();
+                using (NpgsqlCommand cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = String.Format(
+                        @"INSERT INTO {0} (id, document)
+                          VALUES (@id, @text)
+                          ON CONFLICT (id) DO UPDATE
+                            SET document = @text
+                        ",
+                        this.table
+                    );
+                    cmd.Parameters.AddWithValue("id", id);
+                    cmd.Parameters.AddWithValue("text", NpgsqlDbType.Json, text);
+
+                    Serilog.Log.Information("Running {sql}", cmd.CommandText);
+                    await cmd.ExecuteNonQueryAsync();
+                }
             }
         }
     }
