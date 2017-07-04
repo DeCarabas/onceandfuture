@@ -11,19 +11,21 @@ namespace OnceAndFuture.Deployment
 {
     abstract class StackBase
     {
-        readonly string name;
+        readonly DateTime startTime;
         readonly BuildVersion version;
 
         protected StackBase(BuildVersion build)
         {
             this.version = build;
+            this.startTime = DateTime.Now;
+        }
 
-            DateTime startTime = DateTime.Now;
-            this.name = String.Join("-", new string[] {
-                Environment,
+        public string Name =>
+            String.Join("-", new string[] {
+                this.Environment,
                 Configuration.Application,
                 "doty",
-                build.Release,
+                this.version.Release,
                 startTime.Year.ToString(),
                 startTime.Month.ToString(),
                 startTime.Day.ToString(),
@@ -31,9 +33,6 @@ namespace OnceAndFuture.Deployment
                 startTime.Minute.ToString(),
                 startTime.Second.ToString(),
             });
-        }
-
-        public string Name => this.name;
 
         public abstract string StackType { get; }
 

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "deploy": {
+      "commandName": "Project",
+      "commandLineArgs": "deploy"
+    }
+  }
+}
