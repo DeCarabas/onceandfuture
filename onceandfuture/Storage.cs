@@ -2,9 +2,11 @@
 {
     using Newtonsoft.Json;
     using Npgsql;
+    using Npgsql.Logging;
     using NpgsqlTypes;
     using Polly;
     using Serilog;
+    using Serilog.Events;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
@@ -474,6 +476,54 @@
         }
     }
 
+    public static class DocumentStore
+    {
+        public static void InitializeLogging()
+        {
+            NpgsqlLogManager.Provider = new Provider();
+        }
+
+        class Provider : INpgsqlLoggingProvider
+        {
+            public NpgsqlLogger CreateLogger(string name) => new Logger(name);
+        }
+
+        class Logger : NpgsqlLogger
+        {
+            readonly ILogger logger;
+
+            public Logger(string name)
+            {
+                this.logger = Serilog.Log.ForContext("NPGSQL_SOURCE", name);
+            }
+
+            static LogEventLevel ConvertLevel(NpgsqlLogLevel level)
+            {
+                switch (level)
+                {
+                    case NpgsqlLogLevel.Trace:
+                        return LogEventLevel.Verbose;
+                    case NpgsqlLogLevel.Debug:
+                        return LogEventLevel.Debug;
+                    case NpgsqlLogLevel.Info:
+                        return LogEventLevel.Information;
+                    case NpgsqlLogLevel.Warn:
+                        return LogEventLevel.Warning;
+                    case NpgsqlLogLevel.Error:
+                        return LogEventLevel.Error;
+                    case NpgsqlLogLevel.Fatal:
+                        return LogEventLevel.Fatal;
+                    default:
+                        throw new ArgumentOutOfRangeException("level");
+                }
+            }
+
+            public override bool IsEnabled(NpgsqlLogLevel level) => this.logger.IsEnabled(ConvertLevel(level));
+            public override void Log(NpgsqlLogLevel level, int connectorId, string msg, Exception exception = null)
+                => this.logger.Write(ConvertLevel(level), exception, "{ConnectorId}: {Message}", connectorId, msg);
+        }
+    }
+
     public abstract class DocumentStore<TDocumentID, TDocument> where TDocument : class
     {
         readonly BlobStore blobStore;
@@ -525,7 +575,6 @@
                 using (NpgsqlCommand cmd = connection.CreateCommand())
                 {
                     cmd.CommandText = String.Format("SELECT document FROM {0} WHERE id = @id", this.table);
-                    Serilog.Log.Information("Running {sql}", cmd.CommandText);
                     cmd.Parameters.AddWithValue("id", id);
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
@@ -576,8 +625,6 @@
                     );
                     cmd.Parameters.AddWithValue("id", id);
                     cmd.Parameters.AddWithValue("text", NpgsqlDbType.Json, text);
-
-                    Serilog.Log.Information("Running {sql}", cmd.CommandText);
                     await cmd.ExecuteNonQueryAsync();
                 }
             }

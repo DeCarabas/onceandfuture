@@ -143,6 +143,7 @@
             Serilog.Log.Logger = logConfig.CreateLogger();
 
             ThumbnailExtractor.ConfigureProcess();
+            DocumentStore.InitializeLogging();
         }
 
         static void LoadEnvironmentVariables(ParsedOpts parsedArgs)
