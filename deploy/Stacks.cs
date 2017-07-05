@@ -45,7 +45,7 @@ namespace OnceAndFuture.Deployment
                 new Tag { Key = "application", Value = Configuration.Application },
                 new Tag { Key = "commit", Value = Version.Commit },
                 new Tag { Key = "environment", Value = Environment },
-                new Tag { Key = "stack-type", Value = "builder" },
+                new Tag { Key = "stack-type", Value = StackType },
             };
 
         protected abstract object Template { get; }
