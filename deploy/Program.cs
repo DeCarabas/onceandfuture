@@ -162,6 +162,59 @@ namespace OnceAndFuture.Deployment
             return success.Value;
         }
 
+        static bool WaitForStackDeleted(string stackId)
+        {
+            Console.WriteLine("Waiting for doneness of {0}...", stackId);
+
+            string lastId = null;
+            bool? success = null;
+
+            do
+            {
+                SleepWithAnimation(TimeSpan.FromSeconds(5));
+                var response = cloudFormationClient.DescribeStackEventsAsync(new DescribeStackEventsRequest
+                {
+                    StackName = stackId,
+                }).Result;
+                if (response.StackEvents.Count == 0) { continue; }
+
+                var newEvents = new List<StackEvent>();
+                foreach (StackEvent evt in response.StackEvents)
+                {
+                    if (evt.EventId == lastId) { break; }
+                    newEvents.Add(evt);
+                    if (evt.PhysicalResourceId == stackId)
+                    {
+                        if (evt.ResourceStatus == ResourceStatus.DELETE_COMPLETE)
+                        {
+                            success = true;
+                        }
+                        else if (evt.ResourceStatus == ResourceStatus.DELETE_FAILED)
+                        {
+                            success = false;
+                        }
+                    }
+                }
+                newEvents.Reverse();
+                foreach (StackEvent evt in newEvents)
+                {
+                    Console.WriteLine(
+                        "{0,-20} {1,-20} {2,-40} {3} - {4}",
+                        evt.Timestamp,
+                        evt.ResourceStatus,
+                        evt.ResourceType,
+                        evt.LogicalResourceId,
+                        evt.ResourceStatusReason
+                    );
+                }
+                lastId = response.StackEvents[0].EventId;
+            } while (success == null);
+
+            Console.WriteLine("Stack deletion {0}", success.Value ? "SUCCEEDED" : "FAILED");
+            return success.Value;
+        }
+
+
         static bool WaitForStackHealthy(string stackId)
         {
             Console.WriteLine("Getting scaling group from {0}...", stackId);
@@ -246,6 +299,7 @@ namespace OnceAndFuture.Deployment
         {
             Console.WriteLine("Marking {0} for deletion...", stackId);
             cloudFormationClient.DeleteStackAsync(new DeleteStackRequest { StackName = stackId }).Wait();
+            WaitForStackDeleted(stackId);
         }
 
         static List<Dictionary<string, object>> LoadSecrets(string environment)
