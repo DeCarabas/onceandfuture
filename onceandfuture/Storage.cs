@@ -528,11 +528,16 @@
     {
         readonly BlobStore blobStore;
         readonly string table;
+        readonly ILogger logger;
 
         protected DocumentStore(BlobStore blobStore, string table)
         {
             this.blobStore = blobStore;
             this.table = table;
+
+            this.logger = Serilog.Log
+                .ForContext(HoneycombSink.DatasetPropertyKey, "Database")
+                .ForContext("Table", table);
         }
 
         protected abstract string GetObjectID(TDocumentID id);
@@ -561,75 +566,110 @@
             }
         }
 
-        NpgsqlConnection CreateConnection()
+        async Task<NpgsqlConnection> OpenConnection()
         {
             string connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
-            return new NpgsqlConnection(connectionString);
+            var connection = new NpgsqlConnection(connectionString);
+            try
+            {
+                await connection.OpenAsync();
+                return connection;
+            }
+            catch(Exception)
+            {
+                if (connection != null) { connection.Dispose(); }
+                throw;
+            }
         }
 
         async Task<TDocument> GetDocumentFromDatabase(string id)
         {
-            using (var connection = CreateConnection())
+            TDocument document = null;
+            await DoOperation("read", id, async () =>
             {
-                await connection.OpenAsync();
-                using (NpgsqlCommand cmd = connection.CreateCommand())
+                using (var connection = await OpenConnection())
                 {
-                    cmd.CommandText = String.Format("SELECT document FROM {0} WHERE id = @id", this.table);
-                    cmd.Parameters.AddWithValue("id", NpgsqlDbType.Varchar, id);
-                    cmd.Prepare();
-                    using (var reader = await cmd.ExecuteReaderAsync())
+                    using (NpgsqlCommand cmd = connection.CreateCommand())
                     {
-                        if (await reader.ReadAsync())
+                        cmd.CommandText = String.Format("SELECT document FROM {0} WHERE id = @id", this.table);
+                        cmd.Parameters.AddWithValue("id", NpgsqlDbType.Varchar, id);
+                        cmd.Prepare();
+                        using (var reader = await cmd.ExecuteReaderAsync())
                         {
-                            string text = reader.GetString(0);
-                            return JsonConvert.DeserializeObject<TDocument>(text, Policies.SerializerSettings);
+                            if (await reader.ReadAsync())
+                            {
+                                string text = reader.GetString(0);
+                                document = JsonConvert.DeserializeObject<TDocument>(text, Policies.SerializerSettings);
+                            }
                         }
                     }
                 }
-            }
+                return (document == null) ? "not found" : null;
+            });
 
-            return null;
+            return document;
         }
 
         protected async Task WriteDocument(TDocumentID docid, TDocument document)
         {
             string id = GetObjectID(docid);
-            string text = JsonConvert.SerializeObject(document, Policies.SerializerSettings);
-
-            await WriteDocumentToDatabase(id, text);
-            await WriteDocumentToBlobStore(id, text);
-        }
-
-        async Task WriteDocumentToBlobStore(string id, string text)
-        {
-            byte[] data = Encoding.UTF8.GetBytes(text);
-            using (var memoryStream = new MemoryStream(data))
+            await DoOperation("write", id, async () =>
             {
-                await this.blobStore.PutObject(id, "application/json", memoryStream, compress: true);
-            }
-        }
+                string text = JsonConvert.SerializeObject(document, Policies.SerializerSettings);
 
-        async Task WriteDocumentToDatabase(string id, string text)
-        {
-            using (var connection = CreateConnection())
-            {
-                await connection.OpenAsync();
-                using (NpgsqlCommand cmd = connection.CreateCommand())
+                using (var connection = await OpenConnection())
                 {
-                    cmd.CommandText = String.Format(
-                        @"INSERT INTO {0} (id, document)
+                    using (NpgsqlCommand cmd = connection.CreateCommand())
+                    {
+                        cmd.CommandText = String.Format(
+                            @"INSERT INTO {0} (id, document)
                           VALUES (@id, @text)
                           ON CONFLICT (id) DO UPDATE
                             SET document = @text
                         ",
-                        this.table
-                    );
-                    cmd.Parameters.AddWithValue("id", NpgsqlDbType.Varchar, id);
-                    cmd.Parameters.AddWithValue("text", NpgsqlDbType.Json, text);
-                    cmd.Prepare();
-                    await cmd.ExecuteNonQueryAsync();
+                            this.table
+                        );
+                        cmd.Parameters.AddWithValue("id", NpgsqlDbType.Varchar, id);
+                        cmd.Parameters.AddWithValue("text", NpgsqlDbType.Json, text);
+                        cmd.Prepare();
+                        await cmd.ExecuteNonQueryAsync();
+                    }
                 }
+
+                return null;
+            });
+        }
+
+        async Task DoOperation(string operation, string key, Func<Task<string>> func)
+        {
+            Stopwatch timer = Stopwatch.StartNew();
+            try
+            {
+                string details = await func();
+                OperationStatus status = (details == null)
+                    ? OperationStatus.OK
+                    : OperationStatus.Error;
+                LogOperation(operation, key, timer, status, details);
             }
+            catch(Exception e)
+            {
+                LogOperation(operation, key, timer, OperationStatus.Exception, e.ToString());
+                throw;
+            }
+        }
+
+        void LogOperation(string operation, string key, Stopwatch timer, OperationStatus status, string details)
+        {
+            this.logger.Information(
+                "{Operation} {Key}: {ElapsedMs}ms: {Status}: {Details}",
+                operation, key.ToString(), timer.ElapsedMilliseconds, status.ToString(), details);
+        }
+
+        enum OperationStatus
+        {
+            OK,
+            Error,
+            Exception
         }
     }
 }
