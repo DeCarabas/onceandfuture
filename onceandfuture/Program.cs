@@ -149,7 +149,16 @@
         static void LoadEnvironmentVariables(ParsedOpts parsedArgs)
         {
             // Assumes you're running from the source tree, since production doesn't have the deployment tool.
-            string env = parsedArgs["environment"].Value.ToLowerInvariant();
+            string env;
+            if (parsedArgs.Opts.TryGetValue("environment", out Opt envOpt))
+            {
+                env = envOpt.Value.ToLowerInvariant();
+            }
+            else
+            {
+                env = "development";
+            }
+
             string secretsFile = System.IO.Path.Combine("..", "deploy", "secrets.json");
             if (File.Exists(secretsFile))
             {
