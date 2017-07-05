@@ -190,7 +190,7 @@ namespace OnceAndFuture
     {
         // ImageSharp consumes tons of resources, and so we want to gate the amount of concurrent JPEG decoding we do.
         // Right now we constrain to 1; let's see if that helps anything.
-        const int MaximumConcurrentLoads = 1;        
+        const int MaximumConcurrentLoads = 1;
 
         static readonly SemaphoreSlim loadGate = new SemaphoreSlim(MaximumConcurrentLoads);
 
@@ -249,29 +249,6 @@ namespace OnceAndFuture
                     new ImageSharp.Formats.GifFormat(),
             };
             foreach (var fmt in formats) { ImageSharp.Configuration.Default.AddImageFormat(fmt); }
-
-            // THE WORST HACK: Limit the size of the DecodedBlockArray pool since it's a huge memory consumer.
-            // See https://github.com/JimBobSquarePants/ImageSharp/issues/151
-            //
-            // This stopped working after I updated because DUH, trying to figure out the best new way.
-            //
-            //Type jpegType = typeof(ImageSharp.Formats.JpegFormat);
-            //Assembly imageSharp = jpegType.GetTypeInfo().Assembly;
-
-            //Type decodedBlock = imageSharp
-            //    .GetType("ImageSharp.Formats.Jpg.DecodedBlock", throwOnError: true);
-            //Type decodedBlockArrayPool = typeof(System.Buffers.ArrayPool<object>)
-            //    .GetGenericTypeDefinition()
-            //    .MakeGenericType(decodedBlock);
-            //object newPool = decodedBlockArrayPool
-            //    .GetRuntimeMethod("Create", new[] { typeof(int), typeof(int) })
-            //    .Invoke(null, new object[] { (int)4096, (int)20 });
-
-            //Type decodedBlockArray = imageSharp
-            //    .GetType("ImageSharp.Formats.Jpg.DecodedBlockArray", throwOnError: true);
-            //FieldInfo arrayPoolField = decodedBlockArray
-            //    .GetField("ArrayPool", BindingFlags.Static | BindingFlags.NonPublic);
-            //arrayPoolField.SetValue(null, newPool);
         }
 
         public async Task<RiverItem[]> LoadItemThumbnailsAsync(Uri baseUri, RiverItem[] items)
@@ -686,17 +663,42 @@ namespace OnceAndFuture
     {
         readonly BlobStore blobStore = new BlobStore("onceandfuture-thumbs", "thumbs");
 
+        static bool IsTransparent(Image<Rgba32> image)
+        {
+            Span<Rgba32> pixels = image.Pixels;
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                Rgba32 pixel = pixels[i];
+                if (pixel.A != 255) { return true; }
+            }
+            return false;
+        }
+
         public async Task<Uri> StoreImage(Image<Rgba32> image)
         {
             MemoryStream stream = new MemoryStream();
-            image.SaveAsJpeg(stream);
+            string extension;
+            string mimeType;
+
+            if (IsTransparent(image))
+            {
+                mimeType = "image/png";
+                extension = ".png";
+                image.SaveAsPng(stream);
+            }
+            else
+            {
+                mimeType = "image/jpeg";
+                extension = ".jpg";
+                image.SaveAsJpeg(stream);
+            }
 
             stream.Position = 0;
             byte[] hash = SHA1.Create().ComputeHash(stream);
-            string fileName = Convert.ToBase64String(hash).Replace('/', '-') + ".jpg";
+            string fileName = Convert.ToBase64String(hash).Replace('/', '-') + extension;
 
             stream.Position = 0;
-            await this.blobStore.PutObject(fileName, "image/jpeg", stream);
+            await this.blobStore.PutObject(fileName, mimeType, stream);
             return this.blobStore.GetObjectUri(fileName);
         }
     }
