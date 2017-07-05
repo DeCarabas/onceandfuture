@@ -106,6 +106,46 @@ namespace OnceAndFuture.Deployment
             }
         }
 
+        static void PrintEvents(List<StackEvent> events)
+        {
+            ConsoleColor defaultColor = Console.ForegroundColor;
+            foreach (StackEvent evt in events)
+            {
+                ConsoleColor statusColor;
+                if (
+                    evt.ResourceStatus == ResourceStatus.CREATE_FAILED ||
+                    evt.ResourceStatus == ResourceStatus.DELETE_FAILED ||
+                    evt.ResourceStatus == ResourceStatus.UPDATE_FAILED
+                )
+                {
+                    statusColor = ConsoleColor.Red;
+                }
+                else if (
+                    evt.ResourceStatus == ResourceStatus.CREATE_COMPLETE ||
+                    evt.ResourceStatus == ResourceStatus.DELETE_COMPLETE ||
+                    evt.ResourceStatus == ResourceStatus.UPDATE_COMPLETE
+                )
+                {
+                    statusColor = ConsoleColor.Green;
+                }
+                else
+                {
+                    statusColor = defaultColor;
+                }
+
+                Console.ForegroundColor = statusColor;
+                Console.WriteLine(
+                    "{0,-20} {1,-20} {2,-40} {3} - {4}",
+                    evt.Timestamp,
+                    evt.ResourceStatus,
+                    evt.ResourceType,
+                    evt.LogicalResourceId,
+                    evt.ResourceStatusReason
+                );
+            }
+            Console.ForegroundColor = defaultColor;
+        }
+
         static bool WaitForStackCreated(string stackId)
         {
             Console.WriteLine("Waiting for doneness of {0}...", stackId);
@@ -144,17 +184,7 @@ namespace OnceAndFuture.Deployment
                     }
                 }
                 newEvents.Reverse();
-                foreach (StackEvent evt in newEvents)
-                {
-                    Console.WriteLine(
-                        "{0,-20} {1,-20} {2,-40} {3} - {4}",
-                        evt.Timestamp,
-                        evt.ResourceStatus,
-                        evt.ResourceType,
-                        evt.LogicalResourceId,
-                        evt.ResourceStatusReason
-                    );
-                }
+                PrintEvents(newEvents);
                 lastId = response.StackEvents[0].EventId;
             } while (success == null);
 
@@ -177,6 +207,23 @@ namespace OnceAndFuture.Deployment
                     StackName = stackId,
                 }).Result;
                 if (response.StackEvents.Count == 0) { continue; }
+                
+                if (lastId == null)
+                {
+                    // Assume the last CREATE_COMPLETE or UPDATE_COMPLETE is the lastId. Fortunately the events 
+                    // come out newest-to-oldest.
+                    foreach(StackEvent evt in response.StackEvents)
+                    {
+                        if (
+                            evt.ResourceStatus == ResourceStatus.CREATE_COMPLETE || 
+                            evt.ResourceStatus == ResourceStatus.UPDATE_COMPLETE
+                        )
+                        {
+                            lastId = evt.EventId;
+                            break;
+                        }
+                    }
+                }
 
                 var newEvents = new List<StackEvent>();
                 foreach (StackEvent evt in response.StackEvents)
@@ -196,24 +243,13 @@ namespace OnceAndFuture.Deployment
                     }
                 }
                 newEvents.Reverse();
-                foreach (StackEvent evt in newEvents)
-                {
-                    Console.WriteLine(
-                        "{0,-20} {1,-20} {2,-40} {3} - {4}",
-                        evt.Timestamp,
-                        evt.ResourceStatus,
-                        evt.ResourceType,
-                        evt.LogicalResourceId,
-                        evt.ResourceStatusReason
-                    );
-                }
+                PrintEvents(newEvents);
                 lastId = response.StackEvents[0].EventId;
             } while (success == null);
 
             Console.WriteLine("Stack deletion {0}", success.Value ? "SUCCEEDED" : "FAILED");
             return success.Value;
         }
-
 
         static bool WaitForStackHealthy(string stackId)
         {
@@ -348,38 +384,102 @@ namespace OnceAndFuture.Deployment
             };
         }
 
-        static string GetPublishedCommit()
+        static List<Revision> GetMasterLog()
         {
             // git fetch origin master
             var process = Process.Start(new ProcessStartInfo
             {
                 FileName = "git",
-                Arguments = "log origin/master --format=format:%H --max-count=1",
+                Arguments = "log origin/master --format=format:%H|%s --max-count=200",
                 RedirectStandardOutput = true,
             });
 
-            string commit = process.StandardOutput.ReadToEnd().Trim();
+            var revs = new List<Revision>();
+            while (true)
+            {
+                string line = process.StandardOutput.ReadLine();
+                if (line == null) { break; }
+
+                line = line.Trim();
+                if (line.Length == 0) { continue; }
+                string[] parts = line.Split(new char[] { '|' }, 2);
+                revs.Add(new Revision(commit: parts[0], subject: parts[1]));
+            }
+
             process.WaitForExit();
             process.Dispose();
 
-            return commit;
+            return revs;
+        }
+
+        static List<Revision> GetDelta(List<Revision> log, string start, string end)
+        {
+            List<Revision> delta = null;
+            for (int i = 0; i < log.Count; i++)
+            {
+                if (log[i].Commit == start)
+                {
+                    delta = new List<Revision>();
+                }
+
+                if (delta != null)
+                {
+                    if (log[i].Commit == end) { break; }
+                    delta.Add(log[i]);
+                }
+            }
+            return delta;
+        }
+
+        static void PrintChangeLog(List<Revision> log)
+        {
+            for (int i = 0; i < log.Count; i++)
+            {
+                ConsoleColor fg = Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.Write("    {0}", log[i].Commit.Substring(0, 7));
+                Console.ForegroundColor = fg;
+                Console.WriteLine(" - {0}", log[i].Subject);
+            }
+        }
+
+        static bool Confirm()
+        {
+            Console.Write("Ready to proceed? [y/N] ");
+            string response = Console.ReadLine();
+            return response.StartsWith("y", StringComparison.OrdinalIgnoreCase);
         }
 
         static int DoBuild(ParsedOpts args)
         {
-            string commit = args["commit"].Value ?? GetPublishedCommit();
-            Console.WriteLine("Building and uploading for commit {0}...", commit);
-
             DateTime startTime = DateTime.Now;
 
-            if (!args["force"].Flag)
+            List<Revision> log = GetMasterLog();
+            string commit = args["commit"].Value ?? log[0].Commit;
+            Console.WriteLine("Building and uploading for commit {0}...", commit);
+
+            BuildVersion lastVersion = GetLastVersion();
+            List<Revision> changes = GetDelta(log, commit, lastVersion.Commit);
+            if (changes == null)
             {
-                BuildVersion lastVersion = GetLastVersion();
-                if (lastVersion.Commit == commit)
-                {
-                    Console.WriteLine("Latest build is for this commit, nothing to do.");
-                    return 0;
-                }
+                Console.WriteLine("Cannot find commit {0} in the log; aborting!", commit);
+                return 2;
+            }
+            if (changes.Count > 0)
+            {
+                Console.WriteLine("Commits since the last build:");
+                PrintChangeLog(changes);
+            }
+            else if (!args["force"].Flag)
+            {
+                Console.WriteLine("Latest build is for this commit, nothing to do.");
+                return 0;
+            }
+
+            if (!Confirm())
+            {
+                Console.WriteLine("Aborting.");
+                return 3;
             }
 
             DateTime now = DateTime.UtcNow;
@@ -456,5 +556,12 @@ namespace OnceAndFuture.Deployment
                 return 99;
             }
         }
+    }
+
+    class Revision
+    {
+        public Revision(string commit, string subject) { Commit = commit; Subject = subject; }
+        public string Commit { get; }
+        public string Subject { get; }
     }
 }
