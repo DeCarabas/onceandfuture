@@ -46,6 +46,46 @@ namespace OnceAndFuture.Deployment
         }
     }
 
+
+    class Revision
+    {
+        public Revision(string commit, string subject) { Commit = commit; Subject = subject; }
+        public string Commit { get; }
+        public string Subject { get; }
+    }
+
+    static class TheConsole
+    {
+        public static void WriteColor(ConsoleColor foreground, string message, params object[] args)
+        {
+            ConsoleColor oldColor = Console.ForegroundColor;
+            Console.ForegroundColor = foreground;
+            try
+            {
+                Console.Write(message, args);
+            }
+            finally
+            {
+                Console.ForegroundColor = oldColor;
+            }
+        }
+
+        internal static void WriteLineColor(ConsoleColor foreground, string message, params object[] args)
+        {
+            ConsoleColor oldColor = Console.ForegroundColor;
+            Console.ForegroundColor = foreground;
+            try
+            {
+                Console.WriteLine(message, args);
+            }
+            finally
+            {
+                Console.ForegroundColor = oldColor;
+            }
+        }
+    }
+
+
     class Program
     {
         static readonly RegionEndpoint region = RegionEndpoint.USWest2;
@@ -61,6 +101,7 @@ namespace OnceAndFuture.Deployment
                 .AddOption("force", "Rebuild even if we've already built the specified commit.")
             )
             .AddVerb("deploy", "Deploy to an environment.", DoDeploy, v => v
+                .AddOption("force", "Redeploy even if we've already deployed the latest build.")
             )
             ;
 
@@ -106,7 +147,7 @@ namespace OnceAndFuture.Deployment
             }
         }
 
-        static void PrintEvents(List<StackEvent> events)
+        static void PrintStackEvents(List<StackEvent> events)
         {
             ConsoleColor defaultColor = Console.ForegroundColor;
             foreach (StackEvent evt in events)
@@ -184,7 +225,7 @@ namespace OnceAndFuture.Deployment
                     }
                 }
                 newEvents.Reverse();
-                PrintEvents(newEvents);
+                PrintStackEvents(newEvents);
                 lastId = response.StackEvents[0].EventId;
             } while (success == null);
 
@@ -207,15 +248,15 @@ namespace OnceAndFuture.Deployment
                     StackName = stackId,
                 }).Result;
                 if (response.StackEvents.Count == 0) { continue; }
-                
+
                 if (lastId == null)
                 {
                     // Assume the last CREATE_COMPLETE or UPDATE_COMPLETE is the lastId. Fortunately the events 
                     // come out newest-to-oldest.
-                    foreach(StackEvent evt in response.StackEvents)
+                    foreach (StackEvent evt in response.StackEvents)
                     {
                         if (
-                            evt.ResourceStatus == ResourceStatus.CREATE_COMPLETE || 
+                            evt.ResourceStatus == ResourceStatus.CREATE_COMPLETE ||
                             evt.ResourceStatus == ResourceStatus.UPDATE_COMPLETE
                         )
                         {
@@ -243,7 +284,7 @@ namespace OnceAndFuture.Deployment
                     }
                 }
                 newEvents.Reverse();
-                PrintEvents(newEvents);
+                PrintStackEvents(newEvents);
                 lastId = response.StackEvents[0].EventId;
             } while (success == null);
 
@@ -302,7 +343,11 @@ namespace OnceAndFuture.Deployment
             {
                 if (!healths.TryGetValue(instance.InstanceId, out TargetHealthDescription health))
                 {
-                    Console.WriteLine("{0,-20} {0} not in health yet...", DateTime.Now, instance.InstanceId);
+                    Console.WriteLine(
+                        "{0,-20} {0} not in health yet...", 
+                        DateTime.Now, 
+                        instance.InstanceId
+                    );
                     return false;
                 }
 
@@ -318,7 +363,7 @@ namespace OnceAndFuture.Deployment
                     return false;
                 }
             }
-            Console.WriteLine("{0,-20} All instances healthy!", DateTime.Now);
+            TheConsole.WriteLineColor(ConsoleColor.Green, "{0,-20} All instances healthy!", DateTime.Now);
             return true;
         }
 
@@ -384,6 +429,18 @@ namespace OnceAndFuture.Deployment
             };
         }
 
+        static string GetDeployedCommit(string environment)
+        {
+            var commits =
+                from stack in GetStacksByEnvironmentAndType(environment, "release")
+                orderby stack.LastUpdatedTime descending
+                from tag in stack.Tags
+                where tag.Key == "commit"
+                select tag.Value;
+
+            return commits.FirstOrDefault();
+        }
+
         static List<Revision> GetMasterLog()
         {
             // git fetch origin master
@@ -435,10 +492,7 @@ namespace OnceAndFuture.Deployment
         {
             for (int i = 0; i < log.Count; i++)
             {
-                ConsoleColor fg = Console.ForegroundColor;
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.Write("    {0}", log[i].Commit.Substring(0, 7));
-                Console.ForegroundColor = fg;
+                TheConsole.WriteColor(ConsoleColor.Green, "    {0}", log[i].Commit.Substring(0, 7));
                 Console.WriteLine(" - {0}", log[i].Subject);
             }
         }
@@ -501,6 +555,29 @@ namespace OnceAndFuture.Deployment
 
             DateTime startTime = DateTime.Now;
             BuildVersion version = GetLastVersion();
+            string deployedCommit = GetDeployedCommit(environment);
+
+            if (deployedCommit != version.Commit)
+            {
+                List<Revision> log = GetMasterLog();
+                List<Revision> changes = GetDelta(log, log[0].Commit, deployedCommit);
+                if (changes != null && changes.Count > 0)
+                {
+                    Console.WriteLine("Commits to be deployed:");
+                    PrintChangeLog(changes);
+                }
+            }
+            else if (!args["force"].Flag)
+            {
+                Console.WriteLine("Latest release is for this build, nothing to do.");
+                return 0;
+            }
+
+            if (!Confirm())
+            {
+                Console.WriteLine("Aborting.");
+                return 3;
+            }
 
             Console.WriteLine("Deploying {0} to {1} @ {2}", version, environment, startTime);
             string[] oldStackIds = GetOldReleaseStacks(environment);
@@ -556,12 +633,5 @@ namespace OnceAndFuture.Deployment
                 return 99;
             }
         }
-    }
-
-    class Revision
-    {
-        public Revision(string commit, string subject) { Commit = commit; Subject = subject; }
-        public string Commit { get; }
-        public string Subject { get; }
     }
 }
