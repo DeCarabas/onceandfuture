@@ -266,14 +266,15 @@ namespace OnceAndFuture.Deployment
             {
                 if (!healths.TryGetValue(instance.InstanceId, out TargetHealthDescription health))
                 {
-                    Console.WriteLine("{0} not in health yet...", instance.InstanceId);
+                    Console.WriteLine("{0,-20} {0} not in health yet...", DateTime.Now, instance.InstanceId);
                     return false;
                 }
 
                 if (health.TargetHealth.State != TargetHealthStateEnum.Healthy)
                 {
                     Console.WriteLine(
-                        "{0} in state {1} : {2}",
+                        "{0,-20} {1} in state {2} : {3}",
+                        DateTime.Now,
                         instance.InstanceId,
                         health.TargetHealth.State,
                         health.TargetHealth.Reason
@@ -281,7 +282,7 @@ namespace OnceAndFuture.Deployment
                     return false;
                 }
             }
-            Console.WriteLine("All instances healthy!");
+            Console.WriteLine("{0,-20} All instances healthy!", DateTime.Now);
             return true;
         }
 
