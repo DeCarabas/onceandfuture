@@ -319,15 +319,8 @@
             // OK!
             try
             {
-                return new DateTimeOffset(
-                    year,
-                    month,
-                    day,
-                    hour,
-                    minute,
-                    (int)second,
-                    new TimeSpan(tz_hours, tz_minutes, 0)
-                ).UtcDateTime;
+                TimeSpan offset = new TimeSpan(tz_hours, tz_minutes, 0);
+                return new DateTimeOffset(year, month, day, hour, minute, (int)second, offset).UtcDateTime;
             }
             catch (ArgumentOutOfRangeException)
             {
