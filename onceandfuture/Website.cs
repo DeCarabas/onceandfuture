@@ -822,7 +822,7 @@
             {
                 // Remove all instances of the source from the current aggregate.
                 River aggregate = await this.aggregateStore.LoadAggregate(id);
-                ImmutableList<RiverFeed> newFeeds = aggregate.UpdatedFeeds.Feeds.RemoveAll(
+                ImmutableList<FeedSegment> newFeeds = aggregate.UpdatedFeeds.Feeds.RemoveAll(
                     f => Util.HashString(f.FeedUrl.AbsoluteUri) == sourceId);
                 River newAggregate = aggregate.With(updatedFeeds: aggregate.UpdatedFeeds.With(feeds: newFeeds));
                 await this.aggregateStore.WriteAggregate(id, newAggregate);
@@ -1033,7 +1033,7 @@
                 await this.profileStore.SaveProfile(newProfile);
 
                 // Grab some number of items out of the udpated river; we're gonna forge an update.
-                RiverFeed newUpdate = parsedFeed.UpdatedFeeds.Feeds[0].With(
+                FeedSegment newUpdate = parsedFeed.UpdatedFeeds.Feeds[0].With(
                     items: parsedFeed.UpdatedFeeds.Feeds.SelectMany(f => f.Items).Take(30));
 
                 River aggregate = await this.aggregateStore.LoadAggregate(newRiver.Id);

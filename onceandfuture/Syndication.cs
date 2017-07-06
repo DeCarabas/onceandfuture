@@ -551,15 +551,15 @@
     }
 
     [JsonObject]
-    public class RiverFeed
+    public class FeedSegment
     {
-        public RiverFeed(
+        public FeedSegment(
             string feedTitle = null,
             Uri feedUrl = null,
             string websiteUrl = null,
             string feedDescription = null,
             DateTimeOffset? whenLastUpdate = null,
-            IEnumerable<RiverItem> items = null)
+            IEnumerable<Item> items = null)
         {
             FeedTitle = feedTitle ?? String.Empty;
             FeedUrl = feedUrl;
@@ -567,18 +567,18 @@
             FeedDescription = feedDescription ?? String.Empty;
             WhenLastUpdate = whenLastUpdate ?? DateTimeOffset.UtcNow;
 
-            Items = ImmutableList.CreateRange<RiverItem>(items ?? Enumerable.Empty<RiverItem>());
+            Items = ImmutableList.CreateRange<Item>(items ?? Enumerable.Empty<Item>());
         }
 
-        public RiverFeed With(
+        public FeedSegment With(
             string feedTitle = null,
             Uri feedUrl = null,
             string websiteUrl = null,
             string feedDescription = null,
             DateTimeOffset? whenLastUpdate = null,
-            IEnumerable<RiverItem> items = null)
+            IEnumerable<Item> items = null)
         {
-            return new RiverFeed(
+            return new FeedSegment(
                 feedTitle ?? FeedTitle,
                 feedUrl ?? FeedUrl,
                 websiteUrl ?? WebsiteUrl,
@@ -603,13 +603,13 @@
         public DateTimeOffset WhenLastUpdate { get; }
 
         [JsonProperty(PropertyName = "item")]
-        public ImmutableList<RiverItem> Items { get; }
+        public ImmutableList<Item> Items { get; }
     }
 
-    public class RiverItem
+    public class Item
     {
         [JsonConstructor]
-        public RiverItem(
+        public Item(
             string title = null,
             Uri link = null,
             string body = null,
@@ -617,8 +617,8 @@
             Uri permaLink = null,
             string comments = null,
             string id = null,
-            RiverItemThumbnail thumbnail = null,
-            IEnumerable<RiverItemEnclosure> enclosures = null,
+            Thumbnail thumbnail = null,
+            IEnumerable<Enclosure> enclosures = null,
             XElement content = null,
             XElement description = null,
             XElement summary = null)
@@ -635,11 +635,11 @@
             Description = description;
             Summary = summary;
 
-            Enclosures = ImmutableList.CreateRange<RiverItemEnclosure>(
-                enclosures ?? Enumerable.Empty<RiverItemEnclosure>());
+            Enclosures = ImmutableList.CreateRange<Enclosure>(
+                enclosures ?? Enumerable.Empty<Enclosure>());
         }
 
-        public RiverItem With(
+        public Item With(
             string title = null,
             Uri link = null,
             string body = null,
@@ -647,13 +647,13 @@
             Uri permaLink = null,
             string comments = null,
             string id = null,
-            RiverItemThumbnail thumbnail = null,
-            IEnumerable<RiverItemEnclosure> enclosures = null,
+            Thumbnail thumbnail = null,
+            IEnumerable<Enclosure> enclosures = null,
             XElement content = null,
             XElement description = null,
             XElement summary = null)
         {
-            return new RiverItem(
+            return new Item(
                 title ?? Title,
                 link ?? Link,
                 body ?? Body,
@@ -690,10 +690,10 @@
         public string Id { get; }
 
         [JsonProperty(PropertyName = "thumbnail")]
-        public RiverItemThumbnail Thumbnail { get; }
+        public Thumbnail Thumbnail { get; }
 
         [JsonProperty(PropertyName = "enclosure")]
-        public ImmutableList<RiverItemEnclosure> Enclosures { get; }
+        public ImmutableList<Enclosure> Enclosures { get; }
 
         // Tracking elements during parsing; not stored or used afterwards.
         [JsonIgnore]
@@ -704,18 +704,18 @@
         public XElement Summary { get; }
     }
 
-    public class RiverItemThumbnail
+    public class Thumbnail
     {
-        public RiverItemThumbnail(Uri url, int width, int height)
+        public Thumbnail(Uri url, int width, int height)
         {
             Url = url;
             Width = width;
             Height = height;
         }
 
-        public RiverItemThumbnail With(Uri url = null, int? width = null, int? height = null)
+        public Thumbnail With(Uri url = null, int? width = null, int? height = null)
         {
-            return new RiverItemThumbnail(url ?? Url, width ?? Width, height ?? Height);
+            return new Thumbnail(url ?? Url, width ?? Width, height ?? Height);
         }
 
         [JsonProperty(PropertyName = "url")]
@@ -728,18 +728,18 @@
         public int Height { get; }
     }
 
-    public class RiverItemEnclosure
+    public class Enclosure
     {
-        public RiverItemEnclosure(Uri url, string type, string length)
+        public Enclosure(Uri url, string type, string length)
         {
             Url = url;
             Type = type;
             Length = length;
         }
 
-        public RiverItemEnclosure With(Uri url = null, string type = null, string length = null)
+        public Enclosure With(Uri url = null, string type = null, string length = null)
         {
-            return new RiverItemEnclosure(url ?? Url, type ?? Type, length ?? Length);
+            return new Enclosure(url ?? Url, type ?? Type, length ?? Length);
         }
 
         [JsonProperty(PropertyName = "url")]
@@ -829,18 +829,18 @@
 
     public class UpdatedFeeds
     {
-        public UpdatedFeeds(IEnumerable<RiverFeed> feeds = null)
+        public UpdatedFeeds(IEnumerable<FeedSegment> feeds = null)
         {
-            Feeds = ImmutableList.CreateRange<RiverFeed>(feeds ?? Enumerable.Empty<RiverFeed>());
+            Feeds = ImmutableList.CreateRange<FeedSegment>(feeds ?? Enumerable.Empty<FeedSegment>());
         }
 
-        public UpdatedFeeds With(IEnumerable<RiverFeed> feeds)
+        public UpdatedFeeds With(IEnumerable<FeedSegment> feeds)
         {
             return new UpdatedFeeds(feeds);
         }
 
         [JsonProperty(PropertyName = "updatedFeed")]
-        public ImmutableList<RiverFeed> Feeds { get; }
+        public ImmutableList<FeedSegment> Feeds { get; }
     }
 
     public class River
@@ -921,8 +921,8 @@
 
         static readonly HttpClient client = Policies.CreateHttpClient(allowRedirect: false);
 
-        static readonly Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>> FeedElements =
-            new Dictionary<XName, Func<RiverFeed, XElement, RiverFeed>>
+        static readonly Dictionary<XName, Func<FeedSegment, XElement, FeedSegment>> FeedElements =
+            new Dictionary<XName, Func<FeedSegment, XElement, FeedSegment>>
             {
                 { XNames.RSS.Title,       (rf, xe) => rf.With(feedTitle: Util.ParseBody(xe)) },
                 { XNames.RSS10.Title,     (rf, xe) => rf.With(feedTitle: Util.ParseBody(xe)) },
@@ -940,8 +940,8 @@
                 { XNames.Atom.Entry,      (rf, xe) => rf.With(items: rf.Items.Add(LoadItem(xe))) },
             };
 
-        static readonly Dictionary<XName, Func<RiverItem, XElement, RiverItem>> ItemElements =
-            new Dictionary<XName, Func<RiverItem, XElement, RiverItem>>
+        static readonly Dictionary<XName, Func<Item, XElement, Item>> ItemElements =
+            new Dictionary<XName, Func<Item, XElement, Item>>
             {
                 { XNames.RSS.Title,       (ri, xe) => ri.With(title: Util.ParseBody(xe)) },
                 { XNames.RSS.Link,        (ri, xe) => ri.With(link: Util.ParseLink(xe.Value, xe)) },
@@ -1016,9 +1016,9 @@
             if (river.UpdatedFeeds.Feeds.Count > UpdateLimit)
             {
                 Log.SplittingFeed(id, river);
-                ImmutableList<RiverFeed> feeds = river.UpdatedFeeds.Feeds;
-                IEnumerable<RiverFeed> oldFeeds = feeds.Skip(UpdateSize);
-                IEnumerable<RiverFeed> newFeeds = feeds.Take(UpdateSize);
+                ImmutableList<FeedSegment> feeds = river.UpdatedFeeds.Feeds;
+                IEnumerable<FeedSegment> oldFeeds = feeds.Skip(UpdateSize);
+                IEnumerable<FeedSegment> newFeeds = feeds.Take(UpdateSize);
 
                 River oldRiver = river.With(updatedFeeds: river.UpdatedFeeds.With(feeds: oldFeeds));
                 string archiveKey = await this.archiveStore.WriteRiverArchive(oldRiver);
@@ -1048,16 +1048,16 @@
             River[] rivers = await Task.WhenAll(from url in feedUrls select parser.FetchRiver(url));
             Log.AggregateRefreshPulledRivers(id, rivers.Length);
 
-            var newFeeds = new List<RiverFeed>();
+            var newFeeds = new List<FeedSegment>();
             foreach (River feedRiver in rivers)
             {
-                RiverFeed[] newUpdates =
+                FeedSegment[] newUpdates =
                     feedRiver.UpdatedFeeds.Feeds.Where(rf => rf.WhenLastUpdate > lastUpdated).ToArray();
                 Log.AggregateNewUpdates(id, feedRiver.Metadata.OriginUrl, newUpdates.Length);
 
                 if (newUpdates.Length > 0)
                 {
-                    RiverItem[] newItems = newUpdates.SelectMany(rf => rf.Items).ToArray();
+                    Item[] newItems = newUpdates.SelectMany(rf => rf.Items).ToArray();
                     DateTimeOffset biggestUpdate = newUpdates.Max(rf => rf.WhenLastUpdate);
                     Log.AggregateFeedState(id, feedRiver.Metadata.OriginUrl, newUpdates.Length, biggestUpdate);
                     newFeeds.Add(newUpdates[0].With(whenLastUpdate: biggestUpdate, items: newItems));
@@ -1097,7 +1097,7 @@
                     where item.Id != null
                     select item.Id
                 );
-                RiverItem[] newItems = feed.Items.Where(item => !existingItems.Contains(item.Id)).ToArray();
+                Item[] newItems = feed.Items.Where(item => !existingItems.Contains(item.Id)).ToArray();
                 if (newItems.Length > 0)
                 {
                     Uri baseUri = Util.TryParseAbsoluteUrl(feed.WebsiteUrl) ?? feed.FeedUrl;
@@ -1121,7 +1121,7 @@
             return river.With(updatedFeeds: updatedFeeds, metadata: metadata);
         }
 
-        static RiverItem Rebase(RiverItem item, Uri baseUri)
+        static Item Rebase(Item item, Uri baseUri)
         {
             return item.With(
                 link: Util.Rebase(item.Link, baseUri),
@@ -1205,7 +1205,7 @@
                 using (var textReader = new StreamReader(responseStream))
                 using (var reader = XmlReader.Create(textReader)) // TODO: BASE URI?
                 {
-                    RiverFeed result = null;
+                    FeedSegment result = null;
                     XElement element = XElement.Load(reader, LoadOptions.SetBaseUri);
                     if (element.Name == XNames.RSS.Rss)
                     {
@@ -1285,7 +1285,7 @@
             }
         }
 
-        static RiverFeed HandleAtomLink(RiverFeed feed, XElement link)
+        static FeedSegment HandleAtomLink(FeedSegment feed, XElement link)
         {
             string rel = link.Attribute(XNames.Atom.Rel)?.Value ?? "alternate";
             string type = link.Attribute(XNames.Atom.Type)?.Value ?? "text/html";
@@ -1300,7 +1300,7 @@
             return feed;
         }
 
-        static RiverItem HandleAtomLink(RiverItem item, XElement link)
+        static Item HandleAtomLink(Item item, XElement link)
         {
             string rel = link.Attribute(XNames.Atom.Rel)?.Value ?? "alternate";
             string type = link.Attribute(XNames.Atom.Type)?.Value ?? "text/html";
@@ -1320,7 +1320,7 @@
 
             if (link.Attribute(XNames.Atom.Rel)?.Value == "enclosure")
             {
-                item = item.With(enclosures: item.Enclosures.Add(new RiverItemEnclosure(
+                item = item.With(enclosures: item.Enclosures.Add(new Enclosure(
                     length: link.Attribute(XNames.Atom.Length)?.Value,
                     type: type,
                     url: Util.ParseLink(href, link)
@@ -1329,16 +1329,16 @@
             return item;
         }
 
-        static RiverItem HandleEnclosure(RiverItem item, XElement element)
+        static Item HandleEnclosure(Item item, XElement element)
         {
-            return item.With(enclosures: item.Enclosures.Add(new RiverItemEnclosure(
+            return item.With(enclosures: item.Enclosures.Add(new Enclosure(
                 length: element.Attribute(XNames.RSS.Length)?.Value,
                 type: element.Attribute(XNames.RSS.Type)?.Value,
                 url: Util.ParseLink(element.Attribute(XNames.RSS.Url)?.Value, element)
             )));
         }
 
-        static RiverItem HandleGuid(RiverItem item, XElement element)
+        static Item HandleGuid(Item item, XElement element)
         {
             item = item.With(id: element.Value);
 
@@ -1350,7 +1350,7 @@
             return item;
         }
 
-        static RiverItem HandlePubDate(RiverItem item, XElement element)
+        static Item HandlePubDate(Item item, XElement element)
         {
             DateTime? date = Util.ParseDate(element);
             if (date != null && (item.PubDate == null || date > item.PubDate))
@@ -1360,7 +1360,7 @@
             return item;
         }
 
-        static RiverItem HandleThumbnail(RiverItem item, XElement element)
+        static Item HandleThumbnail(Item item, XElement element)
         {
             if (element.Name == XNames.Media.Content && element.Attribute(XNames.Media.Medium)?.Value == "image")
             {
@@ -1371,19 +1371,19 @@
                     Int32.TryParse(element.Attribute(XNames.Media.Width)?.Value, out width) &&
                     Int32.TryParse(element.Attribute(XNames.Media.Height)?.Value, out height))
                 {
-                    item = item.With(thumbnail: new RiverItemThumbnail(url, width, height));
+                    item = item.With(thumbnail: new Thumbnail(url, width, height));
                 }
             }
 
             return item;
         }
 
-        static RiverFeed LoadFeed(Uri feedUrl, XElement item)
+        static FeedSegment LoadFeed(Uri feedUrl, XElement item)
         {
-            var rf = new RiverFeed(feedUrl: feedUrl);
+            var rf = new FeedSegment(feedUrl: feedUrl);
             foreach (XElement xe in item.Elements())
             {
-                Func<RiverFeed, XElement, RiverFeed> action;
+                Func<FeedSegment, XElement, FeedSegment> action;
                 if (FeedElements.TryGetValue(xe.Name, out action)) { rf = action(rf, xe); }
             }
             if (String.IsNullOrWhiteSpace(rf.FeedTitle))
@@ -1398,12 +1398,12 @@
             return rf;
         }
 
-        static RiverItem LoadItem(XElement item)
+        static Item LoadItem(XElement item)
         {
-            var ri = new RiverItem();
+            var ri = new Item();
             foreach (XElement xe in item.Elements())
             {
-                Func<RiverItem, XElement, RiverItem> func;
+                Func<Item, XElement, Item> func;
                 if (ItemElements.TryGetValue(xe.Name, out func)) { ri = func(ri, xe); }
             }
 
@@ -1427,7 +1427,7 @@
             return ri;
         }
 
-        static string CreateItemId(RiverItem item)
+        static string CreateItemId(Item item)
         {
             var guid = "";
             if (item.PubDate != null) { guid += item.PubDate.ToString(); }
@@ -1445,7 +1445,7 @@
         class FetchResult
         {
             public FetchResult(
-                RiverFeed feed,
+                FeedSegment feed,
                 HttpStatusCode status,
                 Uri feedUrl,
                 string etag,
@@ -1458,7 +1458,7 @@
                 LastModified = lastModified;
             }
 
-            public RiverFeed Feed { get; }
+            public FeedSegment Feed { get; }
             public HttpStatusCode Status { get; }
             public Uri FeedUrl { get; }
             public string Etag { get; }

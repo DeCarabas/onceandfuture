@@ -45,7 +45,7 @@
             string status,
             string version,
             HttpResponseMessage response,
-            RiverFeed result,
+            FeedSegment result,
             Stopwatch loadTimer,
             Exception error = null
         )
@@ -83,7 +83,7 @@
             Get().Information("{BaseUrl}: Loading thumbnails...", baseUri);
         }
 
-        public static void EndLoadThumbnails(Uri baseUri, RiverItem[] items, Stopwatch loadTimer)
+        public static void EndLoadThumbnails(Uri baseUri, Item[] items, Stopwatch loadTimer)
         {
             Get().Information(
                 "{BaseUrl}: Finished loading thumbs for {Count} items in {ElapsedMs} ms",

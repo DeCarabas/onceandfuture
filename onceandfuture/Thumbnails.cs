@@ -251,17 +251,17 @@ namespace OnceAndFuture
             foreach (var fmt in formats) { ImageSharp.Configuration.Default.AddImageFormat(fmt); }
         }
 
-        public async Task<RiverItem[]> LoadItemThumbnailsAsync(Uri baseUri, RiverItem[] items)
+        public async Task<Item[]> LoadItemThumbnailsAsync(Uri baseUri, Item[] items)
         {
             Stopwatch loadTimer = Stopwatch.StartNew();
             Log.BeginLoadThumbnails(baseUri);
-            Task<RiverItem>[] itemTasks = new Task<RiverItem>[items.Length];
+            Task<Item>[] itemTasks = new Task<Item>[items.Length];
             for (int i = 0; i < itemTasks.Length; i++)
             {
                 itemTasks[i] = GetItemThumbnailAsync(baseUri, items[i]);
             }
 
-            RiverItem[] newItems = await Task.WhenAll(itemTasks);
+            Item[] newItems = await Task.WhenAll(itemTasks);
             Log.EndLoadThumbnails(baseUri, newItems, loadTimer);
             return newItems;
         }
@@ -274,7 +274,7 @@ namespace OnceAndFuture
             return new HtmlParser().Parse(htmlText);
         }
 
-        async Task<RiverItem> GetItemThumbnailAsync(Uri baseUri, RiverItem item)
+        async Task<Item> GetItemThumbnailAsync(Uri baseUri, Item item)
         {
             Uri itemLink = Util.Rebase(item.Link, baseUri);
             Image<Rgba32> sourceImage = null;
@@ -317,7 +317,7 @@ namespace OnceAndFuture
 
             Uri thumbnailUri = await this.thumbnailStore.StoreImage(thumbnail);
             return item.With(
-                thumbnail: new RiverItemThumbnail(thumbnailUri, thumbnail.Width, thumbnail.Height));
+                thumbnail: new Thumbnail(thumbnailUri, thumbnail.Width, thumbnail.Height));
         }
 
         public static Image<Rgba32> MakeThumbnail(Image<Rgba32> sourceImage)

@@ -238,7 +238,7 @@
 
             if (river.UpdatedFeeds.Feeds.Count > 0)
             {
-                foreach (RiverFeed feed in river.UpdatedFeeds.Feeds)
+                foreach (FeedSegment feed in river.UpdatedFeeds.Feeds)
                 {
                     DumpFeed(feed);
                 }
@@ -259,7 +259,7 @@
             River river = aggregateStore.LoadAggregate(aggregateId).Result;
             if (river.UpdatedFeeds.Feeds.Count > 0)
             {
-                foreach (RiverFeed feed in river.UpdatedFeeds.Feeds)
+                foreach (FeedSegment feed in river.UpdatedFeeds.Feeds)
                 {
                     DumpFeed(feed);
                 }
@@ -284,7 +284,7 @@
                 River river = aggregateStore.LoadAggregate(rd.Id).Result;
                 if (river.UpdatedFeeds.Feeds.Count > 0)
                 {
-                    foreach (RiverFeed feed in river.UpdatedFeeds.Feeds)
+                    foreach (FeedSegment feed in river.UpdatedFeeds.Feeds)
                     {
                         DumpFeed(feed);
                     }
@@ -564,7 +564,7 @@
             return 0;
         }
 
-        static void DumpFeed(RiverFeed riverFeed)
+        static void DumpFeed(FeedSegment riverFeed)
         {
             if (riverFeed != null)
             {
@@ -574,7 +574,7 @@
                 Console.WriteLine("Description: {0}", riverFeed.FeedDescription);
                 Console.WriteLine();
 
-                foreach (RiverItem item in riverFeed.Items)
+                foreach (Item item in riverFeed.Items)
                 {
                     Console.WriteLine(item.Title);
                     Console.WriteLine(new String('-', item.Title.Length));
@@ -588,7 +588,7 @@
                     if (item.Enclosures.Count > 0)
                     {
                         Console.WriteLine("  Enclosures:");
-                        foreach (RiverItemEnclosure e in item.Enclosures)
+                        foreach (Enclosure e in item.Enclosures)
                         {
                             Console.WriteLine("    {0} ({1}): {2}", e.Type, e.Length, e.Url);
                         }
