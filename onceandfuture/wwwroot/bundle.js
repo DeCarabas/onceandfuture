@@ -2042,6 +2042,23 @@ function refreshRiver(index, river_name, river_url, river_id, on_complete) {
       return dispatch(riverUpdateStart(index));
     },
     loaded_json: function loaded_json(dispatch, result) {
+
+      // Here we fix up the thumbnails, removing duplicates. We need to do it somewhere, why not here?
+      var lastThumb = null;
+      result.updatedFeeds.updatedFeed.forEach(function (feed) {
+        feed.item.forEach(function (item) {
+          if (item.thumbnail) {
+            if (item.thumbnail.url === lastThumb) {
+              item.thumbnail = null;
+            } else {
+              lastThumb = item.thumbnail.url;
+            }
+          } else {
+            lastThumb = null;
+          }
+        });
+      });
+
       dispatch(riverUpdateSuccess(index, river_name, river_url, river_id, result));
       if (on_complete) {
         dispatch(on_complete);
