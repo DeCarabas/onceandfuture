@@ -5,9 +5,11 @@ using Amazon.CloudFormation;
 using Amazon.CloudFormation.Model;
 using Amazon.ElasticLoadBalancingV2;
 using Amazon.ElasticLoadBalancingV2.Model;
+using Amazon.KeyManagementService;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -30,6 +32,8 @@ namespace OnceAndFuture.Deployment
             "CTFTRLBsZXhmswyEiONWc4JV/BfHEmPNDpRKJPsDRyuppJBrveVs+lcP5PODbB2TXMwR42FKnByKiA==";
         public const string GitUrl = "git@github.com:DeCarabas/onceandfuture.git";
         public const string Port = "8080";
+        public const string SecretsJson = "secrets.json";
+        public const string KeyId = "df3c54d3-a61a-4561-9414-afa9853143d9";
     }
 
     class BuildVersion
@@ -53,6 +57,7 @@ namespace OnceAndFuture.Deployment
         public string Commit { get; }
         public string Subject { get; }
     }
+
 
     static class TheConsole
     {
@@ -102,6 +107,16 @@ namespace OnceAndFuture.Deployment
             )
             .AddVerb("deploy", "Deploy to an environment.", DoDeploy, v => v
                 .AddOption("force", "Redeploy even if we've already deployed the latest build.")
+            )
+            .AddVerb("encrypt", "Encrypt a setting with KMS.", DoEncrypt, v => v
+                .AddOption("value", "The value to encrypt.", o => o.IsRequired())
+                .AddOption("name", "The name of the setting to decrypt.", o => o.AcceptValue())
+                .AddOption("env", "The environment of the setting to decrypt.", o => o.AcceptValue())
+            )
+            .AddVerb("decrypt", "Decrypt a setting with KMS.", DoDecrypt, v => v
+                .AddOption("value", "The value to decrypt.", o => o.AcceptValue())
+                .AddOption("name", "The name of the setting to decrypt.", o => o.AcceptValue())
+                .AddOption("env", "The environment of the setting to decrypt.", o => o.AcceptValue())
             )
             ;
 
@@ -344,8 +359,8 @@ namespace OnceAndFuture.Deployment
                 if (!healths.TryGetValue(instance.InstanceId, out TargetHealthDescription health))
                 {
                     Console.WriteLine(
-                        "{0,-20} {0} not in health yet...", 
-                        DateTime.Now, 
+                        "{0,-20} {0} not in health yet...",
+                        DateTime.Now,
                         instance.InstanceId
                     );
                     return false;
@@ -387,7 +402,7 @@ namespace OnceAndFuture.Deployment
         static List<Dictionary<string, object>> LoadSecrets(string environment)
         {
             return JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(
-                File.ReadAllText("secrets.json")
+                File.ReadAllText(Configuration.SecretsJson)
             )
             .Where(
                 d => (string)(d["env"]) == environment || (string)(d["env"]) == "all"
@@ -395,6 +410,41 @@ namespace OnceAndFuture.Deployment
             .Select(
                 d => new Dictionary<string, object> { { "KEY", d["name"] }, { "VALUE", d["value"] } }
             ).ToList();
+        }
+
+        static string DecryptValue(string value)
+        {
+            var client = new AmazonKeyManagementServiceClient(Amazon.RegionEndpoint.USWest2);
+            var response = client.DecryptAsync(new Amazon.KeyManagementService.Model.DecryptRequest
+            {
+                CiphertextBlob = new MemoryStream(Convert.FromBase64String(value)),
+                EncryptionContext =
+                {
+                    {"application", Configuration.Application},
+                },
+            }).Result;
+
+            byte[] bytes = new byte[response.Plaintext.Length];
+            response.Plaintext.Read(bytes, 0, bytes.Length);
+            return System.Text.Encoding.UTF8.GetString(bytes).Trim();
+        }
+
+        static string EncryptValue(string value)
+        {
+            var client = new AmazonKeyManagementServiceClient(Amazon.RegionEndpoint.USWest2);
+            var response = client.EncryptAsync(new Amazon.KeyManagementService.Model.EncryptRequest
+            {
+                Plaintext = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(value)),
+                KeyId = Configuration.KeyId,
+                EncryptionContext =
+                {
+                    {"application", Configuration.Application},
+                },
+            }).Result;
+
+            byte[] bytes = new byte[response.CiphertextBlob.Length];
+            response.CiphertextBlob.Read(bytes, 0, bytes.Length);
+            return Convert.ToBase64String(bytes);
         }
 
         static BuildVersion GetLastVersion()
@@ -606,6 +656,95 @@ namespace OnceAndFuture.Deployment
             }
 
             return succeeded ? 0 : 1;
+        }
+
+        static int DoEncrypt(ParsedOpts args)
+        {
+            string value = EncryptValue(args["value"].Value);
+
+            string name = args["name"].Value;
+            string env = args["env"].Value;
+            if (!String.IsNullOrEmpty(name) || !String.IsNullOrEmpty(env))
+            {
+                if (String.IsNullOrEmpty(name) || String.IsNullOrEmpty(env))
+                {
+                    Console.Error.WriteLine("Must specify both of 'name' and 'env'.");
+                    return -1;
+                }
+
+                var secretList = JsonConvert.DeserializeObject<JArray>(File.ReadAllText(Configuration.SecretsJson));
+
+                bool found = false;
+                foreach (JObject secret in secretList)
+                {
+                    string secretEnvironment = secret.Value<string>("env");
+                    string secretName = secret.Value<string>("name");
+                    if (secretEnvironment == env && secretName == name)
+                    {
+                        secret["value"] = JValue.CreateString(value);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    secretList.Add(new JObject(
+                        new JProperty("name", name),
+                        new JProperty("env", env),
+                        new JProperty("ord", secretList.Count),
+                        new JProperty("value", value)
+                    ));
+                }
+
+                File.WriteAllText(
+                    Configuration.SecretsJson,
+                    JsonConvert.SerializeObject(secretList, Formatting.Indented)
+                );
+            }
+            else
+            {
+                Console.WriteLine("{0}", value);
+            }
+
+            return 0;
+
+        }
+
+        static int DoDecrypt(ParsedOpts args)
+        {
+            string value = args["value"].Value;
+            if (String.IsNullOrEmpty(value))
+            {
+                string name = args["name"].Value;
+                string env = args["env"].Value;
+
+                if (String.IsNullOrEmpty(name) || String.IsNullOrEmpty(env))
+                {
+                    Console.Error.WriteLine("Must specify either 'value' or 'name' and 'env'.");
+                    return -1;
+                }
+
+                var secretList = JsonConvert.DeserializeObject<JArray>(File.ReadAllText(Configuration.SecretsJson));
+                foreach (JObject secret in secretList)
+                {
+                    string secretEnvironment = secret.Value<string>("env");
+                    string secretName = secret.Value<string>("name");
+                    if (secretEnvironment == env && secretName == name)
+                    {
+                        value = secret.Value<string>("value");
+                        break;
+                    }
+                }
+
+                if (String.IsNullOrEmpty(value))
+                {
+                    Console.Error.WriteLine("Setting '{0}' in environment '{1}' not found.", name, env);
+                    return -2;
+                }
+            }
+
+            Console.WriteLine("{0}", DecryptValue(value));
+            return 0;
         }
 
         static int Main(string[] args)
