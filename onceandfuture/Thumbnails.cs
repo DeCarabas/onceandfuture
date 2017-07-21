@@ -417,7 +417,7 @@ namespace OnceAndFuture
 
             ImageUrl bestImageUrl = null;
             Image<Rgba32> bestImage = null;
-            int bestArea = 0;
+            float bestArea = 0;
             for (int i = 0; i < images.Length; i++)
             {
                 ImageUrl imageUrl = imageUrls[i];
@@ -426,7 +426,7 @@ namespace OnceAndFuture
 
                 int width = image.Width;
                 int height = image.Height;
-                int area = width * height;
+                float area = width * height;
                 if (area < 5000)
                 {
                     ThumbnailLog.LogThumbnail(baseUrl, imageUrl.Uri, imageUrl.Kind, image, "Small");
@@ -442,9 +442,9 @@ namespace OnceAndFuture
                     continue;
                 }
 
-                if (imageUrl.Uri.AbsolutePath.Contains("sprite")) { ratio /= 10; } // Penalize images named "sprite"
+                if (imageUrl.Uri.AbsolutePath.Contains("sprite")) { area /= 10; } // Penalize images named "sprite"
 
-                if (ratio > bestArea)
+                if (area > bestArea)
                 {
                     if (bestImageUrl != null)
                     {
