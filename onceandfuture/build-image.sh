@@ -55,6 +55,3 @@ echo ======================================
 echo REMOVING CACHE THINGS
 echo ======================================
 rm -rf /var/lib/apt/lists/*
-rm -rf /root/.nuget
-rm -rf /root/.npm
-rm -rf /root/.local
