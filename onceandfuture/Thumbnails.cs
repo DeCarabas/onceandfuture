@@ -1,7 +1,6 @@
 ﻿using AngleSharp.Dom;
 using AngleSharp.Dom.Html;
 using AngleSharp.Parser.Html;
-using ImageSharp;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -28,7 +27,7 @@ namespace OnceAndFuture
             Uri referrer,
             Uri thumbnailUri,
             string kind,
-            Image<Rgba32> image,
+            ThumbnailResponse image,
             string judgement,
             Exception exception = null)
         {
@@ -39,172 +38,18 @@ namespace OnceAndFuture
 
             if (image != null)
             {
-                width = image.Width;
-                height = image.Height;
-                aspectRatio = (float)Math.Max(image.Width, image.Height) / (float)Math.Min(image.Width, image.Height);
-                area = image.Width * image.Height;
+                width = image.OriginalWidth;
+                height = image.OriginalHeight;
+                aspectRatio =
+                    (float)Math.Max(image.OriginalWidth, image.OriginalHeight) /
+                    (float)Math.Min(image.OriginalWidth, image.OriginalHeight);
+                area = image.OriginalWidth * image.OriginalHeight;
             }
 
             Logger.Information(
                 exception,
                 "{Referrer}: Image {Thumbnail} ({Kind}): {Judgement} ({Width}x{Height} / Ratio: {AspectRatio} / Area: {Area})",
                 referrer.AbsoluteUri, thumbnailUri.AbsoluteUri, kind, judgement, width, height, aspectRatio, area);
-        }
-    }
-
-    static class EntropyCropper
-    {
-        const int MaximumSlice = 10;
-
-        static byte[] ToGreyscale(Image<Rgba32> image)
-        {
-            Span<Rgba32> pixels = new Image<Rgba32>(image).Grayscale().Pixels;
-            byte[] bytes = new byte[pixels.Length];
-            for (int i = 0; i < bytes.Length; i++) { bytes[i] = pixels[i].R; }
-            return bytes;
-        }
-
-        static double Entropy(byte[] pix, int stride, int[] hist, int left, int top, int right, int bottom)
-        {
-            Array.Clear(hist, 0, hist.Length);
-            for (int iy = top; iy < bottom; iy++)
-            {
-                int idx = (iy * stride) + left;
-                for (int ix = left; ix < right; ix++)
-                {
-                    hist[pix[idx]]++;
-                    idx++;
-                }
-            }
-
-            double sum = 0;
-
-            // In the math this is sum(hist), but that's weird because it's really just the area of the bitmap.
-            double area = (right - left) * (bottom - top);
-            for (int i = 0; i < hist.Length; i++)
-            {
-                if (hist[i] != 0)
-                {
-                    double v = ((double)hist[i]) / area;
-                    sum += v * Math.Log(v, 2.0);
-                }
-            }
-            return -sum;
-        }
-
-        static void CropVertical(byte[] pix, int width, int height, int targetHeight, out int top, out int bottom)
-        {
-            int[] hist = new int[256];
-            top = 0;
-            bottom = height;
-            while (bottom - top > targetHeight)
-            {
-                int sliceHeight = Math.Min((bottom - top) - targetHeight, MaximumSlice);
-
-                double topEntropy = Entropy(
-                    pix, width, hist,
-                    0, top,
-                    width, top + sliceHeight);
-
-                double bottomEntropy = Entropy(
-                    pix, width, hist,
-                    0, bottom - sliceHeight,
-                    width, bottom);
-                if (topEntropy < bottomEntropy)
-                {
-                    // Top has less entropy, cut it by moving top down.
-                    top += sliceHeight;
-                }
-                else
-                {
-                    // Bottom has less entropy, cut it by moving bottom up.
-                    bottom -= sliceHeight;
-                }
-            }
-        }
-
-        static void CropHorizontal(byte[] pix, int width, int height, int targetWidth, out int left, out int right)
-        {
-            int[] hist = new int[256];
-            left = 0;
-            right = width;
-            while (right - left > targetWidth)
-            {
-                int sliceWidth = Math.Min((right - left) - targetWidth, MaximumSlice);
-
-                double leftEntropy = Entropy(
-                    pix, width, hist,
-                    left, 0,
-                    left + sliceWidth, height);
-
-                double rightEntropy = Entropy(
-                    pix, width, hist,
-                    right - sliceWidth, 0,
-                    right, height);
-                if (leftEntropy < rightEntropy)
-                {
-                    // Left has less entropy, cut it by moving left.
-                    left += sliceWidth;
-                }
-                else
-                {
-                    // Right has less entropy, cut it by moving right.
-                    right -= sliceWidth;
-                }
-            }
-        }
-
-        static void CropSquare(
-            byte[] pix, int width, int height, out int left, out int top, out int right, out int bottom)
-        {
-            if (width > height)
-            {
-                top = 0; bottom = height;
-                CropHorizontal(pix, width, height, height, out left, out right);
-            }
-            else
-            {
-                left = 0; right = width;
-                CropVertical(pix, width, height, width, out top, out bottom);
-            }
-        }
-
-        public static Image<Rgba32> Crop(Image<Rgba32> image, int targetSize)
-        {
-            byte[] values = ToGreyscale(image);
-            int width = image.Width;
-            int height = image.Height;
-
-            int left, right, top, bottom;
-            CropSquare(values, width, height, out left, out top, out right, out bottom);
-
-            // Don't enlarge, it adds nothing.
-            int sourceWidth = right - left;
-            if (sourceWidth < targetSize) { targetSize = sourceWidth; }
-
-            return image
-                .Crop(new Rectangle(left, top, right - left, bottom - top))
-                .Resize(targetSize, targetSize);
-        }
-    }
-
-    static class ThumbnailGate
-    {
-        // ImageSharp consumes tons of resources, and so we want to gate the amount of concurrent JPEG decoding we do.
-        // Right now we constrain to 1; let's see if that helps anything.
-        const int MaximumConcurrentLoads = 1;
-
-        static readonly SemaphoreSlim loadGate = new SemaphoreSlim(MaximumConcurrentLoads);
-
-        public static async Task<IDisposable> Enter()
-        {
-            await loadGate.WaitAsync();
-            return new SemaphoreLock();
-        }
-
-        class SemaphoreLock : IDisposable
-        {
-            public void Dispose() => loadGate.Release();
         }
     }
 
@@ -218,18 +63,39 @@ namespace OnceAndFuture
         public int OriginalWidth { get; set; }
         [JsonProperty("originalHeight")]
         public int OriginalHeight { get; set; }
+        [JsonProperty("thumbnailWidth")]
+        public int ThumbnailWidth { get; set; }
+        [JsonProperty("thumbnailHeight")]
+        public int ThumbnailHeight { get; set; }
         [JsonProperty("error")]
         public JToken Error { get; set; }
+
+        public string ErrorString()
+        {
+            if (Error == null) { return null; }
+            if (Error.Type == JTokenType.String) { return Error.Value<string>(); }
+            if (Error.Type == JTokenType.Object)
+            {
+                var errorObject = (JObject)Error;
+                JToken value = errorObject["message"] ?? errorObject["msg"];
+                if (value != null)
+                {
+                    if (value.Type == JTokenType.String) { return value.Value<string>(); }
+                    return value.ToString();
+                }
+            }
+            return Error.ToString();
+        }
     }
 
-    public class ThumbnailService
+    public class ThumbnailServiceClient
     {
         static readonly HttpClient client = Policies.CreateHttpClient();
 
         readonly string accessKeyId;
         readonly string secretAccessKey;
 
-        public ThumbnailService()
+        public ThumbnailServiceClient()
         {
             AmazonUtils.GetAuthInfo(out this.accessKeyId, out this.secretAccessKey);
         }
@@ -253,17 +119,19 @@ namespace OnceAndFuture
                 Headers = { { "Date", DateTimeOffset.UtcNow.ToString("r") } },
             };
             await AmazonUtils.AuthenticateRequestV4(
-                request, 
-                "us-west-2", 
-                "execute-api", 
-                this.accessKeyId, 
+                request,
+                "us-west-2",
+                "execute-api",
+                this.accessKeyId,
                 this.secretAccessKey
                 );
 
             HttpResponseMessage response = await client.SendAsync(request);
-            var responseString = await response.Content.ReadAsStringAsync();
-            Console.WriteLine(responseString);
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                string error = await response.Content.ReadAsStringAsync();
+                return new ThumbnailResponse { OriginalUrl = imageUri, Error = JValue.CreateString(error) };
+            }
 
             return JsonConvert.DeserializeObject<ThumbnailResponse>(
                 await response.Content.ReadAsStringAsync(),
@@ -274,9 +142,7 @@ namespace OnceAndFuture
 
     class ThumbnailExtractor
     {
-        const int ThumbnailSize = 312;
-
-        readonly RiverThumbnailStore thumbnailStore = new RiverThumbnailStore();
+        readonly ThumbnailServiceClient thumbnailServiceClient = new ThumbnailServiceClient();
 
         static readonly HttpClient client = Policies.CreateHttpClient();
         static readonly MemoryCache imageCache;
@@ -343,7 +209,7 @@ namespace OnceAndFuture
         async Task<Item> GetItemThumbnailAsync(Uri baseUri, Item item)
         {
             Uri itemLink = Util.Rebase(item.Link, baseUri);
-            Image<Rgba32> sourceImage = null;
+            ThumbnailResponse sourceImage = null;
 
             // We might already have found a thumbnail...
             if (item.Thumbnail != null)
@@ -354,7 +220,8 @@ namespace OnceAndFuture
                 {
                     sourceImage = await FetchThumbnailAsync(
                         new ImageUrl { Kind = "EmbeddedThumb", Uri = thumbnailUrl },
-                        baseUrl);
+                        baseUrl,
+                        skipChecks: true);
                     if (sourceImage != null)
                     {
                         ThumbnailLog.LogThumbnail(baseUrl, thumbnailUrl, "EmbeddedThumb", sourceImage, "Best");
@@ -379,19 +246,16 @@ namespace OnceAndFuture
             }
 
             if (sourceImage == null) { return item; }
-            Image<Rgba32> thumbnail = MakeThumbnail(sourceImage);
-
-            Uri thumbnailUri = await this.thumbnailStore.StoreImage(thumbnail);
             return item.With(
-                thumbnail: new Thumbnail(thumbnailUri, thumbnail.Width, thumbnail.Height));
+                thumbnail: new Thumbnail(
+                    sourceImage.ThumbnailUrl,
+                    sourceImage.ThumbnailWidth,
+                    sourceImage.ThumbnailHeight
+                    )
+                );
         }
 
-        public static Image<Rgba32> MakeThumbnail(Image<Rgba32> sourceImage)
-        {
-            return EntropyCropper.Crop(sourceImage, ThumbnailSize);
-        }
-
-        public static async Task<Image<Rgba32>> FindImageAsync(Uri uri)
+        public async Task<ThumbnailResponse> FindImageAsync(Uri uri)
         {
             try
             {
@@ -410,7 +274,7 @@ namespace OnceAndFuture
                     if (mediaType.Contains("image"))
                     {
                         var iu = new ImageUrl { Uri = uri, Kind = "Direct" };
-                        Image<Rgba32> result = await FetchThumbnailAsync(iu, uri);
+                        ThumbnailResponse result = await FetchThumbnailAsync(iu, uri, skipChecks: true);
                         if (result != null) { ThumbnailLog.LogThumbnail(uri, uri, iu.Kind, result, "Best"); }
                         return result;
                     }
@@ -443,7 +307,7 @@ namespace OnceAndFuture
             return null;
         }
 
-        static async Task<Image<Rgba32>> FindThumbnailInSoupAsync(Uri baseUrl, IHtmlDocument document)
+        async Task<ThumbnailResponse> FindThumbnailInSoupAsync(Uri baseUrl, IHtmlDocument document)
         {
             // These get preferential treatment; if we find them then great otherwise we have to search the whole doc.
             // (Note that they also still have to pass the URL filter.)
@@ -456,8 +320,9 @@ namespace OnceAndFuture
 
             if (easyUri != null)
             {
-                ThumbnailLog.LogThumbnail(baseUrl, easyUri.Uri, easyUri.Kind, null, "Best");
-                return await FetchThumbnailAsync(easyUri, baseUrl);
+                ThumbnailResponse easyResponse = await FetchThumbnailAsync(easyUri, baseUrl, skipChecks: true);
+                ThumbnailLog.LogThumbnail(baseUrl, easyUri.Uri, easyUri.Kind, easyResponse, "Best");
+                return easyResponse;
             }
 
             IEnumerable<Uri> distinctSrc =
@@ -472,26 +337,26 @@ namespace OnceAndFuture
 
             Stopwatch loadTimer = Stopwatch.StartNew();
             Log.BeginGetThumbsFromSoup(baseUrl, imageUrls.Length);
-            var potentialThumbnails = new Task<Image<Rgba32>>[imageUrls.Length];
+            var potentialThumbnails = new Task<ThumbnailResponse>[imageUrls.Length];
             for (int i = 0; i < potentialThumbnails.Length; i++)
             {
                 potentialThumbnails[i] = FetchThumbnailAsync(imageUrls[i], baseUrl);
             }
 
-            Image<Rgba32>[] images = await Task.WhenAll(potentialThumbnails);
+            ThumbnailResponse[] images = await Task.WhenAll(potentialThumbnails);
             Log.EndGetThumbsFromSoup(baseUrl, imageUrls.Length, loadTimer);
 
             ImageUrl bestImageUrl = null;
-            Image<Rgba32> bestImage = null;
+            ThumbnailResponse bestImage = null;
             float bestArea = 0;
             for (int i = 0; i < images.Length; i++)
             {
                 ImageUrl imageUrl = imageUrls[i];
-                Image<Rgba32> image = images[i];
+                ThumbnailResponse image = images[i];
                 if (image == null) { continue; } // It was invalid.
 
-                int width = image.Width;
-                int height = image.Height;
+                int width = image.OriginalWidth;
+                int height = image.OriginalHeight;
                 float area = width * height;
                 if (area < 5000)
                 {
@@ -592,7 +457,7 @@ namespace OnceAndFuture
         static readonly TimeSpan ErrorCacheLifetime = TimeSpan.FromSeconds(30);
         static readonly TimeSpan SuccessCacheLifetime = TimeSpan.FromHours(1);
 
-        static async Task<Image<Rgba32>> FetchThumbnailAsync(ImageUrl imageUrl, Uri referrer)
+        async Task<ThumbnailResponse> FetchThumbnailAsync(ImageUrl imageUrl, Uri referrer, bool skipChecks = false)
         {
             try
             {
@@ -606,47 +471,25 @@ namespace OnceAndFuture
                         Log.ThumbnailErrorCacheHit(referrer, imageUrl.Uri, cachedObject);
                         return null;
                     }
-                    if (cachedObject is Image<Rgba32>)
+                    if (cachedObject is ThumbnailResponse)
                     {
                         Log.ThumbnailSuccessCacheHit(referrer, imageUrl.Uri);
-                        return (Image<Rgba32>)cachedObject;
+                        return (ThumbnailResponse)cachedObject;
                     }
 
-                    var request = new HttpRequestMessage(HttpMethod.Get, imageUrl.Uri);
-                    if (referrer != null) { request.Headers.Referrer = referrer; }
-
-                    HttpResponseMessage response = await client.SendAsync(request);
-
-                    if (!response.IsSuccessStatusCode)
+                    ThumbnailResponse response = await this.thumbnailServiceClient.GetThumbnail(
+                        imageUrl.Uri,
+                        skipChecks: skipChecks,
+                        referrer: referrer
+                        );
+                    if (response.Error != null)
                     {
-                        ThumbnailLog.LogThumbnail(referrer, imageUrl.Uri, imageUrl.Kind, null, response.ReasonPhrase);
-                        CacheError(imageUrl, response.ReasonPhrase);
+                        ThumbnailLog.LogThumbnail(referrer, imageUrl.Uri, imageUrl.Kind, null, response.ErrorString());
+                        CacheError(imageUrl, response.ErrorString());
                         return null;
                     }
 
-                    if (Policies.ImageResponseTooBig(response))
-                    {
-                        ThumbnailLog.LogThumbnail(referrer, imageUrl.Uri, imageUrl.Kind, null, "ImageTooBig");
-                        CacheError(imageUrl, "ImageTooBig");
-                        return null;
-                    }
-
-                    byte[] imageBytes = await response.Content.ReadAsByteArrayAsync();
-                    try
-                    {
-                        // TODO: Record the original image and the result of loading somewhere.
-                        using (await ThumbnailGate.Enter())
-                        {
-                            Image<Rgba32> streamImage = Image.Load(imageBytes);
-                            return CacheSuccess(imageUrl, streamImage);
-                        }
-                    }
-                    catch (Exception ae)
-                    {
-                        ThumbnailLog.LogThumbnail(referrer, imageUrl.Uri, imageUrl.Kind, null, "LoadException");
-                        CacheError(imageUrl, ae.Message);
-                        return null;
-                    }
+                    return CacheSuccess(imageUrl, response);
                 },
                 new Dictionary<string, object> { { "uri", imageUrl.Uri } });
             }
@@ -670,11 +513,8 @@ namespace OnceAndFuture
             }
         }
 
-        static Image<Rgba32> CacheSuccess(ImageUrl imageUrl, Image<Rgba32> image)
+        static ThumbnailResponse CacheSuccess(ImageUrl imageUrl, ThumbnailResponse image)
         {
-            // Bypass the cache if the image is too big.
-            if (image.Width * image.Height >= 5000) { return image; }
-
             return imageCache.Set(imageUrl.Uri.AbsoluteUri, image, SuccessCacheLifetime);
         }
 
@@ -722,50 +562,6 @@ namespace OnceAndFuture
         {
             public string Kind;
             public Uri Uri;
-        }
-    }
-
-    public class RiverThumbnailStore
-    {
-        readonly BlobStore blobStore = new BlobStore("onceandfuture-thumbs", "thumbs");
-
-        static bool IsTransparent(Image<Rgba32> image)
-        {
-            Span<Rgba32> pixels = image.Pixels;
-            for (int i = 0; i < pixels.Length; i++)
-            {
-                Rgba32 pixel = pixels[i];
-                if (pixel.A != 255) { return true; }
-            }
-            return false;
-        }
-
-        public async Task<Uri> StoreImage(Image<Rgba32> image)
-        {
-            MemoryStream stream = new MemoryStream();
-            string extension;
-            string mimeType;
-
-            if (IsTransparent(image))
-            {
-                mimeType = "image/png";
-                extension = ".png";
-                image.SaveAsPng(stream);
-            }
-            else
-            {
-                mimeType = "image/jpeg";
-                extension = ".jpg";
-                image.SaveAsJpeg(stream);
-            }
-
-            stream.Position = 0;
-            byte[] hash = SHA1.Create().ComputeHash(stream);
-            string fileName = Convert.ToBase64String(hash).Replace('/', '-') + extension;
-
-            stream.Position = 0;
-            await this.blobStore.PutObject(fileName, mimeType, stream);
-            return this.blobStore.GetObjectUri(fileName);
         }
     }
 }

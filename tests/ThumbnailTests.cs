@@ -12,7 +12,7 @@ namespace tests
         [TestMethod]
         public async Task TestThumbnail()
         {
-            var service = new ThumbnailService();
+            var service = new ThumbnailServiceClient();
             var response = await service.GetThumbnail(
                 new Uri("https://aphyr.com/data/posts/347/2014-02-02_00049.jpg")
                 );            

@@ -1144,26 +1144,21 @@
         readonly UserProfileStore profileStore;
         readonly RiverFeedStore feedStore;
         readonly AggregateRiverStore aggregateStore;
-        readonly RiverThumbnailStore thumbnailStore;
 
         public HealthController(
             UserProfileStore profileStore,
             RiverFeedStore feedStore,
-            AggregateRiverStore aggregateStore,
-            RiverThumbnailStore thumbnailStore)
+            AggregateRiverStore aggregateStore)
         {
             this.profileStore = profileStore;
             this.feedStore = feedStore;
             this.aggregateStore = aggregateStore;
-            this.thumbnailStore = thumbnailStore;
 
             this.healthChecks = new Func<Task<HealthResult>>[]
             {
                 CheckAggregateStore,
                 CheckFeedStore,
                 CheckProfileStore,
-                CheckThumbnailStore,
-                CheckCanMakeThumbnail,
             };
         }
 
@@ -1210,50 +1205,6 @@
             {
                 River river = await this.feedStore.LoadRiverForFeed(new Uri("http://dummy/"));
                 await this.feedStore.WriteRiver(new Uri("http://dummy"), river);
-                result.Healthy = true;
-                result.Log.Add("OK");
-            }
-            catch (Exception e)
-            {
-                result.Healthy = false;
-                result.Log.AddRange(e.ToString().Split('\n'));
-            }
-            return result;
-        }
-
-        async Task<HealthResult> CheckThumbnailStore()
-        {
-            var result = new HealthResult { Title = "Thumbnail Store", Healthy = false };
-            try
-            {
-                byte[] bytes = await LoadFileBytes("dummy.png");
-                Image<Rgba32> img = Image.Load(bytes);
-                /* Uri uri = */
-                await this.thumbnailStore.StoreImage(img);
-                // TODO: validate URI makes an image.
-
-                result.Healthy = true;
-                result.Log.Add("OK");
-            }
-            catch (Exception e)
-            {
-                result.Healthy = false;
-                result.Log.AddRange(e.ToString().Split('\n'));
-            }
-            return result;
-        }
-
-        async Task<HealthResult> CheckCanMakeThumbnail()
-        {
-            var result = new HealthResult { Title = "Make Thumbnail", Healthy = false };
-            try
-            {
-                byte[] bytes = await LoadFileBytes("dummy.png");
-                Image<Rgba32> img = Image.Load(bytes);
-
-                /* var dstImage =*/
-                ThumbnailExtractor.MakeThumbnail(img);
-
                 result.Healthy = true;
                 result.Log.Add("OK");
             }
@@ -1487,13 +1438,11 @@
 
             var aggStore = new AggregateRiverStore();
             var feedStore = new RiverFeedStore();
-            var thumbStore = new RiverThumbnailStore();
             var feedParser = new RiverFeedParser();
 
             var profileStore = new UserProfileStore();
             var authenticationManager = new AuthenticationManager(profileStore);
 
-            services.AddSingleton(typeof(RiverThumbnailStore), thumbStore);
             services.AddSingleton(typeof(AggregateRiverStore), aggStore);
             services.AddSingleton(typeof(RiverFeedStore), feedStore);
             services.AddSingleton(typeof(UserProfileStore), profileStore);

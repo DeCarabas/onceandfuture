@@ -67,7 +67,6 @@
             )
             .AddVerb("thumbnail", "Load an image and produce a thumbnail", DoThumbnail, v => v
                 .AddOption("url", "The URL of the image to load.", o => o.IsRequired())
-                .AddOption("out", "The file to write.", o => o.IsRequired())
             )
             ;
 
@@ -549,18 +548,14 @@
         {
             Uri url = new Uri(args["url"].Value);
 
-            Image<Rgba32> sourceImage = ThumbnailExtractor.FindImageAsync(url).Result;
+            ThumbnailResponse sourceImage = new ThumbnailExtractor().FindImageAsync(url).Result;
             if (sourceImage == null)
             {
                 Console.Error.WriteLine("No image found @ {0}.", url);
                 return 1;
             }
 
-            Image<Rgba32> thumb = ThumbnailExtractor.MakeThumbnail(sourceImage);
-            using (var stream = File.Create(args["out"].Value))
-            {
-                thumb.SaveAsPng(stream);
-            }
+            Console.WriteLine(JsonConvert.SerializeObject(sourceImage, Formatting.Indented));
             return 0;
         }
 
