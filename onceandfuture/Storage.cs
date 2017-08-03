@@ -1,5 +1,6 @@
 ﻿namespace OnceAndFuture
 {
+    using System.Linq;
     using Newtonsoft.Json;
     using Npgsql;
     using Npgsql.Logging;
@@ -34,6 +35,308 @@
         }
     }
 
+    public static class AmazonUtils
+    {
+        static readonly Comparison<KeyValuePair<string, string>> CompareByOrdinalKey = DoCompareByOrdinalKey;
+
+        public static void GetAuthInfo(out string accessKeyId, out string secretAccessKey)
+        {
+            string keyIdString = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+            string accessKeyString = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+
+            if (String.IsNullOrWhiteSpace(keyIdString) || String.IsNullOrWhiteSpace(accessKeyString))
+            {
+                string credPath = Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".aws", "credentials");
+                if (File.Exists(credPath))
+                {
+                    string[] lines = File.ReadAllLines(credPath);
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        string line = lines[i];
+                        if (line.StartsWith("aws_access_key_id", StringComparison.OrdinalIgnoreCase))
+                        {
+                            keyIdString = line.Split(new[] { '=' }, 2)[1].Trim();
+                        }
+                        if (line.StartsWith("aws_secret_access_key", StringComparison.OrdinalIgnoreCase))
+                        {
+                            accessKeyString = line.Split(new[] { '=' }, 2)[1].Trim();
+                        }
+                    }
+                }
+            }
+
+            accessKeyId = keyIdString;
+            secretAccessKey = accessKeyString;
+        }
+
+        /// <summary>Construct the Authorization header value for the specified request.</summary>
+        /// <param name="request"></param>
+        /// <returns>The value of the 'Authorization' header for this request.</returns>
+        /// <remarks>See http://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html#ConstructingTheAuthenticationHeader for more.</remarks>
+        public static string AuthenticateRequestS3(
+            HttpRequestMessage request,
+            string accessKeyId,
+            byte[] secretAccessKey
+        )
+        {
+            string httpVerb = request.Method.ToString().ToUpperInvariant();
+            string contentMD5 = request.Content?.Headers?.Value("Content-MD5") ?? String.Empty;
+            string contentType = request.Content?.Headers?.Value("Content-Type") ?? String.Empty;
+            string date = request.Headers.Value("Date");
+
+            string canonicalizedAmzHeaders = "";
+            foreach (KeyValuePair<string, IEnumerable<string>> headers in request.Headers)
+            {
+                if (headers.Key.StartsWith("x-amz-", StringComparison.OrdinalIgnoreCase))
+                {
+                    canonicalizedAmzHeaders +=
+                        headers.Key.ToLowerInvariant() + ":" + String.Join(",", headers.Value) + "\n";
+                }
+            }
+
+            string canonicalizedResource = request.RequestUri.AbsolutePath;
+
+            string stringToSign =
+                httpVerb + "\n" +
+                contentMD5 + "\n" +
+                contentType + "\n" +
+                date + "\n" +
+                canonicalizedAmzHeaders +
+                canonicalizedResource;
+            using (var hmac = new HMACSHA1(secretAccessKey))
+            {
+                string signature = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(stringToSign)));
+                return "AWS " + accessKeyId + ":" + signature;
+            }
+        }
+
+        /// <summary>Construct the Authorization header value for the specified request.</summary>
+        /// <param name="request"></param>
+        /// <returns>The value of the 'Authorization' header for this request.</returns>
+        /// <remarks>See http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html for more.</remarks>
+        public static async Task AuthenticateRequestV4(
+            HttpRequestMessage request,
+            string region,
+            string service,
+            string accessKeyId,
+            string secretAccessKey
+        )
+        {
+            const string algorithm = "AWS4-HMAC-SHA256";
+
+            if (request.Headers.Contains("x-amz-date")) { throw new InvalidOperationException(); }
+            DateTimeOffset date = DateTimeOffset.UtcNow;            
+            string dateStamp = date.ToString("yyyyMMdd");
+            string amzdate = date.ToString("yyyyMMdd'T'HHmmss'Z'");
+            request.Headers.Add("x-amz-date", amzdate);
+            if (!request.Headers.Contains("host")) { request.Headers.Add("host", request.RequestUri.Host); }
+
+            List<KeyValuePair<string, string>> headers = GetCanonicalHeaders(request);
+
+            // Task 1: Build the 'canonical request'.
+            var canonicalRequest = new StringBuilder();
+            await BuildCanonicalRequest(request, headers, canonicalRequest);
+            byte[] requestBytes = Encoding.UTF8.GetBytes(canonicalRequest.ToString());
+            
+            // Task 2: Build the 'string to sign'
+            var builder = new StringBuilder();
+            builder.Append(algorithm);
+            builder.Append('\n');
+            builder.Append(amzdate);
+            builder.Append('\n');
+            BuildCredentialScope(dateStamp, region, service, builder);
+            builder.Append('\n');
+            BuildSHA256Digest(requestBytes, builder);
+            
+            // Task 3: Calculate the signature
+            byte[] signingKey = GetSignatureKey(secretAccessKey, dateStamp, region, service);
+            byte[] signatureBytes = HmacSHA256(builder.ToString(), signingKey);
+            
+            // Task 4: Build the header.
+            builder.Clear();
+            builder.Append(algorithm);
+            builder.Append(" Credential=");
+            builder.Append(accessKeyId);
+            builder.Append('/');
+            BuildCredentialScope(dateStamp, region, service, builder);
+            builder.Append(", SignedHeaders=");
+            BuildSignedHeaders(headers, builder);
+            builder.Append(", Signature=");
+            HexEncode(signatureBytes, builder);
+
+            // It's JUST THAT EASY.
+            request.Headers.TryAddWithoutValidation("Authorization", builder.ToString());
+        }
+
+        static void BuildCredentialScope(string date, string region, string service, StringBuilder builder)
+        {
+            builder.Append(date);
+            builder.Append('/');
+            builder.Append(region);
+            builder.Append('/');
+            builder.Append(service);
+            builder.Append("/aws4_request");
+        }
+
+        static async Task BuildCanonicalRequest(
+            HttpRequestMessage request, 
+            List<KeyValuePair<string,string>> headers, 
+            StringBuilder builder
+        )
+        {
+            builder.Append(request.Method.ToString().ToUpperInvariant());
+            builder.Append('\n');
+            BuildCanonicalResource(request, builder);
+            builder.Append('\n');
+            BuildCanonicalQueryString(request, builder);
+            builder.Append('\n');
+            BuildCanonicalHeaders(headers, builder);
+            builder.Append('\n');
+            BuildSignedHeaders(headers, builder);
+            builder.Append('\n');
+            await BuildPayloadHash(request, builder);
+        }
+
+        static async Task BuildPayloadHash(HttpRequestMessage request, StringBuilder builder)
+        {
+            byte[] payload = new byte[0];
+            if (request.Content != null) { payload = await request.Content.ReadAsByteArrayAsync(); }
+            BuildSHA256Digest(payload, builder);
+        }        
+
+        static void AddCanonicalHeaders(HttpHeaders headers, List<KeyValuePair<string, string>> result)
+        {
+            foreach (KeyValuePair<string, IEnumerable<string>> header in headers)
+            {
+                string name = header.Key.ToLowerInvariant().Trim();
+                string value = String.Join(",", header.Value.Select(v => v.Replace("  ", " "))).Trim();
+                result.Add(new KeyValuePair<string, string>(name, value));
+            }
+        }
+
+        static List<KeyValuePair<string,string>> GetCanonicalHeaders(HttpRequestMessage request)
+        {
+            var headers = new List<KeyValuePair<string, string>>();
+            AddCanonicalHeaders(request.Headers, headers);
+            if (request.Content != null) { AddCanonicalHeaders(request.Content.Headers, headers); }
+            headers.Sort(CompareByOrdinalKey);
+            return headers;
+        }
+
+        static void BuildCanonicalHeaders(List<KeyValuePair<string, string>> headers, StringBuilder builder)
+        {
+            for (int i = 0; i < headers.Count; i++)
+            {
+                builder.Append(headers[i].Key);
+                builder.Append(':');
+                builder.Append(headers[i].Value);
+                builder.Append('\n');
+            }
+        }
+
+        static void BuildSignedHeaders(List<KeyValuePair<string,string>> headers, StringBuilder builder)
+        {
+            for (int i = 0; i < headers.Count; i++)
+            {
+                if (i > 0) { builder.Append(';'); }
+                builder.Append(headers[i].Key);
+            }
+        }
+
+        static void BuildCanonicalQueryString(HttpRequestMessage request, StringBuilder builder)
+        {
+            // A note about escaping: we don't do any. We assume that the parameters in the request are already
+            // escaped appropriately. We hope that the sort order is not affected by this.
+            string query = request.RequestUri.Query;
+            var parameters = new List<KeyValuePair<string, string>>();
+
+            int index = 1;
+            while (index < query.Length)
+            {
+                int keyStart = index;
+                while (index < query.Length && query[index] != '&' && query[index] != '=') { index++; }
+
+                // Skip degenerate query parameters, e.g. '...&&&...'
+                if (index < query.Length && query[index] == '&') { index += 1; continue; }
+
+                string key = query.Substring(keyStart, index - keyStart);
+                string value = String.Empty;
+                if (index < query.Length && query[index] == '=')
+                {
+                    index += 1;
+                    int valueStart = index;
+                    while (index < query.Length && query[index] != '&') { index += 1; }
+
+                    // Don't bother allocating in the case of '...&foo=&...'
+                    if (index - valueStart > 0) { value = query.Substring(valueStart, index - valueStart); }
+                }
+
+
+                parameters.Add(new KeyValuePair<string, string>(key, value));
+
+                // Now index either points off the end or at a '&', either way this is safe.
+                index++;
+            }
+
+            parameters.Sort(CompareByOrdinalKey);
+
+            for (int i = 0; i < parameters.Count; i++)
+            {
+                if (i > 0) { builder.Append('&'); }
+                builder.Append(parameters[i].Key);
+                builder.Append('=');
+                if (parameters[i].Value.Length > 0)
+                {
+                    builder.Append(parameters[i].Value);
+                }
+            }
+        }
+
+        static void BuildCanonicalResource(HttpRequestMessage request, StringBuilder builder)
+        {
+            builder.Append(request.RequestUri.AbsolutePath);
+        }
+
+        static int DoCompareByOrdinalKey(KeyValuePair<string, string> a, KeyValuePair<string, string> b)
+            => StringComparer.Ordinal.Compare(a.Key, b.Key);
+
+        static void BuildSHA256Digest(byte[] data, StringBuilder builder)
+        {
+            using (var hasher = SHA256.Create())
+            {
+                byte[] hash = hasher.ComputeHash(data);
+                HexEncode(hash, builder);
+            }
+        }
+
+        static void HexEncode(byte[] data, StringBuilder builder)
+        {
+            for (int i = 0; i < data.Length; i++)
+            {
+                builder.AppendFormat("{0:x2}", data[i]);
+            }
+        }
+
+        static byte[] HmacSHA256(string data, byte[] key)
+        {
+            using (KeyedHashAlgorithm kha = new HMACSHA256(key))
+            {
+                return kha.ComputeHash(Encoding.UTF8.GetBytes(data));
+            }
+        }
+
+        static byte[] GetSignatureKey(string key, string dateStamp, string region, string service)
+        {
+            byte[] kSecret = Encoding.UTF8.GetBytes(("AWS4" + key).ToCharArray());
+            byte[] kDate = HmacSHA256(dateStamp, kSecret);
+            byte[] kRegion = HmacSHA256(region, kDate);
+            byte[] kService = HmacSHA256(service, kRegion);
+            byte[] kSigning = HmacSHA256("aws4_request", kService);
+
+            return kSigning;
+        }
+    }
+
     public class BlobStore
     {
         static readonly HttpClient Client = CreateHttpClient();
@@ -64,32 +367,9 @@
             this.bucket = bucket;
             this.subdir = subdir;
 
-            string accessKeyId = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
-            string secretAccessKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
-
-            if (String.IsNullOrWhiteSpace(accessKeyId) || String.IsNullOrWhiteSpace(secretAccessKey))
-            {
-                string credPath = Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".aws", "credentials");
-                if (File.Exists(credPath))
-                {
-                    string[] lines = File.ReadAllLines(credPath);
-                    for (int i = 0; i < lines.Length; i++)
-                    {
-                        string line = lines[i];
-                        if (line.StartsWith("aws_access_key_id", StringComparison.OrdinalIgnoreCase))
-                        {
-                            accessKeyId = line.Split(new[] { '=' }, 2)[1].Trim();
-                        }
-                        if (line.StartsWith("aws_secret_access_key", StringComparison.OrdinalIgnoreCase))
-                        {
-                            secretAccessKey = line.Split(new[] { '=' }, 2)[1].Trim();
-                        }
-                    }
-                }
-            }
-
-            this.accessKeyId = accessKeyId;
-            this.secretAccessKey = Encoding.UTF8.GetBytes(secretAccessKey);
+            string accessKeyString;
+            AmazonUtils.GetAuthInfo(out this.accessKeyId, out accessKeyString);
+            this.secretAccessKey = Encoding.UTF8.GetBytes(accessKeyString);
         }
 
         static HttpClient CreateHttpClient()
@@ -320,35 +600,10 @@
         /// <remarks>See http://docs.aws.amazon.com/AmazonS3/latest/dev/RESTAuthentication.html#ConstructingTheAuthenticationHeader for more.</remarks>
         HttpRequestMessage AuthenticateRequest(HttpRequestMessage request)
         {
-            string httpVerb = request.Method.ToString().ToUpperInvariant();
-            string contentMD5 = request.Content?.Headers?.Value("Content-MD5") ?? String.Empty;
-            string contentType = request.Content?.Headers?.Value("Content-Type") ?? String.Empty;
-            string date = request.Headers.Value("Date");
-
-            string canonicalizedAmzHeaders = "";
-            foreach (KeyValuePair<string, IEnumerable<string>> headers in request.Headers)
-            {
-                if (headers.Key.StartsWith("x-amz-", StringComparison.OrdinalIgnoreCase))
-                {
-                    canonicalizedAmzHeaders += headers.Key.ToLowerInvariant() + ":" + String.Join(",", headers.Value) + "\n";
-                }
-            }
-
-            string canonicalizedResource = request.RequestUri.AbsolutePath;
-
-            string stringToSign =
-                httpVerb + "\n" +
-                contentMD5 + "\n" +
-                contentType + "\n" +
-                date + "\n" +
-                canonicalizedAmzHeaders +
-                canonicalizedResource;
-            using (var hmac = new HMACSHA1(this.secretAccessKey))
-            {
-                string signature = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(stringToSign)));
-                request.Headers.Add("Authorization", "AWS " + accessKeyId + ":" + signature);
-            }
-
+            request.Headers.Add(
+                "Authorization",
+                AmazonUtils.AuthenticateRequestS3(request, this.accessKeyId, this.secretAccessKey)
+            );
             return request;
         }
 
@@ -575,7 +830,7 @@
                 await connection.OpenAsync();
                 return connection;
             }
-            catch(Exception)
+            catch (Exception)
             {
                 if (connection != null) { connection.Dispose(); }
                 throw;
@@ -651,7 +906,7 @@
                     : OperationStatus.Error;
                 LogOperation(operation, key, timer, status, details);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 LogOperation(operation, key, timer, OperationStatus.Exception, e.ToString());
                 throw;

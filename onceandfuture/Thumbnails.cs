@@ -3,6 +3,8 @@ using AngleSharp.Dom.Html;
 using AngleSharp.Parser.Html;
 using ImageSharp;
 using Microsoft.Extensions.Caching.Memory;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -203,6 +205,70 @@ namespace OnceAndFuture
         class SemaphoreLock : IDisposable
         {
             public void Dispose() => loadGate.Release();
+        }
+    }
+
+    public class ThumbnailResponse
+    {
+        [JsonProperty("originalUrl")]
+        public Uri OriginalUrl { get; set; }
+        [JsonProperty("thumbnailUrl")]
+        public Uri ThumbnailUrl { get; set; }
+        [JsonProperty("originalWidth")]
+        public int OriginalWidth { get; set; }
+        [JsonProperty("originalHeight")]
+        public int OriginalHeight { get; set; }
+        [JsonProperty("error")]
+        public JToken Error { get; set; }
+    }
+
+    public class ThumbnailService
+    {
+        static readonly HttpClient client = Policies.CreateHttpClient();
+
+        readonly string accessKeyId;
+        readonly string secretAccessKey;
+
+        public ThumbnailService()
+        {
+            AmazonUtils.GetAuthInfo(out this.accessKeyId, out this.secretAccessKey);
+        }
+
+        public async Task<ThumbnailResponse> GetThumbnail(
+            Uri imageUri,
+            bool skipChecks = false,
+            Uri referrer = null
+            )
+        {
+            string requestUrl =
+                "https://kuehe1it30.execute-api.us-west-2.amazonaws.com/prod/thumbr?" +
+                "dream=" + Uri.EscapeDataString(imageUri.AbsoluteUri);
+            if (skipChecks) { requestUrl += "&skipChecks=true"; }
+            if (referrer != null) { requestUrl += "&referrer=" + Uri.EscapeDataString(referrer.AbsoluteUri); }
+
+            var request = new HttpRequestMessage
+            {
+                RequestUri = new Uri(requestUrl),
+                Method = HttpMethod.Post,
+                Headers = { { "Date", DateTimeOffset.UtcNow.ToString("r") } },
+            };
+            await AmazonUtils.AuthenticateRequestV4(
+                request, 
+                "us-west-2", 
+                "execute-api", 
+                this.accessKeyId, 
+                this.secretAccessKey
+                );
+
+            HttpResponseMessage response = await client.SendAsync(request);
+            var responseString = await response.Content.ReadAsStringAsync();
+            Console.WriteLine(responseString);
+            response.EnsureSuccessStatusCode();
+
+            return JsonConvert.DeserializeObject<ThumbnailResponse>(
+                await response.Content.ReadAsStringAsync(),
+                Policies.SerializerSettings
+                );
         }
     }
 
