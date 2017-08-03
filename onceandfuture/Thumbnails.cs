@@ -53,6 +53,16 @@ namespace OnceAndFuture
         }
     }
 
+    public class ThumbnailRequest
+    {
+        [JsonProperty("dream")]
+        public Uri Dream { get; set; }
+        [JsonProperty("skipChecks")]
+        public bool SkipChecks { get; set; }
+        [JsonProperty("referrer")]
+        public Uri Referrer { get; set; }
+    }
+
     public class ThumbnailResponse
     {
         [JsonProperty("originalUrl")]
@@ -106,27 +116,31 @@ namespace OnceAndFuture
             Uri referrer = null
             )
         {
-            string requestUrl =
-                "https://kuehe1it30.execute-api.us-west-2.amazonaws.com/prod/thumbr?" +
-                "dream=" + Uri.EscapeDataString(imageUri.AbsoluteUri);
-            if (skipChecks) { requestUrl += "&skipChecks=true"; }
-            if (referrer != null) { requestUrl += "&referrer=" + Uri.EscapeDataString(referrer.AbsoluteUri); }
-
-            var request = new HttpRequestMessage
+            var requestMessage = new HttpRequestMessage
             {
-                RequestUri = new Uri(requestUrl),
+                RequestUri = new Uri("https://kuehe1it30.execute-api.us-west-2.amazonaws.com/prod/thumbr"),
                 Method = HttpMethod.Post,
+                Content = new StringContent(
+                    JsonConvert.SerializeObject(new ThumbnailRequest
+                    {
+                        Dream = imageUri,
+                        SkipChecks = skipChecks,
+                        Referrer = referrer,
+                    }, Policies.SerializerSettings),
+                    System.Text.Encoding.UTF8,
+                    "application/json"
+                ),
                 Headers = { { "Date", DateTimeOffset.UtcNow.ToString("r") } },
             };
             await AmazonUtils.AuthenticateRequestV4(
-                request,
+                requestMessage,
                 "us-west-2",
                 "execute-api",
                 this.accessKeyId,
                 this.secretAccessKey
                 );
 
-            HttpResponseMessage response = await client.SendAsync(request);
+            HttpResponseMessage response = await client.SendAsync(requestMessage);
             if (!response.IsSuccessStatusCode)
             {
                 string error = await response.Content.ReadAsStringAsync();
