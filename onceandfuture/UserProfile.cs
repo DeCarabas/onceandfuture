@@ -103,5 +103,6 @@
             => GetDocument(user).ContinueWith(t => t.Result.With(user: user));
         public Task SaveProfile(UserProfile profile) => WriteDocument(profile.User, profile);
         public Task SaveProfileFor(string user, UserProfile profile) => WriteDocument(user, profile);
+        public Task<bool> ProfileExists(string user) => DocumentExists(user);
     }
 }

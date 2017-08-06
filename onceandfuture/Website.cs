@@ -1,6 +1,5 @@
 ﻿namespace OnceAndFuture
 {
-    using ImageSharp;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.AspNetCore.Http;
@@ -9,6 +8,7 @@
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
+    using OnceAndFuture.Templates;
     using Scrypt;
     using Serilog;
     using System;
@@ -412,7 +412,7 @@
             public string Token;
             public DateTimeOffset ExpireAt;
         }
-    }    
+    }
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
     public class EnforceAuthenticationAttribute : Attribute, IAsyncAuthorizationFilter
@@ -437,9 +437,13 @@
             }
         }
     }
-        
+
     public class AppController : Controller
     {
+        static readonly TextTemplate SignupTemplate = new TextTemplate(
+            System.IO.File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "signup.html"))
+            );
+
         readonly AuthenticationManager authenticationManager;
 
         public AppController(AuthenticationManager authenticationManager)
@@ -487,8 +491,7 @@
             string user = form["username"];
             string password = form["password"];
 
-            var authnManager = HttpContext.RequestServices.GetRequiredService<AuthenticationManager>();
-            bool isAuthenticated = await authnManager.ValidateLogin(HttpContext, user, password);
+            bool isAuthenticated = await this.authenticationManager.ValidateLogin(HttpContext, user, password);
             if (isAuthenticated)
             {
                 return RedirectToAction(nameof(App), new { user });
@@ -497,6 +500,109 @@
             {
                 return RedirectToAction(nameof(Login));
             }
+        }
+
+        [HttpGet("/signup")]
+        public IActionResult Signup()
+        {
+            var template = GetTemplate("signup.html");
+            return Content(template.Format(new SignupContext()), "text/html");
+        }
+
+        [HttpPost("/signup")]
+        public async Task<IActionResult> ProcessSignup()
+        {
+            IFormCollection form = await Request.ReadFormAsync(HttpContext.RequestAborted);
+            string user = form["username"];
+            string password = form["password"];
+            string email = form["email"];
+
+            string userIdError = await CheckUserId(user);
+            string emailAddressError = CheckEmail(email);
+            string passwordError = CheckPassword(password, user, email);
+
+            if (userIdError == null && emailAddressError == null && passwordError == null)
+            {
+                // Save the new profile...
+                var profileStore = HttpContext.RequestServices.GetRequiredService<UserProfileStore>();
+                var profile = await profileStore.GetProfileFor(user);
+                var newProfile = profile.With(
+                    password: AuthenticationManager.EncryptPassword(password),
+                    email: email,
+                    emailVerified: false,
+                    logins: new LoginCookie[0]);
+                await profileStore.SaveProfileFor(user, newProfile);
+
+                // ...now make sure we're authenticated...
+                await this.authenticationManager.ValidateLogin(HttpContext, user, password);
+                
+                // ...and we can go to the app.
+                return RedirectToAction(nameof(App), new { user = user });
+            }
+            else
+            {
+                var template = GetTemplate("signup.html");
+                var context = new SignupContext
+                {
+                    UserId = user,
+                    UserIdError = userIdError,
+                    EmailAddress = email,
+                    EmailAddressError = emailAddressError,
+                    PasswordError = passwordError,
+                };
+                return Content(template.Format(context), "text/html");
+            }
+        }
+
+        async Task<string> CheckUserId(string user)
+        {
+            var profileStore = HttpContext.RequestServices.GetRequiredService<UserProfileStore>();
+            if (user == null || user.Length < 3)
+            {
+                return "User IDs must be at least three letters or numbers.";
+            }
+            else if (await profileStore.ProfileExists(user))
+            {
+                return "Sorry, that user ID is already in use!<br/>(Did you forget your password?)";
+            }
+
+            return null;
+        }
+
+        static string CheckEmail(string email)
+        {
+            if (email == null || email.IndexOf('@') < 0)
+            {
+                return "Email addresses always have at least an '@' in them.";
+            }
+            return null;
+        }
+
+        static string CheckPassword(string password, string user, string email)
+        {
+            if (String.IsNullOrWhiteSpace(password) || password.Length < 6)
+            {
+                return "Your password is too short, please use something at least 6 characters long.";
+            }
+            if (String.Equals(password, user, StringComparison.OrdinalIgnoreCase) ||
+                String.Equals(password, email, StringComparison.OrdinalIgnoreCase))
+            {
+                return "Your password must not match your user ID or your email address.";
+            }
+            return null;
+        }
+
+        static TextTemplate GetTemplate(string fileName) => new TextTemplate(
+            System.IO.File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "templates", fileName))
+        );
+
+        class SignupContext
+        {
+            public string UserId { get; set; }
+            public string UserIdError { get; set; }
+            public string EmailAddress { get; set; }
+            public string EmailAddressError { get; set; }
+            public string PasswordError { get; set; }
         }
     }
 
@@ -512,7 +618,7 @@
             this.descriptions = descriptions;
 
             Debug.Assert(
-                tasks.Length == descriptions.Length, 
+                tasks.Length == descriptions.Length,
                 "Task and description arrays must be the same");
 
             var callback = new Action<Task>(OnTaskCompleted);

@@ -125,7 +125,7 @@
             const string algorithm = "AWS4-HMAC-SHA256";
 
             if (request.Headers.Contains("x-amz-date")) { throw new InvalidOperationException(); }
-            DateTimeOffset date = DateTimeOffset.UtcNow;            
+            DateTimeOffset date = DateTimeOffset.UtcNow;
             string dateStamp = date.ToString("yyyyMMdd");
             string amzdate = date.ToString("yyyyMMdd'T'HHmmss'Z'");
             request.Headers.Add("x-amz-date", amzdate);
@@ -137,7 +137,7 @@
             var canonicalRequest = new StringBuilder();
             await BuildCanonicalRequest(request, headers, canonicalRequest);
             byte[] requestBytes = Encoding.UTF8.GetBytes(canonicalRequest.ToString());
-            
+
             // Task 2: Build the 'string to sign'
             var builder = new StringBuilder();
             builder.Append(algorithm);
@@ -147,11 +147,11 @@
             BuildCredentialScope(dateStamp, region, service, builder);
             builder.Append('\n');
             BuildSHA256Digest(requestBytes, builder);
-            
+
             // Task 3: Calculate the signature
             byte[] signingKey = GetSignatureKey(secretAccessKey, dateStamp, region, service);
             byte[] signatureBytes = HmacSHA256(builder.ToString(), signingKey);
-            
+
             // Task 4: Build the header.
             builder.Clear();
             builder.Append(algorithm);
@@ -179,8 +179,8 @@
         }
 
         static async Task BuildCanonicalRequest(
-            HttpRequestMessage request, 
-            List<KeyValuePair<string,string>> headers, 
+            HttpRequestMessage request,
+            List<KeyValuePair<string, string>> headers,
             StringBuilder builder
         )
         {
@@ -202,7 +202,7 @@
             byte[] payload = new byte[0];
             if (request.Content != null) { payload = await request.Content.ReadAsByteArrayAsync(); }
             BuildSHA256Digest(payload, builder);
-        }        
+        }
 
         static void AddCanonicalHeaders(HttpHeaders headers, List<KeyValuePair<string, string>> result)
         {
@@ -214,7 +214,7 @@
             }
         }
 
-        static List<KeyValuePair<string,string>> GetCanonicalHeaders(HttpRequestMessage request)
+        static List<KeyValuePair<string, string>> GetCanonicalHeaders(HttpRequestMessage request)
         {
             var headers = new List<KeyValuePair<string, string>>();
             AddCanonicalHeaders(request.Headers, headers);
@@ -234,7 +234,7 @@
             }
         }
 
-        static void BuildSignedHeaders(List<KeyValuePair<string,string>> headers, StringBuilder builder)
+        static void BuildSignedHeaders(List<KeyValuePair<string, string>> headers, StringBuilder builder)
         {
             for (int i = 0; i < headers.Count; i++)
             {
@@ -798,6 +798,14 @@
         protected abstract string GetObjectID(TDocumentID id);
         protected abstract TDocument GetDefaultValue(TDocumentID id);
 
+        protected async Task<bool> DocumentExists(TDocumentID docid)
+        {
+            string id = GetObjectID(docid);
+            return
+                (await DocumentExistsInDatabase(id)) ||
+                (await DocumentExistsInBlobStore(id));
+        }
+
         protected async Task<TDocument> GetDocument(TDocumentID docid)
         {
             string id = GetObjectID(docid);
@@ -819,6 +827,12 @@
                 string text = reader.ReadToEnd();
                 return JsonConvert.DeserializeObject<TDocument>(text, Policies.SerializerSettings);
             }
+        }
+
+        async Task<bool> DocumentExistsInBlobStore(string id)
+        {
+            byte[] blob = await this.blobStore.GetObject(id);
+            return blob != null;
         }
 
         async Task<NpgsqlConnection> OpenConnection()
@@ -893,6 +907,27 @@
 
                 return null;
             });
+        }
+
+        async Task<bool> DocumentExistsInDatabase(string id)
+        {
+            long count = 0;
+            await DoOperation("read", id, async () =>
+            {
+                using (var connection = await OpenConnection())
+                {
+                    using (NpgsqlCommand cmd = connection.CreateCommand())
+                    {
+                        cmd.CommandText = String.Format("SELECT COUNT(1) FROM {0} WHERE id = @id", this.table);
+                        cmd.Parameters.AddWithValue("id", NpgsqlDbType.Varchar, id);
+                        cmd.Prepare();
+                        count = (long)(await cmd.ExecuteScalarAsync());
+                        return null;
+                    }
+                }
+            });
+
+            return count != 0;
         }
 
         async Task DoOperation(string operation, string key, Func<Task<string>> func)

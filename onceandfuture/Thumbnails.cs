@@ -12,8 +12,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
