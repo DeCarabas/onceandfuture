@@ -6,6 +6,8 @@ Todo:
 
 UI:
 - Account creation flow
+  - Maximum userid length enforced
+  - Banner for success and the like?
 - Recover lost password flow
 - Add/remove river sets
 - Import/export OPML

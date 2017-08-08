@@ -99,7 +99,7 @@ namespace OnceAndFuture
     public class ThumbnailServiceClient
     {
         static readonly HttpClient client = Policies.CreateHttpClient();
-
+        
         readonly string accessKeyId;
         readonly string secretAccessKey;
 

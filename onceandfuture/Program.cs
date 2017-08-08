@@ -7,6 +7,7 @@
     using Microsoft.Extensions.Configuration;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
+    using OnceAndFuture.DAL;
     using Serilog;
     using Serilog.Events;
     using Serilog.Formatting.Compact;
@@ -67,6 +68,8 @@
             )
             .AddVerb("thumbnail", "Load an image and produce a thumbnail", DoThumbnail, v => v
                 .AddOption("url", "The URL of the image to load.", o => o.IsRequired())
+            )
+            .AddVerb("invite", "Create an invitation", DoInvite, v => v
             )
             ;
 
@@ -556,6 +559,17 @@
             }
 
             Console.WriteLine(JsonConvert.SerializeObject(sourceImage, Formatting.Indented));
+            return 0;
+        }
+
+        static int DoInvite(ParsedOpts args)
+        {
+            var store = new InvitationStore();
+            Invitation invite = store.CreateInvitation(null).Result;
+            string code = Uri.EscapeDataString(invite.Code);
+            Console.WriteLine(
+                $"Created invitation {invite.Code}: https://beta.rivers.friendlyhedgehog.com/signup?code={code}"
+            );
             return 0;
         }
 

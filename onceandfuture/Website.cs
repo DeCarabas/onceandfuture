@@ -8,6 +8,7 @@
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
+    using OnceAndFuture.DAL;
     using OnceAndFuture.Templates;
     using Scrypt;
     using Serilog;
@@ -214,6 +215,9 @@
 
     public class AuthenticationManager
     {
+        // TODO: Fix this login duration. :P
+        public static readonly TimeSpan TokenDuration = TimeSpan.FromMinutes(30);
+
         const string CookieName = "onceandfuture-feed";
         const int MaxConcurrentSessions = 10;
         static readonly ScryptEncoder Scrypt = new ScryptEncoder();
@@ -301,6 +305,10 @@
             return newCache;
         }
 
+        public LoginCookie CreateLoginCookie(SecretToken token) =>
+            new LoginCookie(token.Encrypt(), DateTimeOffset.UtcNow + TokenDuration);
+
+
         public async Task<string> GetAuthenticatedUser(HttpContext context)
         {
             // Has somebody already asked me for this request?
@@ -369,9 +377,8 @@
             if (profile.Password == null) { return false; } // No password: disabled
             if (!CheckPassword(password, profile.Password)) { return false; }
 
-            // TODO: Fix this login duration. :P
             SecretToken token = SecretToken.Create();
-            var newLogin = new LoginCookie(token.Encrypt(), DateTimeOffset.UtcNow + TimeSpan.FromMinutes(30));
+            LoginCookie newLogin = CreateLoginCookie(token);
 
             // Insert the new session at the front (because it's most likely to be tried first), and try to keep the
             // number of sessions bounded.
@@ -386,24 +393,30 @@
             var newProfile = profile.With(logins: validLogins);
             await this.profileStore.SaveProfileFor(user, newProfile);
 
-            // Now update the cache.
+            // Now update the cache and context.
+            AddLogin(context, user, token, newLogin);
+            return true;
+        }
+        
+        public void SignOut(HttpContext context)
+        {
+            context.Response.Cookies.Delete(CookieName);
+        }
+
+        public void AddLogin(HttpContext context, string user, SecretToken token, LoginCookie cookie)
+        {
+            // Update the cache.
             LoginCookieCache[] cache;
             if (!this.loginCache.TryGetValue(user, out cache)) { cache = Array.Empty<LoginCookieCache>(); }
             LoginCookieCache[] newCache = new LoginCookieCache[cache.Length + 1];
             Array.Copy(cache, 0, newCache, 1, cache.Length);
-            newCache[0].ExpireAt = newLogin.ExpireAt;
-            newCache[0].Token = newLogin.Id;
+            newCache[0].ExpireAt = cookie.ExpireAt;
+            newCache[0].Token = cookie.Id;
             newCache[0].Plaintext = token;
             this.loginCache[user] = newCache;
 
-            // Now store the cookie.
+            // Store the cookie.
             context.Response.Cookies.Append(CookieName, MakeCookie(user, token));
-            return true;
-        }
-
-        public void SignOut(HttpContext context)
-        {
-            context.Response.Cookies.Delete(CookieName);
         }
 
         struct LoginCookieCache
@@ -480,9 +493,11 @@
         }
 
         [HttpGet("/login")]
-        public IActionResult Login() => PhysicalFile(
-            Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "login.html"),
-            "text/html");
+        public IActionResult Login()
+        {
+            var template = GetTemplate("login.html");
+            return Content(template.Format(null), "text/html");
+        }
 
         [HttpPost("/login")]
         public async Task<IActionResult> ProcessLogin()
@@ -503,53 +518,57 @@
         }
 
         [HttpGet("/signup")]
-        public IActionResult Signup()
+        public IActionResult Signup(string code)
         {
             var template = GetTemplate("signup.html");
-            return Content(template.Format(new SignupContext()), "text/html");
+            var context = new SignupContext { InviteCode = code };
+            return Content(template.Format(context), "text/html");
         }
 
         [HttpPost("/signup")]
         public async Task<IActionResult> ProcessSignup()
         {
             IFormCollection form = await Request.ReadFormAsync(HttpContext.RequestAborted);
-            string user = form["username"];
+            var context = new SignupContext();
+            context.UserId = form["username"];
             string password = form["password"];
-            string email = form["email"];
+            context.EmailAddress = form["email"];
+            context.InviteCode = form["invite"];
 
-            string userIdError = await CheckUserId(user);
-            string emailAddressError = CheckEmail(email);
-            string passwordError = CheckPassword(password, user, email);
+            context.UserIdError = await CheckUserId(context.UserId);
+            context.EmailAddressError = CheckEmail(context.EmailAddress);
+            context.PasswordError = CheckPassword(password, context.UserId, context.EmailAddress);
+            context.InviteCodeError = await CheckInviteCode(context.InviteCode);                       
 
-            if (userIdError == null && emailAddressError == null && passwordError == null)
+            if (!context.HasError)
             {
+                // Construct a login cookie.
+                SecretToken token = SecretToken.Create();
+                LoginCookie newLogin = this.authenticationManager.CreateLoginCookie(token);
+
                 // Save the new profile...
                 var profileStore = HttpContext.RequestServices.GetRequiredService<UserProfileStore>();
-                var profile = await profileStore.GetProfileFor(user);
+                var profile = await profileStore.GetProfileFor(context.UserId);
                 var newProfile = profile.With(
                     password: AuthenticationManager.EncryptPassword(password),
-                    email: email,
+                    email: context.EmailAddress,
                     emailVerified: false,
-                    logins: new LoginCookie[0]);
-                await profileStore.SaveProfileFor(user, newProfile);
+                    logins: new LoginCookie[] { newLogin });
+                await profileStore.SaveProfileFor(context.UserId, newProfile);
 
-                // ...now make sure we're authenticated...
-                await this.authenticationManager.ValidateLogin(HttpContext, user, password);
-                
+                // ...now make sure the authentication manager knows about this session...
+                this.authenticationManager.AddLogin(HttpContext, context.UserId, token, newLogin);
+
+                // ...now claim the invitation, if we can...                
+                var invitationStore = HttpContext.RequestServices.GetRequiredService<InvitationStore>();
+                await invitationStore.TryClaimInvitation(context.InviteCode, context.UserId);
+
                 // ...and we can go to the app.
-                return RedirectToAction(nameof(App), new { user = user });
+                return RedirectToAction(nameof(App), new { user = context.UserId });
             }
             else
             {
                 var template = GetTemplate("signup.html");
-                var context = new SignupContext
-                {
-                    UserId = user,
-                    UserIdError = userIdError,
-                    EmailAddress = email,
-                    EmailAddressError = emailAddressError,
-                    PasswordError = passwordError,
-                };
                 return Content(template.Format(context), "text/html");
             }
         }
@@ -592,6 +611,22 @@
             return null;
         }
 
+        async Task<string> CheckInviteCode(string inviteCode)
+        {
+            if (String.IsNullOrWhiteSpace(inviteCode))
+            {
+                return "Sign up is by invitation only right now, sorry.";
+            }
+
+            var invitationStore = HttpContext.RequestServices.GetRequiredService<InvitationStore>();
+            if (!await invitationStore.IsInvitationValid(inviteCode))
+            {
+                return "I'm afraid that invitation has already been claimed. (Did you forget your user ID?)";
+            }
+
+            return null;
+        }
+
         static TextTemplate GetTemplate(string fileName) => new TextTemplate(
             System.IO.File.ReadAllText(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "templates", fileName))
         );
@@ -603,6 +638,14 @@
             public string EmailAddress { get; set; }
             public string EmailAddressError { get; set; }
             public string PasswordError { get; set; }
+            public string InviteCode { get; set; }
+            public string InviteCodeError { get; set; }
+
+            public bool HasError =>
+                UserIdError != null
+                || EmailAddressError != null
+                || PasswordError != null
+                || InviteCodeError != null;
         }
     }
 
@@ -1554,6 +1597,7 @@
             services.AddSingleton(typeof(UserProfileStore), profileStore);
             services.AddSingleton(typeof(AuthenticationManager), authenticationManager);
             services.AddSingleton(typeof(RiverFeedParser), feedParser);
+            services.AddSingleton(typeof(InvitationStore), new InvitationStore());
         }
 
         public void Configure(

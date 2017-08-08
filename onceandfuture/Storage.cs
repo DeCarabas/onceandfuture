@@ -779,20 +779,15 @@
         }
     }
 
-    public abstract class DocumentStore<TDocumentID, TDocument> where TDocument : class
+    public abstract class DocumentStore<TDocumentID, TDocument> : DAL.DalBase where TDocument : class
     {
         readonly BlobStore blobStore;
         readonly string table;
-        readonly ILogger logger;
 
-        protected DocumentStore(BlobStore blobStore, string table)
+        protected DocumentStore(BlobStore blobStore, string table) : base(table)
         {
             this.blobStore = blobStore;
             this.table = table;
-
-            this.logger = Serilog.Log
-                .ForContext(HoneycombSink.DatasetPropertyKey, "Database")
-                .ForContext("Table", table);
         }
 
         protected abstract string GetObjectID(TDocumentID id);
@@ -833,22 +828,6 @@
         {
             byte[] blob = await this.blobStore.GetObject(id);
             return blob != null;
-        }
-
-        async Task<NpgsqlConnection> OpenConnection()
-        {
-            string connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
-            var connection = new NpgsqlConnection(connectionString);
-            try
-            {
-                await connection.OpenAsync();
-                return connection;
-            }
-            catch (Exception)
-            {
-                if (connection != null) { connection.Dispose(); }
-                throw;
-            }
         }
 
         async Task<TDocument> GetDocumentFromDatabase(string id)
@@ -928,38 +907,6 @@
             });
 
             return count != 0;
-        }
-
-        async Task DoOperation(string operation, string key, Func<Task<string>> func)
-        {
-            Stopwatch timer = Stopwatch.StartNew();
-            try
-            {
-                string details = await func();
-                OperationStatus status = (details == null)
-                    ? OperationStatus.OK
-                    : OperationStatus.Error;
-                LogOperation(operation, key, timer, status, details);
-            }
-            catch (Exception e)
-            {
-                LogOperation(operation, key, timer, OperationStatus.Exception, e.ToString());
-                throw;
-            }
-        }
-
-        void LogOperation(string operation, string key, Stopwatch timer, OperationStatus status, string details)
-        {
-            this.logger.Information(
-                "{Operation} {Key}: {ElapsedMs}ms: {Status}: {Details}",
-                operation, key.ToString(), timer.ElapsedMilliseconds, status.ToString(), details);
-        }
-
-        enum OperationStatus
-        {
-            OK,
-            Error,
-            Exception
         }
     }
 }
