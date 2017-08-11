@@ -13837,6 +13837,7 @@ var MoreBox = function MoreBox(_ref) {
       collapse = _ref.collapse;
 
   if (update.item.length > 3) {
+    var numberMore = update.item.length - 3;
     var moreStyle = {
       textAlign: 'right',
       cursor: 'pointer'
@@ -13846,7 +13847,9 @@ var MoreBox = function MoreBox(_ref) {
       return _react2.default.createElement(
         'p',
         { style: moreStyle, onClick: click },
-        'See more...'
+        'See ',
+        numberMore,
+        ' more...'
       );
     }
     //  else {
@@ -14864,14 +14867,6 @@ var RiverSettingsButton = function RiverSettingsButton(_ref) {
       onShowSettings = _ref.onShowSettings,
       onHideSettings = _ref.onHideSettings;
 
-  // N.B. you might be tempted to style this with transform: translate() to
-  // match the style of the title in the center; but this puts the tooltip in
-  // its own stacking context and it gets sorted under all the other elements.
-  //
-  var style = {
-    position: 'absolute',
-    right: 0, top: 0
-  };
   var modal_kind = (river.modal || {}).kind;
   var is_settings = modal_kind === 'settings' || modal_kind === 'ambiguous';
 
@@ -14886,24 +14881,11 @@ var RiverSettingsButton = function RiverSettingsButton(_ref) {
     tip = 'Show the settings panel for this feed.';
   }
 
-  return _react2.default.createElement(
-    'div',
-    { style: style },
-    _react2.default.createElement(_iconbutton2.default, { tip: tip, icon: icon, onClick: onClick })
-  );
+  return _react2.default.createElement(_iconbutton2.default, { tip: tip, icon: icon, onClick: onClick });
 };
 
 var RiverDragHandle = function RiverDragHandle(_ref2) {
   var river = _ref2.river;
-
-  // N.B. you might be tempted to style this with transform: translate() to
-  // match the style of the title in the center; but this puts the tooltip in
-  // its own stacking context and it gets sorted under all the other elements.
-  //
-  var style = {
-    position: 'absolute',
-    left: 0, top: 0
-  };
 
   var onDrag = function onDrag(ev) {
     ev.dataTransfer.setData("river", river.id);
@@ -14913,7 +14895,7 @@ var RiverDragHandle = function RiverDragHandle(_ref2) {
 
   return _react2.default.createElement(
     'div',
-    { style: style, draggable: 'true', onDragStart: onDrag },
+    { draggable: 'true', onDragStart: onDrag },
     _react2.default.createElement(_iconbutton2.default, {
       cursor: 'move',
       tip: 'Drag this onto another column to re-order it.',
@@ -14926,38 +14908,37 @@ var RiverTitle = function RiverTitle(_ref3) {
   var river = _ref3.river,
       onShowSettings = _ref3.onShowSettings,
       onHideSettings = _ref3.onHideSettings;
-
-  var divStyle = {
-    height: _style.SIZE_RIVER_TITLE_HEIGHT,
-    //width: SIZE_COLUMN_WIDTH,
-    position: 'absolute',
-    left: 0,
-    right: 0, // ::shrug::
-
-    backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR
-  };
-
-  var style = {
-    position: 'absolute',
-    fontSize: _style.SIZE_RIVER_TITLE_FONT,
-    marginTop: 0,
-    left: '50%', top: '50%',
-    transform: 'translateX(-50%) translateY(-50%)'
-  };
-
   return _react2.default.createElement(
     'div',
-    { style: divStyle },
-    _react2.default.createElement(RiverSettingsButton, {
-      river: river,
-      onShowSettings: onShowSettings,
-      onHideSettings: onHideSettings
-    }),
-    _react2.default.createElement(RiverDragHandle, { river: river }),
+    { style: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        height: _style.SIZE_RIVER_TITLE_HEIGHT,
+        backgroundColor: _style.RIVER_TITLE_BACKGROUND_COLOR
+      } },
     _react2.default.createElement(
-      'h1',
-      { style: style },
-      river.name
+      'div',
+      { style: { flex: '0 0 auto' } },
+      _react2.default.createElement(RiverDragHandle, { river: river })
+    ),
+    _react2.default.createElement(
+      'div',
+      { style: { flex: '0 0 auto' } },
+      _react2.default.createElement(
+        'h1',
+        { style: { fontSize: _style.SIZE_RIVER_TITLE_FONT } },
+        river.name
+      )
+    ),
+    _react2.default.createElement(
+      'div',
+      { style: { flex: '0 0 auto' } },
+      _react2.default.createElement(RiverSettingsButton, {
+        river: river,
+        onShowSettings: onShowSettings,
+        onHideSettings: onHideSettings
+      })
     )
   );
 };
