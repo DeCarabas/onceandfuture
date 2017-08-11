@@ -9,15 +9,7 @@ import {
 } from './style';
 import IconButton from './iconbutton';
 
-const RiverSettingsButton = ({river, onShowSettings, onHideSettings}) => {
-  // N.B. you might be tempted to style this with transform: translate() to
-  // match the style of the title in the center; but this puts the tooltip in
-  // its own stacking context and it gets sorted under all the other elements.
-  //
-  const style = {
-    position: 'absolute',
-    right: 0, top: 0,
-  };
+const RiverSettingsButton = ({ river, onShowSettings, onHideSettings }) => {
   const modal_kind = (river.modal || {}).kind;
   const is_settings = modal_kind === 'settings' || modal_kind === 'ambiguous';
 
@@ -32,28 +24,17 @@ const RiverSettingsButton = ({river, onShowSettings, onHideSettings}) => {
     tip = 'Show the settings panel for this feed.';
   }
 
-  return <div style={style}>
-    <IconButton tip={tip} icon={icon} onClick={onClick} />
-  </div>;
+  return <IconButton tip={tip} icon={icon} onClick={onClick} />;
 };
 
-const RiverDragHandle = ({river}) => {
-  // N.B. you might be tempted to style this with transform: translate() to
-  // match the style of the title in the center; but this puts the tooltip in
-  // its own stacking context and it gets sorted under all the other elements.
-  //
-  const style = {
-    position: 'absolute',
-    left: 0, top: 0,
-  };
-
+const RiverDragHandle = ({ river }) => {
   const onDrag = (ev) => {
     ev.dataTransfer.setData("river", river.id);
     const draggo = ev.target.parentNode.parentNode; //.parentNode; but too slow.
     ev.dataTransfer.setDragImage(draggo, 0, 0);
   };
 
-  return <div style={style} draggable="true" onDragStart={onDrag}>
+  return <div draggable="true" onDragStart={onDrag}>
     <IconButton
       cursor='move'
       tip='Drag this onto another column to re-order it.'
@@ -62,34 +43,27 @@ const RiverDragHandle = ({river}) => {
   </div>;
 };
 
-const RiverTitle = ({river, onShowSettings, onHideSettings}) => {
-  const divStyle = {
+const RiverTitle = ({ river, onShowSettings, onHideSettings }) =>
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     height: SIZE_RIVER_TITLE_HEIGHT,
-    //width: SIZE_COLUMN_WIDTH,
-    position: 'absolute',
-    left: 0,
-    right: 0, // ::shrug::
-
     backgroundColor: RIVER_TITLE_BACKGROUND_COLOR,
-  };
-
-  const style = {
-    position: 'absolute',
-    fontSize: SIZE_RIVER_TITLE_FONT,
-    marginTop: 0,
-    left: '50%', top: '50%',
-    transform: 'translateX(-50%) translateY(-50%)',
-  };
-
-  return <div style={divStyle}>
-    <RiverSettingsButton
-      river={river}
-      onShowSettings={onShowSettings}
-      onHideSettings={onHideSettings}
-    />
-    <RiverDragHandle river={river} />
-    <h1 style={style}>{river.name}</h1>
+  }}>
+    <div style={{ flex: '0 0 auto' }}>
+      <RiverDragHandle river={river} />
+    </div>
+    <div style={{ flex: '0 0 auto' }}>
+      <h1 style={{ fontSize: SIZE_RIVER_TITLE_FONT }}>{river.name}</h1>
+    </div>
+    <div style={{ flex: '0 0 auto' }}>
+      <RiverSettingsButton
+        river={river}
+        onShowSettings={onShowSettings}
+        onHideSettings={onHideSettings}
+      />
+    </div>
   </div>;
-};
 
 export default RiverTitle;
