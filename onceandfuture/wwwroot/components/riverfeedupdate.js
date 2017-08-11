@@ -7,13 +7,14 @@ import RiverItem from './riveritem';
 
 const MoreBox = ({update, river_index, expand, collapse}) => {
   if (update.item.length > 3) {
+    const numberMore = update.item.length - 3;
     const moreStyle = {
        textAlign: 'right',
        cursor: 'pointer',
     };
     if (!update.expanded) {
       const click = expand(river_index, update_key(update));
-      return <p style={moreStyle} onClick={click}>See more...</p>;
+      return <p style={moreStyle} onClick={click}>See {numberMore} more...</p>;
     }
     //  else {
     //   const click = collapse(river_index, update_key(update));
