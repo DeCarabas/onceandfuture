@@ -55,6 +55,7 @@ function modalForRiver(river, index, dismiss, dispatch) {
 const RiverTitlePosition = ({ river, onShowSettings, onHideSettings }) => {
   const style = {
     flex: '0 0 auto',
+    border: '1px solid transparent',
   };
 
   return <div style={style}>

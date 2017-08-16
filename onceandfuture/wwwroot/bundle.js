@@ -13696,8 +13696,8 @@ var RiverTitlePosition = function RiverTitlePosition(_ref) {
       onHideSettings = _ref.onHideSettings;
 
   var style = {
-    border: '1px solid transparent',
-    flex: '0 0 auto'
+    flex: '0 0 auto',
+    border: '1px solid transparent'
   };
 
   return _react2.default.createElement(
@@ -14934,7 +14934,6 @@ var RiverTitle = function RiverTitle(_ref3) {
   return _react2.default.createElement(
     'div',
     { style: {
-        border: '1px solid transparent',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',

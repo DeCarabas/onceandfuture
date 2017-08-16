@@ -45,7 +45,6 @@ const RiverDragHandle = ({ river }) => {
 
 const RiverTitle = ({ river, onShowSettings, onHideSettings }) =>
   <div style={{
-    border: '1px solid transparent',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
