@@ -13696,10 +13696,8 @@ var RiverTitlePosition = function RiverTitlePosition(_ref) {
       onHideSettings = _ref.onHideSettings;
 
   var style = {
-    position: 'absolute',
-    top: _style.SIZE_RIVER_TITLE_TOP_SPACER,
-    left: 0, right: 0,
-    border: '1px solid transparent'
+    border: '1px solid transparent',
+    flex: '0 0 auto'
   };
 
   return _react2.default.createElement(
@@ -13726,7 +13724,9 @@ var RiverBase = function RiverBase(_ref2) {
     backgroundColor: _style.RIVER_COLUMN_BACKGROUND_COLOR,
     border: '1px solid ' + _style.COLOR_VERY_DARK,
     height: '100%',
-    width: '100%'
+    width: '100%',
+    display: 'flex',
+    flexDirection: 'column'
   };
 
   var river = rivers[index] || {};
@@ -14985,20 +14985,27 @@ var RiverUpdates = function RiverUpdates(_ref) {
   var style = {
     overflowX: 'hidden',
     overflowY: 'auto',
-    position: 'absolute',
-    top: TOP_SPACE,
-    bottom: SIDE_PADDING,
-    left: SIDE_PADDING,
-    right: SIDE_PADDING
+    marginTop: SIDE_PADDING,
+    marginBottom: SIDE_PADDING,
+    marginLeft: SIDE_PADDING,
+    marginRight: SIDE_PADDING,
+    height: '100%',
+    flex: '1 1 auto',
+    display: 'flex',
+    flexDirection: 'column'
   };
 
   var update_nodes = (river.updates || []).map(function (u) {
-    return _react2.default.createElement(_riverfeedupdate2.default, {
-      update: u,
-      mode: river.mode,
-      river_index: index,
-      key: (0, _util.update_key)(u)
-    });
+    return _react2.default.createElement(
+      'div',
+      { style: { flex: '1 1 auto' } },
+      _react2.default.createElement(_riverfeedupdate2.default, {
+        update: u,
+        mode: river.mode,
+        river_index: index,
+        key: (0, _util.update_key)(u)
+      })
+    );
   });
 
   return _react2.default.createElement(

@@ -42,7 +42,7 @@ function modalForRiver(river, index, dismiss, dispatch) {
       control = <AmbiguousFeedDialog index={index} river={river} address={modal.address} feeds={modal.feeds} />;
       break;
     case 'bubble':
-      control = <RiverBalloon info={modal.info}  dismiss={dismiss} dispatchAction={dispatch} />;
+      control = <RiverBalloon info={modal.info} dismiss={dismiss} dispatchAction={dispatch} />;
       break;
     default: return <span />;
   }
@@ -51,20 +51,18 @@ function modalForRiver(river, index, dismiss, dispatch) {
   </div>;
 }
 
-const RiverTitlePosition = ({river, onShowSettings, onHideSettings}) => {
+const RiverTitlePosition = ({ river, onShowSettings, onHideSettings }) => {
   const style = {
-    position: 'absolute',
-    top: SIZE_RIVER_TITLE_TOP_SPACER,
-    left: 0, right: 0,
     border: '1px solid transparent',
+    flex: '0 0 auto',
   };
 
   return <div style={style}>
-      <RiverTitle
-        river={river}
-        onShowSettings={onShowSettings}
-        onHideSettings={onHideSettings}
-      />
+    <RiverTitle
+      river={river}
+      onShowSettings={onShowSettings}
+      onHideSettings={onHideSettings}
+    />
   </div>;
 };
 
@@ -82,6 +80,8 @@ const RiverBase = ({
     border: '1px solid ' + COLOR_VERY_DARK,
     height: '100%',
     width: '100%',
+    display: 'flex',
+    flexDirection: 'column',
   };
 
   const river = rivers[index] || {};
