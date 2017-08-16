@@ -13711,14 +13711,37 @@ var RiverTitlePosition = function RiverTitlePosition(_ref) {
   );
 };
 
-var RiverBase = function RiverBase(_ref2) {
-  var rivers = _ref2.rivers,
-      index = _ref2.index,
-      onShowSettings = _ref2.onShowSettings,
-      onHideSettings = _ref2.onHideSettings,
-      onDismissBalloon = _ref2.onDismissBalloon,
-      dispatch = _ref2.dispatch,
-      onDropRiver = _ref2.onDropRiver;
+var RiverUpdatesPosition = function RiverUpdatesPosition(_ref2) {
+  var river = _ref2.river,
+      index = _ref2.index;
+
+  var SIDE_PADDING = _style.SIZE_SPACER_WIDTH;
+
+  var style = {
+    overflowX: 'hidden',
+    overflowY: 'auto',
+    height: '100%',
+    flex: '1 1 auto',
+    marginTop: SIDE_PADDING,
+    marginBottom: SIDE_PADDING,
+    marginLeft: SIDE_PADDING,
+    marginRight: SIDE_PADDING
+  };
+  return _react2.default.createElement(
+    'div',
+    { style: style },
+    _react2.default.createElement(_riverupdates2.default, { river: river, index: index })
+  );
+};
+
+var RiverBase = function RiverBase(_ref3) {
+  var rivers = _ref3.rivers,
+      index = _ref3.index,
+      onShowSettings = _ref3.onShowSettings,
+      onHideSettings = _ref3.onHideSettings,
+      onDismissBalloon = _ref3.onDismissBalloon,
+      dispatch = _ref3.dispatch,
+      onDropRiver = _ref3.onDropRiver;
 
   var style = {
     backgroundColor: _style.RIVER_COLUMN_BACKGROUND_COLOR,
@@ -13753,7 +13776,7 @@ var RiverBase = function RiverBase(_ref2) {
       onShowSettings: onShowSettings(index, river),
       onHideSettings: onHideSettings(index)
     }),
-    _react2.default.createElement(_riverupdates2.default, { river: river, index: index }),
+    _react2.default.createElement(RiverUpdatesPosition, { river: river, index: index }),
     modal
   );
 };
@@ -14911,6 +14934,7 @@ var RiverTitle = function RiverTitle(_ref3) {
   return _react2.default.createElement(
     'div',
     { style: {
+        border: '1px solid transparent',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -14971,26 +14995,13 @@ var _riverfeedupdate2 = _interopRequireDefault(_riverfeedupdate);
 
 var _util = __webpack_require__(/*! ../util */ 24);
 
-var _style = __webpack_require__(/*! ./style */ 7);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var RiverUpdates = function RiverUpdates(_ref) {
   var river = _ref.river,
       index = _ref.index;
 
-  var TOP_SPACE = _style.SIZE_UPDATE_TOP;
-  var SIDE_PADDING = _style.SIZE_SPACER_WIDTH;
-
   var style = {
-    overflowX: 'hidden',
-    overflowY: 'auto',
-    marginTop: SIDE_PADDING,
-    marginBottom: SIDE_PADDING,
-    marginLeft: SIDE_PADDING,
-    marginRight: SIDE_PADDING,
-    height: '100%',
-    flex: '1 1 auto',
     display: 'flex',
     flexDirection: 'column'
   };

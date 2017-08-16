@@ -1,24 +1,9 @@
 import React from 'react';
 import RiverFeedUpdate from './riverfeedupdate';
 import { update_key } from '../util';
-import {
-  SIZE_SPACER_WIDTH,
-  SIZE_UPDATE_TOP,
-} from './style';
 
 const RiverUpdates = ({ river, index }) => {
-  const TOP_SPACE = SIZE_UPDATE_TOP;
-  const SIDE_PADDING = SIZE_SPACER_WIDTH;
-
   let style = {
-    overflowX: 'hidden',
-    overflowY: 'auto',
-    marginTop: SIDE_PADDING,
-    marginBottom: SIDE_PADDING,
-    marginLeft: SIDE_PADDING,
-    marginRight: SIDE_PADDING,
-    height: '100%',
-    flex: '1 1 auto',
     display: 'flex',
     flexDirection: 'column',
   };

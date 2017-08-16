@@ -6,6 +6,7 @@ import {
 
   SIZE_RIVER_MODAL_TOP,
   SIZE_RIVER_TITLE_TOP_SPACER,
+  SIZE_SPACER_WIDTH,
 } from './style';
 import AmbiguousFeedDialog from './ambiguousfeeddialog';
 import RiverBalloon from './riverballoon';
@@ -53,7 +54,6 @@ function modalForRiver(river, index, dismiss, dispatch) {
 
 const RiverTitlePosition = ({ river, onShowSettings, onHideSettings }) => {
   const style = {
-    border: '1px solid transparent',
     flex: '0 0 auto',
   };
 
@@ -63,6 +63,24 @@ const RiverTitlePosition = ({ river, onShowSettings, onHideSettings }) => {
       onShowSettings={onShowSettings}
       onHideSettings={onHideSettings}
     />
+  </div>;
+};
+
+const RiverUpdatesPosition = ({ river, index }) => {
+  const SIDE_PADDING = SIZE_SPACER_WIDTH;
+
+  const style = {
+    overflowX: 'hidden',
+    overflowY: 'auto',
+    height: '100%',
+    flex: '1 1 auto',
+    marginTop: SIDE_PADDING,
+    marginBottom: SIDE_PADDING,
+    marginLeft: SIDE_PADDING,
+    marginRight: SIDE_PADDING,
+  };
+  return <div style={style}>
+    <RiverUpdates river={river} index={index} />
   </div>;
 };
 
@@ -107,7 +125,7 @@ const RiverBase = ({
         onShowSettings={onShowSettings(index, river)}
         onHideSettings={onHideSettings(index)}
       />
-      <RiverUpdates river={river} index={index} />
+      <RiverUpdatesPosition river={river} index={index} />
       {modal}
     </div>
   );
