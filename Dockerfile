@@ -1,4 +1,4 @@
-FROM microsoft/dotnet:latest
+FROM microsoft/dotnet:1.1.2-sdk-jessie
 RUN mkdir app
 WORKDIR app
 COPY ./onceandfuture .
