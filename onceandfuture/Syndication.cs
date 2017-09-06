@@ -1177,10 +1177,14 @@
                 if (response.StatusCode == HttpStatusCode.MovedPermanently)
                 {
                     Log.EndGetFeedMovedPermanently(uri, response, loadTimer);
+
+                    Uri newUri = response.Headers.Location;
+                    if (!newUri.IsAbsoluteUri) { newUri = new Uri(requestUri, newUri); }
+
                     return new FetchResult(
                         feed: null,
                         status: HttpStatusCode.MovedPermanently,
-                        feedUrl: response.Headers.Location,
+                        feedUrl: newUri,
                         etag: etag,
                         lastModified: lastModified);
                 }
