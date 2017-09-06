@@ -226,11 +226,18 @@
                 return 100;
             }
 
-            River river;
+            River river = null;
             if (args["noload"].Flag)
             {
-                var cleanRiver = new River(metadata: new RiverFeedMeta(originUrl: feedUrl));
-                river = new RiverFeedParser().UpdateAsync(cleanRiver).Result;
+                // Make sure to follow redirects...
+                for (int i = 0; i < 30; i++)
+                {
+                    var cleanRiver = new River(metadata: new RiverFeedMeta(originUrl: feedUrl));
+                    river = new RiverFeedParser().UpdateAsync(cleanRiver).Result;
+                    if (river.Metadata.LastStatus != HttpStatusCode.Moved) { break; }
+                    feedUrl = river.Metadata.OriginUrl;
+                    Console.WriteLine("(Following redirect to {0})", feedUrl);
+                }
             }
             else
             {
