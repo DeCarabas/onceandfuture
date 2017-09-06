@@ -73,9 +73,11 @@
         public static void EndGetFeedMovedPermanently(Uri uri, HttpResponseMessage response, Stopwatch loadTimer)
             => EndGetFeed(uri, "moved", null, response, null, loadTimer, null);
 
-        public static void FoundThumbnail(Uri baseUrl, Uri uri, string kind)
+        public static void FoundThumbnail(string soup, Uri baseUrl, Uri uri, string kind)
         {
-            Get().Information("{BaseUrl}: Found thumbnail {ImageUrl} ({ThumbKind})", baseUrl, uri, kind);
+            Get().Information(
+                "{BaseUrl}: Found thumbnail {ImageUrl} ({ThumbKind}) in {Soup}",
+                baseUrl, uri, kind, soup);
         }
 
         public static void BeginLoadThumbnails(Uri baseUri)
@@ -92,21 +94,21 @@
                 loadTimer.ElapsedMilliseconds);
         }
 
-        public static void NoThumbnailFound(Uri baseUrl)
+        public static void NoThumbnailFound(string soup, Uri baseUrl)
         {
-            Get().Information("{BaseUrl}: No suitable thumbnails found.", baseUrl);
+            Get().Information("{BaseUrl}: No suitable thumbnails found in soup {Soup}.", baseUrl, soup);
         }
 
-        public static void EndGetThumbsFromSoup(Uri baseUrl, int length, Stopwatch loadTimer)
+        public static void EndGetThumbsFromSoup(string soup, Uri baseUrl, int length, Stopwatch loadTimer)
         {
             Get().Information(
-                "{BaseUrl}: Loaded {Count} thumbnails in {ElapsedMs} ms",
-                baseUrl, length, loadTimer.ElapsedMilliseconds);
+                "{BaseUrl}: Loaded {Count} thumbnails in {ElapsedMs} ms from soup {Soup}",
+                baseUrl, length, loadTimer.ElapsedMilliseconds, soup);
         }
 
-        public static void BeginGetThumbsFromSoup(Uri baseUrl, int length)
+        public static void BeginGetThumbsFromSoup(string soup, Uri baseUrl, int length)
         {
-            Get().Information("{BaseUrl}: Checking {Count} thumbnails...", baseUrl, length);
+            Get().Information("{BaseUrl}: Checking {Count} thumbnails in soup {Soup}...", baseUrl, length, soup);
         }
 
         public static void ThumbnailSuccessCacheHit(Uri baseUrl, Uri imageUrl)

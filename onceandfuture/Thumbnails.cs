@@ -138,17 +138,19 @@ namespace OnceAndFuture
                 this.secretAccessKey
                 );
 
-            HttpResponseMessage response = await client.SendAsync(requestMessage);
-            if (!response.IsSuccessStatusCode)
+            using (HttpResponseMessage response = await client.SendAsync(requestMessage))
             {
-                string error = await response.Content.ReadAsStringAsync();
-                return new ThumbnailResponse { OriginalUrl = imageUri, Error = JValue.CreateString(error) };
-            }
+                if (!response.IsSuccessStatusCode)
+                {
+                    string error = await response.Content.ReadAsStringAsync();
+                    return new ThumbnailResponse { OriginalUrl = imageUri, Error = JValue.CreateString(error) };
+                }
 
-            return JsonConvert.DeserializeObject<ThumbnailResponse>(
-                await response.Content.ReadAsStringAsync(),
-                Policies.SerializerSettings
-                );
+                return JsonConvert.DeserializeObject<ThumbnailResponse>(
+                    await response.Content.ReadAsStringAsync(),
+                    Policies.SerializerSettings
+                    );
+            }
         }
     }
 
@@ -242,6 +244,7 @@ namespace OnceAndFuture
             }
 
             // Look in the item soup; maybe we have it?
+            string[] soup_ids = new string[] { "content", "description", "summary", };
             XElement[] soups = new XElement[] { item.Content, item.Description, item.Summary };
             for (int i = 0; i < soups.Length && sourceImage == null; i++)
             {
@@ -249,7 +252,11 @@ namespace OnceAndFuture
                 if (xe != null)
                 {
                     Uri soupBase = Util.TryParseAbsoluteUrl(xe.BaseUri, baseUri) ?? itemLink ?? baseUri;
-                    sourceImage = await FindThumbnailInSoupAsync(soupBase, SoupFromElement(soups[i]));
+                    sourceImage = await FindThumbnailInSoupAsync(
+                        soup_ids[i],
+                        soupBase, 
+                        SoupFromElement(soups[i])
+                        );
                 }
             }
             if (sourceImage == null && itemLink != null)
@@ -298,7 +305,7 @@ namespace OnceAndFuture
                             var parser = new HtmlParser();
                             IHtmlDocument document = await parser.ParseAsync(stream);
 
-                            return await FindThumbnailInSoupAsync(uri, document);
+                            return await FindThumbnailInSoupAsync("item_document", uri, document);
                         }
                     }
                 }
@@ -319,7 +326,7 @@ namespace OnceAndFuture
             return null;
         }
 
-        async Task<ThumbnailResponse> FindThumbnailInSoupAsync(Uri baseUrl, IHtmlDocument document)
+        async Task<ThumbnailResponse> FindThumbnailInSoupAsync(string soup, Uri baseUrl, IHtmlDocument document)
         {
             // These get preferential treatment; if we find them then great otherwise we have to search the whole doc.
             // (Note that they also still have to pass the URL filter.)
@@ -348,7 +355,7 @@ namespace OnceAndFuture
                  select new ImageUrl { Uri = src, Kind = "ImgTag" }).ToArray();
 
             Stopwatch loadTimer = Stopwatch.StartNew();
-            Log.BeginGetThumbsFromSoup(baseUrl, imageUrls.Length);
+            Log.BeginGetThumbsFromSoup(soup, baseUrl, imageUrls.Length);
             var potentialThumbnails = new Task<ThumbnailResponse>[imageUrls.Length];
             for (int i = 0; i < potentialThumbnails.Length; i++)
             {
@@ -356,7 +363,7 @@ namespace OnceAndFuture
             }
 
             ThumbnailResponse[] images = await Task.WhenAll(potentialThumbnails);
-            Log.EndGetThumbsFromSoup(baseUrl, imageUrls.Length, loadTimer);
+            Log.EndGetThumbsFromSoup(soup, baseUrl, imageUrls.Length, loadTimer);
 
             ImageUrl bestImageUrl = null;
             ThumbnailResponse bestImage = null;
@@ -408,11 +415,11 @@ namespace OnceAndFuture
             if (bestImage != null)
             {
                 ThumbnailLog.LogThumbnail(baseUrl, bestImageUrl.Uri, bestImageUrl.Kind, bestImage, "Best");
-                Log.FoundThumbnail(baseUrl, bestImageUrl.Uri, bestImageUrl.Kind);
+                Log.FoundThumbnail(soup, baseUrl, bestImageUrl.Uri, bestImageUrl.Kind);
             }
             else
             {
-                Log.NoThumbnailFound(baseUrl);
+                Log.NoThumbnailFound(soup, baseUrl);
             }
             return bestImage;
         }
