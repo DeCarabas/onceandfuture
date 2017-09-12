@@ -215,8 +215,7 @@
 
     public class AuthenticationManager
     {
-        // TODO: Fix this login duration. :P
-        public static readonly TimeSpan TokenDuration = TimeSpan.FromMinutes(30);
+        public static readonly TimeSpan TokenDuration = TimeSpan.FromHours(2);
 
         const string CookieName = "onceandfuture-feed";
         const int MaxConcurrentSessions = 10;
