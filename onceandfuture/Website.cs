@@ -216,6 +216,7 @@
     public class AuthenticationManager
     {
         public static readonly TimeSpan TokenDuration = TimeSpan.FromHours(2);
+        public static readonly TimeSpan TokenRefresh = TimeSpan.FromTicks(TokenDuration.Ticks / 2);
 
         const string CookieName = "onceandfuture-feed";
         const int MaxConcurrentSessions = 10;
@@ -246,9 +247,10 @@
         static string MakeCookie(string user, SecretToken token) => $"{token},{user}";
 
         static bool CheckPassword(string password, string encrypted) => Scrypt.Compare(password, encrypted);
+
         public static string EncryptPassword(string password) => Scrypt.Encode(password);
 
-        bool ValidateAgainstLoginCache(SecretToken token, LoginCookieCache[] cache)
+        bool ValidateAgainstLoginCache(SecretToken token, LoginCookieCache[] cache, out DateTimeOffset expireAt)
         {
             for (int i = 0; i < cache.Length; i++)
             {
@@ -256,6 +258,7 @@
                 if (cache[i].Plaintext == token)
                 {
                     // We found it; even if it's expired don't bother looping through the encrypted tokens.
+                    expireAt = cache[i].ExpireAt;
                     return (cache[i].ExpireAt >= DateTimeOffset.UtcNow);
                 }
             }
@@ -267,11 +270,13 @@
                 {
                     // Hooray! Make sure the cache is updated.
                     cache[i].Plaintext = token;
+                    expireAt = cache[i].ExpireAt;
                     return (cache[i].ExpireAt >= DateTimeOffset.UtcNow);
                 }
             }
 
             // Neither encrypted nor plaintext, no access.
+            expireAt = default(DateTimeOffset);
             return false;
         }
 
@@ -307,7 +312,6 @@
         public LoginCookie CreateLoginCookie(SecretToken token) =>
             new LoginCookie(token.Encrypt(), DateTimeOffset.UtcNow + TokenDuration);
 
-
         public async Task<string> GetAuthenticatedUser(HttpContext context)
         {
             // Has somebody already asked me for this request?
@@ -323,9 +327,7 @@
             }
 
             // Is it really a valid cookie?
-            string user;
-            SecretToken token;
-            if (!ParseCookie(cookie, out user, out token))
+            if (!ParseCookie(cookie, out string user, out SecretToken token))
             {
                 Serilog.Log.Debug("Auth: Unable to parse cookie {cookie}", cookie);
                 return null;
@@ -334,11 +336,12 @@
             // Is it valid? Check the cache.
             LoginCookieCache[] cachedCookies;
             if (this.loginCache.TryGetValue(user, out cachedCookies))
-            {
-                if (ValidateAgainstLoginCache(token, cachedCookies))
+            {                
+                if (ValidateAgainstLoginCache(token, cachedCookies, out DateTimeOffset expireAt))
                 {
                     Serilog.Log.Debug("Auth: Login session {token} found in cache", token);
                     context.Items.Add(CookieName, user);
+                    await RefreshLogin(context, user, expireAt);
                     return user;
                 }
             }
@@ -357,10 +360,12 @@
             {
                 cachedCookies = RebuildCache(cachedCookies, profile.Logins);
                 this.loginCache[user] = cachedCookies;
-                if (ValidateAgainstLoginCache(token, cachedCookies))
+                
+                if (ValidateAgainstLoginCache(token, cachedCookies, out DateTimeOffset expireAt))
                 {
                     Serilog.Log.Debug("Auth: Login session {token} found in cache after refresh", token);
                     context.Items.Add(CookieName, user);
+                    await RefreshLogin(context, user, expireAt);
                     return user;
                 }
             }
@@ -370,12 +375,26 @@
             return null;
         }
 
+        async Task RefreshLogin(HttpContext context, string user, DateTimeOffset expireAt)
+        {
+            if (expireAt - DateTimeOffset.Now >= TokenRefresh) { return; }
+
+            UserProfile profile = await this.profileStore.GetProfileFor(user);
+            await CreateLoginAndSaveProfile(context, user, profile);
+        }
+
         public async Task<bool> ValidateLogin(HttpContext context, string user, string password)
         {
             UserProfile profile = await this.profileStore.GetProfileFor(user);
             if (profile.Password == null) { return false; } // No password: disabled
             if (!CheckPassword(password, profile.Password)) { return false; }
 
+            await CreateLoginAndSaveProfile(context, user, profile);
+            return true;
+        }
+
+        public async Task CreateLoginAndSaveProfile(HttpContext context, string user, UserProfile profile)
+        {
             SecretToken token = SecretToken.Create();
             LoginCookie newLogin = CreateLoginCookie(token);
 
@@ -392,30 +411,23 @@
             var newProfile = profile.With(logins: validLogins);
             await this.profileStore.SaveProfileFor(user, newProfile);
 
-            // Now update the cache and context.
-            AddLogin(context, user, token, newLogin);
-            return true;
-        }
-        
-        public void SignOut(HttpContext context)
-        {
-            context.Response.Cookies.Delete(CookieName);
-        }
-
-        public void AddLogin(HttpContext context, string user, SecretToken token, LoginCookie cookie)
-        {
             // Update the cache.
             LoginCookieCache[] cache;
             if (!this.loginCache.TryGetValue(user, out cache)) { cache = Array.Empty<LoginCookieCache>(); }
             LoginCookieCache[] newCache = new LoginCookieCache[cache.Length + 1];
             Array.Copy(cache, 0, newCache, 1, cache.Length);
-            newCache[0].ExpireAt = cookie.ExpireAt;
-            newCache[0].Token = cookie.Id;
+            newCache[0].ExpireAt = newLogin.ExpireAt;
+            newCache[0].Token = newLogin.Id;
             newCache[0].Plaintext = token;
             this.loginCache[user] = newCache;
 
             // Store the cookie.
             context.Response.Cookies.Append(CookieName, MakeCookie(user, token));
+        }
+
+        public void SignOut(HttpContext context)
+        {
+            context.Response.Cookies.Delete(CookieName);
         }
 
         struct LoginCookieCache
@@ -541,22 +553,15 @@
 
             if (!context.HasError)
             {
-                // Construct a login cookie.
-                SecretToken token = SecretToken.Create();
-                LoginCookie newLogin = this.authenticationManager.CreateLoginCookie(token);
-
                 // Save the new profile...
                 var profileStore = HttpContext.RequestServices.GetRequiredService<UserProfileStore>();
                 var profile = await profileStore.GetProfileFor(context.UserId);
                 var newProfile = profile.With(
                     password: AuthenticationManager.EncryptPassword(password),
                     email: context.EmailAddress,
-                    emailVerified: false,
-                    logins: new LoginCookie[] { newLogin });
-                await profileStore.SaveProfileFor(context.UserId, newProfile);
-
-                // ...now make sure the authentication manager knows about this session...
-                this.authenticationManager.AddLogin(HttpContext, context.UserId, token, newLogin);
+                    emailVerified: false
+                );
+                await this.authenticationManager.CreateLoginAndSaveProfile(HttpContext, context.UserId, newProfile);
 
                 // ...now claim the invitation, if we can...                
                 var invitationStore = HttpContext.RequestServices.GetRequiredService<InvitationStore>();
