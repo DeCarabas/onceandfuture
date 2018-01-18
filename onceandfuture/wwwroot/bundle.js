@@ -2767,7 +2767,7 @@ module.exports = focusNode;
   !*** ./node_modules/prop-types/index.js ***!
   \******************************************/
 /*! dynamic exports provided */
-/*! exports used: default */
+/*! all exports used */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(process) {/**
@@ -3731,6 +3731,10 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
+var _propTypes = __webpack_require__(/*! prop-types */ 26);
+
+var _propTypes2 = _interopRequireDefault(_propTypes);
+
 var _react = __webpack_require__(/*! react */ 0);
 
 var _react2 = _interopRequireDefault(_react);
@@ -3809,9 +3813,9 @@ var RiverBalloon = function RiverBalloon(_ref) {
 };
 
 RiverBalloon.propTypes = {
-  info: _react2.default.PropTypes.object.isRequired,
-  dispatchAction: _react2.default.PropTypes.func.isRequired,
-  dismiss: _react2.default.PropTypes.func.isRequired
+  info: _propTypes2.default.object.isRequired,
+  dispatchAction: _propTypes2.default.func.isRequired,
+  dismiss: _propTypes2.default.func.isRequired
 };
 
 exports.default = RiverBalloon;
@@ -3999,8 +4003,6 @@ var _reduxThunk = __webpack_require__(/*! redux-thunk */ 79);
 var _reduxThunk2 = _interopRequireDefault(_reduxThunk);
 
 var _reduxLogger = __webpack_require__(/*! redux-logger */ 80);
-
-var _reduxLogger2 = _interopRequireDefault(_reduxLogger);
 
 var _util = __webpack_require__(/*! ./util */ 8);
 
@@ -4476,7 +4478,7 @@ function sociallistsApp() {
 
 // State store, where it all comes together.
 //
-var logger = (0, _reduxLogger2.default)({
+var logger = (0, _reduxLogger.createLogger)({
   collapsed: true
 });
 var store = (0, _redux.createStore)(sociallistsApp, (0, _redux.applyMiddleware)(_reduxThunk2.default, logger));

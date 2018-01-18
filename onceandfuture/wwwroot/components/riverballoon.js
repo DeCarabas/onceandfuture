@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import React from 'react';
 import {
   SIZE_COLUMN_WIDTH,
@@ -51,9 +52,9 @@ const RiverBalloon = ({info, dispatchAction, dismiss}) => {
 };
 
 RiverBalloon.propTypes = {
-  info: React.PropTypes.object.isRequired,
-  dispatchAction: React.PropTypes.func.isRequired,
-  dismiss: React.PropTypes.func.isRequired,
+  info: PropTypes.object.isRequired,
+  dispatchAction: PropTypes.func.isRequired,
+  dismiss: PropTypes.func.isRequired,
 };
 
 export default RiverBalloon;
