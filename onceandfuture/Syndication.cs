@@ -865,7 +865,7 @@
 
     public class RiverFeedStore : DocumentStore<Uri, River>
     {
-        public RiverFeedStore() : base(new BlobStore("onceandfuture", "feeds"), "feeds") { }   
+        public RiverFeedStore() : base(new BlobStore("onceandfuture", "feeds"), "feeds") { }
 
         protected override River GetDefaultValue(Uri id) => new River(metadata: new RiverFeedMeta(originUrl: id));
         protected override string GetObjectID(Uri id) => Util.HashString(id.AbsoluteUri);
@@ -1628,7 +1628,24 @@
                     throw new FindFeedException("The server at {0} returned an error.", url.Host);
                 }
 
-                return await response.Content.ReadAsStringAsync();
+                var contentHeaders = response.Content.Headers;
+                if (contentHeaders.ContentType != null && contentHeaders.ContentType.CharSet != null)
+                {
+                    string charset = contentHeaders.ContentType.CharSet;
+                    if (charset[0] == '"' && charset[charset.Length-1] == '"') {
+                        charset = charset.Substring(1, charset.Length-2);
+                    }
+                    contentHeaders.ContentType.CharSet = charset;
+                }
+
+                try
+                {
+                    return await response.Content.ReadAsStringAsync();
+                }
+                catch(InvalidOperationException)
+                {
+                    return String.Empty;
+                }
             }
         }
 
