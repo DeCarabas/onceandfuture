@@ -1,18 +1,22 @@
-export function assert(condition, message) {
+// @flow
+// @format
+export function assert(condition /*:boolean*/, message /*:string*/) {
   if (!condition) {
     /* eslint-disable no-debugger, no-console */
     debugger;
-    console.log('Assertion failed: ', message);
+    console.log("Assertion failed: ", message);
     /* eslint-enable */
-    throw Error('Assertion failed', message);
+    throw Error("Assertion failed: " + message);
   }
 }
 
-export function update_key(update) {
-  return update.feedUrl + '|' + update.whenLastUpdate;
+export function update_key(
+  update /*:{feedUrl: string, whenLastUpdate:string}*/
+) {
+  return update.feedUrl + "|" + update.whenLastUpdate;
 }
 
-export function make_full_url(url) {
+export function make_full_url(url /*:string*/) {
   let full_url = url;
   // if (full_url.startsWith('http')) { return full_url; }
   // if (!full_url.startsWith('/')) {
