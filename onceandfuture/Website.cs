@@ -118,6 +118,7 @@
                 }
                 catch (FaultException fe)
                 {
+
                     if (!ctxt.Response.HasStarted)
                     {
                         ctxt.Response.StatusCode = (int)fe.StatusCode;
@@ -336,7 +337,7 @@
             // Is it valid? Check the cache.
             LoginCookieCache[] cachedCookies;
             if (this.loginCache.TryGetValue(user, out cachedCookies))
-            {                
+            {
                 if (ValidateAgainstLoginCache(token, cachedCookies, out DateTimeOffset expireAt))
                 {
                     Serilog.Log.Debug("Auth: Login session {token} found in cache", token);
@@ -360,7 +361,7 @@
             {
                 cachedCookies = RebuildCache(cachedCookies, profile.Logins);
                 this.loginCache[user] = cachedCookies;
-                
+
                 if (ValidateAgainstLoginCache(token, cachedCookies, out DateTimeOffset expireAt))
                 {
                     Serilog.Log.Debug("Auth: Login session {token} found in cache after refresh", token);
@@ -549,7 +550,7 @@
             context.UserIdError = await CheckUserId(context.UserId);
             context.EmailAddressError = CheckEmail(context.EmailAddress);
             context.PasswordError = CheckPassword(password, context.UserId, context.EmailAddress);
-            context.InviteCodeError = await CheckInviteCode(context.InviteCode);                       
+            context.InviteCodeError = await CheckInviteCode(context.InviteCode);
 
             if (!context.HasError)
             {
@@ -563,7 +564,7 @@
                 );
                 await this.authenticationManager.CreateLoginAndSaveProfile(HttpContext, context.UserId, newProfile);
 
-                // ...now claim the invitation, if we can...                
+                // ...now claim the invitation, if we can...
                 var invitationStore = HttpContext.RequestServices.GetRequiredService<InvitationStore>();
                 await invitationStore.TryClaimInvitation(context.InviteCode, context.UserId);
 
@@ -918,13 +919,13 @@
             {
                 // NOTE: I considered and rejected filtering the set of returned feeds by the set of feeds already
                 //       subscribed; but then I thought the UX of the "the URL is ambiguous, which feed do you want?"
-                //       dialog with a single feed was dumb. Then I considered (and rejected) filtering the list of 
+                //       dialog with a single feed was dumb. Then I considered (and rejected) filtering the list of
                 //       feedUrls directly, and auto-subscribing to the only non-subscribed feed. But that's a bad UX:
-                //       if I've forgotten I've subscribed to something and try to re-subscribe then I will end up 
-                //       subscribing to a feed I didn't intend to. (Consider the SFP page, where I find RSS by <a> 
+                //       if I've forgotten I've subscribed to something and try to re-subscribe then I will end up
+                //       subscribing to a feed I didn't intend to. (Consider the SFP page, where I find RSS by <a>
                 //       tags, and where there is a link to both the page comments and the comic present on the front
                 //       page.)
-                // 
+                //
                 Tuple<Uri, string>[] foundFeeds = await LoadFeedTitles(feedUrls);
                 return Json(new
                 {
@@ -1579,12 +1580,12 @@
             services.AddResponseCompression(options =>
             {
                 // N.B.: This enables some known security holes, so be careful. In particular,
-                //       if some part of the request is echoed in the response body then a 
-                //       compression oracle can be used to decode the rest of the body. (See 
-                //       the CRIME, BREACH, and HEIST attacks.) 
+                //       if some part of the request is echoed in the response body then a
+                //       compression oracle can be used to decode the rest of the body. (See
+                //       the CRIME, BREACH, and HEIST attacks.)
                 //
-                //       We still enable this because it's too huge a win to not do, and we 
-                //       only put secrets in the headers which are not subject to compression 
+                //       We still enable this because it's too huge a win to not do, and we
+                //       only put secrets in the headers which are not subject to compression
                 //       anyway. (I understand that these count as famous last words.)
                 options.EnableForHttps = true;
             });
@@ -1627,7 +1628,14 @@
             app.UseResponseCompression();
 
             // serve static files from wwwroot/*
-            app.UseStaticFiles();
+            var cacheHeader = env.IsDevelopment()
+                ? "no-cache"
+                : "public,max-age=" + (int)TimeSpan.FromDays(1).TotalSeconds;
+            app.UseStaticFiles(new StaticFileOptions {
+                OnPrepareResponse = context => {
+                    context.Context.Response.Headers["Cache-Control"] = cacheHeader;
+                },
+            });
 
             // Transform fault exceptions to responses.
             app.UseFaultHandler();
