@@ -1534,21 +1534,24 @@ Object.defineProperty(exports, "__esModule", {
 exports.assert = assert;
 exports.update_key = update_key;
 exports.make_full_url = make_full_url;
-function assert(condition, message) {
+
+// @format
+function assert(condition /*:boolean*/, message /*:string*/) {
   if (!condition) {
     /* eslint-disable no-debugger, no-console */
     debugger;
-    console.log('Assertion failed: ', message);
+    console.log("Assertion failed: ", message);
     /* eslint-enable */
-    throw Error('Assertion failed', message);
+    throw Error("Assertion failed: " + message);
   }
 }
 
-function update_key(update) {
-  return update.feedUrl + '|' + update.whenLastUpdate;
+function update_key(update /*:{feedUrl: string, whenLastUpdate:string}*/
+) {
+  return update.feedUrl + "|" + update.whenLastUpdate;
 }
 
-function make_full_url(url) {
+function make_full_url(url /*:string*/) {
   var full_url = url;
   // if (full_url.startsWith('http')) { return full_url; }
   // if (!full_url.startsWith('/')) {
@@ -3848,12 +3851,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } // @format
+
 
 var MsPerSecond = 1000;
 var SecondsPerMinute = 60;
 var MinutesPerHour = 60;
-var HoursPerDay = 60;
+var HoursPerDay = 24;
 var DaysPerWeek = 7;
 
 var MsPerMinute = MsPerSecond * SecondsPerMinute;
@@ -3861,10 +3865,33 @@ var MsPerHour = MsPerMinute * MinutesPerHour;
 var MsPerDay = MsPerHour * HoursPerDay;
 var MsPerWeek = MsPerDay * DaysPerWeek;
 
+// We use 400 years so that we can hit every single leap year rule, and then:
+// 400 years have 146097 days
+// 400 years have 4800 months
+function daysToMonths(days) {
+  return days * 4800 / 146097;
+}
+
+/*::
+type Props = {
+  time: string
+};
+
+type State = {
+  now: number
+};
+*/
+
+var round = Math.round;
+
 var RelTime = function (_React$Component) {
   _inherits(RelTime, _React$Component);
 
-  function RelTime(props) {
+  /*::
+  timerID: TimeoutID;
+  */
+
+  function RelTime(props /*: Props*/) {
     _classCallCheck(this, RelTime);
 
     var _this = _possibleConstructorReturn(this, (RelTime.__proto__ || Object.getPrototypeOf(RelTime)).call(this, props));
@@ -3874,7 +3901,7 @@ var RelTime = function (_React$Component) {
   }
 
   _createClass(RelTime, [{
-    key: 'componentDidMount',
+    key: "componentDidMount",
     value: function componentDidMount() {
       var _this2 = this;
 
@@ -3884,12 +3911,12 @@ var RelTime = function (_React$Component) {
       }, interval);
     }
   }, {
-    key: 'componentWillUnmount',
+    key: "componentWillUnmount",
     value: function componentWillUnmount() {
       clearTimeout(this.timerID);
     }
   }, {
-    key: 'tick',
+    key: "tick",
     value: function tick() {
       var _this3 = this;
 
@@ -3902,8 +3929,8 @@ var RelTime = function (_React$Component) {
       }, interval);
     }
   }, {
-    key: 'nextIntervalMs',
-    value: function nextIntervalMs(now) {
+    key: "nextIntervalMs",
+    value: function nextIntervalMs(now /*: number*/) {
       var parsed = Date.parse(this.props.time);
       var delta = now - parsed;
       if (delta > MsPerWeek) {
@@ -3922,55 +3949,70 @@ var RelTime = function (_React$Component) {
       return MsPerMinute;
     }
   }, {
-    key: 'render',
+    key: "render",
     value: function render() {
       var time = this.props.time;
       var parsed = Date.parse(time);
       var delta = this.state.now - parsed;
 
+      // + " (" + this.props.time + ")";
       var sentence = this.sentenceForDelta(delta);
 
       return _react2.default.createElement(
-        'span',
+        "span",
         null,
         sentence
       );
     }
   }, {
-    key: 'sentenceForDelta',
-    value: function sentenceForDelta(delta) {
-      var unit, value;
-      if (delta > MsPerWeek) {
-        value = Math.round(delta / MsPerWeek);
-        unit = 'week';
-      } else if (delta > MsPerDay) {
-        value = Math.round(delta / MsPerDay);
-        if (value === 1) {
-          return "yesterday";
-        }
-        unit = 'day';
-      } else if (delta > MsPerHour) {
-        value = Math.round(delta / MsPerHour);
-        unit = 'hour';
-      } else if (delta > MsPerMinute) {
-        value = Math.round(delta / MsPerMinute);
-        unit = 'minute';
-      } else if (delta > MsPerSecond) {
-        value = Math.round(delta / MsPerSecond);
-        unit = 'second';
-      } else {
-        return "just now";
-      }
+    key: "sentenceForDelta",
+    value: function sentenceForDelta(delta /*: number*/) {
+      var seconds = round(delta / MsPerSecond);
+      var minutes = round(delta / MsPerMinute);
+      var hours = round(delta / MsPerHour);
+      var days = round(delta / MsPerDay);
+      var months = round(daysToMonths(delta / MsPerDay));
+      var years = round(daysToMonths(delta / MsPerDay) / 12);
 
-      if (value > 1) {
-        unit = unit + "s";
+      if (seconds < 44) {
+        return "a few seconds ago";
       }
-      return value + " " + unit + " ago";
+      if (seconds < 45) {
+        return seconds + " seconds ago";
+      }
+      if (minutes <= 1) {
+        return "one minute ago";
+      }
+      if (minutes < 45) {
+        return minutes + " minutes ago";
+      }
+      if (hours <= 1) {
+        return "one hour ago";
+      }
+      if (hours < 22) {
+        return hours + " hours ago";
+      }
+      if (days <= 1) {
+        return "yesterday";
+      }
+      if (days < 26) {
+        return days + " days ago";
+      }
+      if (months <= 1) {
+        return "last month";
+      }
+      if (months < 11) {
+        return months + " months ago";
+      }
+      if (years <= 1) {
+        return "last year";
+      }
+      return years + " years ago";
     }
   }]);
 
   return RelTime;
-}(_react2.default.Component);
+}(_react2.default.Component /*::<Props, State>*/);
 
 exports.default = RelTime;
 
