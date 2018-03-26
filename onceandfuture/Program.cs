@@ -136,12 +136,12 @@
                 logConfig.WriteTo.Console(new RenderedCompactJsonFormatter());
             }
 
-            string honeycomb_key = Environment.GetEnvironmentVariable("HONEYCOMB_KEY");
-            if (honeycomb_key != null)
-            {
-                Console.WriteLine("(Honeycomb configured.)");
-                logConfig.WriteTo.Honeycomb("server", honeycomb_key);
-            }
+            // string honeycomb_key = Environment.GetEnvironmentVariable("HONEYCOMB_KEY");
+            // if (honeycomb_key != null)
+            // {
+            //     Console.WriteLine("(Honeycomb configured.)");
+            //     logConfig.WriteTo.Honeycomb("server", honeycomb_key);
+            // }
             Serilog.Log.Logger = logConfig.CreateLogger();
 
             ThumbnailExtractor.ConfigureProcess();
