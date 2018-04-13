@@ -8,6 +8,7 @@
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using OnceAndFuture.DAL;
+    using OnceAndFuture.Syndication;
     using Serilog;
     using Serilog.Events;
     using Serilog.Formatting.Compact;
@@ -417,7 +418,7 @@
                     rivers: profile.Rivers.Add(
                         new RiverDefinition(
                             name: riverName,
-                            id: Util.MakeID(),
+                            id: SyndicationUtil.MakeID(),
                             feeds: new Uri[] { feedRiver.Metadata.OriginUrl })));
             }
             else

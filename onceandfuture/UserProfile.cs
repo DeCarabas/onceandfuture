@@ -6,6 +6,7 @@
     using System.Linq;
     using System.Threading.Tasks;
     using Newtonsoft.Json;
+    using OnceAndFuture.Syndication;
 
     public class RiverDefinition
     {
@@ -98,7 +99,7 @@
         public UserProfileStore() : base(new BlobStore("onceandfuture-profiles", "profiles"), "profiles") { }
 
         protected override UserProfile GetDefaultValue(string id) => new UserProfile();
-        protected override string GetObjectID(string id) => Util.HashString(id);
+        protected override string GetObjectID(string id) => SyndicationUtil.HashString(id);
         public Task<UserProfile> GetProfileFor(string user) 
             => GetDocument(user).ContinueWith(t => t.Result.With(user: user));
         public Task SaveProfile(UserProfile profile) => WriteDocument(profile.User, profile);

@@ -1,18 +1,16 @@
 ﻿namespace OnceAndFuture
 {
+    using OnceAndFuture.Syndication;
+    using Serilog;
+    using Serilog.Events;
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Diagnostics;
-    using System.IO;
-    using System.Net;
     using System.Net.Http;
     using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
     using System.Xml;
-    using Polly;
-    using Serilog;
-    using Serilog.Events;
 
     static class Log
     {

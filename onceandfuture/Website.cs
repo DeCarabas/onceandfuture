@@ -9,6 +9,7 @@
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
     using OnceAndFuture.DAL;
+    using OnceAndFuture.Syndication;
     using OnceAndFuture.Templates;
     using Scrypt;
     using Serilog;
@@ -787,12 +788,12 @@
 
             UserProfile profile = await this.profileStore.GetProfileFor(user);
 
-            string name = requestBody.Name ?? Util.RiverName(profile.Rivers);
+            string name = requestBody.Name ?? SyndicationUtil.RiverName(profile.Rivers);
             RiverDefinition river = profile.Rivers.FirstOrDefault(
                 rd => String.Equals(rd.Name, name, StringComparison.OrdinalIgnoreCase));
             if (river == null)
             {
-                var newRiver = new RiverDefinition(name, requestBody.Id ?? Util.MakeID());
+                var newRiver = new RiverDefinition(name, requestBody.Id ?? SyndicationUtil.MakeID());
                 var newProfile = profile.With(rivers: profile.Rivers.Add(newRiver));
 
                 await this.profileStore.SaveProfileFor(user, newProfile);
@@ -965,7 +966,7 @@
             for (int i = feedrivers.Count - 1; i >= 0; i--)
             {
                 River r = feedrivers[i];
-                if (Util.HashString(r.Metadata.OriginUrl.AbsoluteUri) == sourceId)
+                if (SyndicationUtil.HashString(r.Metadata.OriginUrl.AbsoluteUri) == sourceId)
                 {
                     newRiver = newRiver.With(feeds: newRiver.Feeds.RemoveAt(i));
                     feedrivers.RemoveAt(i);
@@ -977,7 +978,7 @@
                 // Remove all instances of the source from the current aggregate.
                 River aggregate = await this.aggregateStore.LoadAggregate(id);
                 ImmutableList<FeedSegment> newFeeds = aggregate.UpdatedFeeds.Feeds.RemoveAll(
-                    f => Util.HashString(f.FeedUrl.AbsoluteUri) == sourceId);
+                    f => SyndicationUtil.HashString(f.FeedUrl.AbsoluteUri) == sourceId);
                 River newAggregate = aggregate.With(updatedFeeds: aggregate.UpdatedFeeds.With(feeds: newFeeds));
                 await this.aggregateStore.WriteAggregate(id, newAggregate);
 
@@ -1085,7 +1086,7 @@
                 status = "ok",
                 sources = feedrivers.Select(r => new
                 {
-                    id = Util.HashString(r.Metadata.OriginUrl.AbsoluteUri),
+                    id = SyndicationUtil.HashString(r.Metadata.OriginUrl.AbsoluteUri),
                     name = r.UpdatedFeeds.Feeds.FirstOrDefault()?.FeedTitle ?? r.Metadata.OriginUrl.AbsoluteUri,
                     webUrl = r.UpdatedFeeds.Feeds.FirstOrDefault()?.WebsiteUrl ?? r.Metadata.OriginUrl.AbsoluteUri,
                     feedUrl = r.Metadata.OriginUrl,

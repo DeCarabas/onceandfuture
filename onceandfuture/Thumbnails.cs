@@ -4,6 +4,7 @@ using AngleSharp.Parser.Html;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using OnceAndFuture.Syndication;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -222,7 +223,7 @@ namespace OnceAndFuture
 
         async Task<Item> GetItemThumbnailAsync(Uri baseUri, Item item)
         {
-            Uri itemLink = Util.Rebase(item.Link, baseUri);
+            Uri itemLink = SyndicationUtil.Rebase(item.Link, baseUri);
             ThumbnailResponse sourceImage = null;
 
             // We might already have found a thumbnail...
@@ -251,7 +252,7 @@ namespace OnceAndFuture
                 XElement xe = soups[i];
                 if (xe != null)
                 {
-                    Uri soupBase = Util.TryParseAbsoluteUrl(xe.BaseUri, baseUri) ?? itemLink ?? baseUri;
+                    Uri soupBase = SyndicationUtil.TryParseAbsoluteUrl(xe.BaseUri, baseUri) ?? itemLink ?? baseUri;
                     sourceImage = await FindThumbnailInSoupAsync(
                         soup_ids[i],
                         soupBase, 
@@ -330,7 +331,7 @@ namespace OnceAndFuture
         {
             // These get preferential treatment; if we find them then great otherwise we have to search the whole doc.
             // (Note that they also still have to pass the URL filter.)
-            ImageUrl easyUri = Util.ConcatSequence(
+            ImageUrl easyUri = SyndicationUtil.ConcatSequence(
                 ExtractOpenGraphImageUrls(baseUrl, document),
                 ExtractTwitterImageUrls(baseUrl, document),
                 ExtractLinkRelImageUrls(baseUrl, document),
@@ -544,14 +545,14 @@ namespace OnceAndFuture
 
         static Uri MakeThumbnailUrl(Uri baseUrl, string src)
         {
-            Uri thumbnail = Util.TryParseAbsoluteUrl(src, baseUrl);
+            Uri thumbnail = SyndicationUtil.TryParseAbsoluteUrl(src, baseUrl);
             if (thumbnail == null) { return null; }
             return MakeThumbnailUrl(baseUrl, thumbnail);
         }
 
         static Uri MakeThumbnailUrl(Uri baseUrl, Uri thumbnail)
         {
-            thumbnail = Util.Rebase(thumbnail, baseUrl);
+            thumbnail = SyndicationUtil.Rebase(thumbnail, baseUrl);
             if (!thumbnail.IsAbsoluteUri) { return null; }
             if (thumbnail.Scheme != "http" && thumbnail.Scheme != "https")
             {

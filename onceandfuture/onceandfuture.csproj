@@ -4,14 +4,12 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp1.1</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
+    <RootNamespace>OnceAndFuture</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="node_modules\**" />
-    <Compile Remove="Syndication\**" />
     <EmbeddedResource Remove="node_modules\**" />
-    <EmbeddedResource Remove="Syndication\**" />
     <None Remove="node_modules\**" />
-    <None Remove="Syndication\**" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="0.9.9" />
