@@ -1,11 +1,11 @@
-﻿using Npgsql;
-using NpgsqlTypes;
-using System;
-using System.Security.Cryptography;
-using System.Threading.Tasks;
-
-namespace OnceAndFuture.DAL
+﻿namespace OnceAndFuture.DAL
 {
+    using Npgsql;
+    using NpgsqlTypes;
+    using System;
+    using System.Security.Cryptography;
+    using System.Threading.Tasks;
+
     public class Invitation
     {
         public string Code { get; set; }
