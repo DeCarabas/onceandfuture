@@ -747,13 +747,13 @@
     {
         readonly UserProfileStore profileStore;
         readonly AggregateRiverStore aggregateStore;
-        readonly RiverFeedParser feedParser;
+        readonly RiverLoader feedParser;
         readonly RiverFeedStore feedStore;
 
         public ApiController(
             UserProfileStore profileStore,
             AggregateRiverStore aggregateStore,
-            RiverFeedParser feedParser,
+            RiverLoader feedParser,
             RiverFeedStore feedStore)
         {
             this.profileStore = profileStore;
@@ -1593,7 +1593,7 @@
 
             var aggStore = new AggregateRiverStore();
             var feedStore = new RiverFeedStore();
-            var feedParser = new RiverFeedParser();
+            var feedParser = new RiverLoader();
 
             var profileStore = new UserProfileStore();
             var authenticationManager = new AuthenticationManager(profileStore);
@@ -1602,7 +1602,7 @@
             services.AddSingleton(typeof(RiverFeedStore), feedStore);
             services.AddSingleton(typeof(UserProfileStore), profileStore);
             services.AddSingleton(typeof(AuthenticationManager), authenticationManager);
-            services.AddSingleton(typeof(RiverFeedParser), feedParser);
+            services.AddSingleton(typeof(RiverLoader), feedParser);
             services.AddSingleton(typeof(InvitationStore), new InvitationStore());
         }
 

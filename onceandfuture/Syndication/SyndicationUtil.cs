@@ -120,14 +120,7 @@
             var parser = new HtmlParser();
             IHtmlDocument document = parser.Parse(body.Value);
 
-            string result = HtmlFormatter.Format(document.Body);
-
-            //string result = String.Join(
-            //    " ",
-            //    document.Body.Text().Split(default(char[]), StringSplitOptions.RemoveEmptyEntries)
-            //);
-            //if (result.Length > 280) { result = result.Substring(0, 277) + "..."; }
-            return result;
+            return HtmlFormatter.Format(document.Body);
         }
 
         public static DateTime? ParseDate(XElement dateTime)
@@ -323,8 +316,7 @@
 
         static DateTime? TryParseDateNative(string timeString)
         {
-            DateTimeOffset result;
-            if (DateTimeOffset.TryParse(timeString, out result))
+            if (DateTimeOffset.TryParse(timeString, out DateTimeOffset result))
             {
                 return result.UtcDateTime;
             }

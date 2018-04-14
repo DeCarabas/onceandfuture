@@ -234,7 +234,7 @@
                 for (int i = 0; i < 30; i++)
                 {
                     var cleanRiver = new River(metadata: new RiverFeedMeta(originUrl: feedUrl));
-                    river = new RiverFeedParser().UpdateAsync(cleanRiver).Result;
+                    river = new RiverLoader().UpdateAsync(cleanRiver).Result;
                     if (river.Metadata.LastStatus != HttpStatusCode.Moved) { break; }
                     feedUrl = river.Metadata.OriginUrl;
                     Console.WriteLine("(Following redirect to {0})", feedUrl);
@@ -341,7 +341,7 @@
                 return 100;
             }
 
-            var parser = new RiverFeedParser();
+            var parser = new RiverLoader();
 
             Console.WriteLine("Refreshing {0}...", feedUrl);
             Stopwatch loadTimer = Stopwatch.StartNew();
@@ -356,7 +356,7 @@
             string river = args["river"].Value;
 
             var subscriptionStore = new UserProfileStore();
-            var parser = new RiverFeedParser();
+            var parser = new RiverLoader();
 
             Console.WriteLine("Refreshing for {0}/{1}...", user, river);
             Stopwatch loadTimer = Stopwatch.StartNew();
@@ -377,7 +377,7 @@
             string user = args["user"].Value;
 
             var subscriptionStore = new UserProfileStore();
-            var parser = new RiverFeedParser();
+            var parser = new RiverLoader();
 
             Console.WriteLine("Refreshing for {0}...", user);
             Stopwatch loadTimer = Stopwatch.StartNew();
@@ -397,7 +397,7 @@
             string riverName = args["river"].Value;
 
             // Check feed.
-            var parser = new RiverFeedParser();
+            var parser = new RiverLoader();
             var feedStore = new RiverFeedStore();
             River feedRiver = parser.FetchAndUpdateRiver(new Uri(feed)).Result;
             if (feedRiver.Metadata.LastStatus < (HttpStatusCode)200 ||
