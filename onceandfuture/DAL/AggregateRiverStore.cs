@@ -1,5 +1,6 @@
-﻿namespace OnceAndFuture.Syndication
+﻿namespace OnceAndFuture.DAL
 {
+    using OnceAndFuture.Syndication;
     using System;
     using System.Threading.Tasks;
 

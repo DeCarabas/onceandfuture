@@ -1,20 +1,9 @@
-﻿namespace OnceAndFuture.Syndication
+﻿namespace OnceAndFuture.DAL
 {
-    using Newtonsoft.Json;
+    using OnceAndFuture.Syndication;
     using System;
-    using System.Collections.Generic;
-    using System.Collections.Immutable;
-    using System.Diagnostics;
-    using System.IO;
-    using System.Linq;
     using System.Net;
-    using System.Net.Http;
-    using System.Net.Http.Headers;
-    using System.Security.Cryptography;
-    using System.Text;
     using System.Threading.Tasks;
-    using System.Xml;
-    using System.Xml.Linq;
 
     public class RiverFeedStore : DocumentStore<Uri, River>
     {

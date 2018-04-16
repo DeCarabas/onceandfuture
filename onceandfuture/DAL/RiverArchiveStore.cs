@@ -1,6 +1,7 @@
-﻿namespace OnceAndFuture.Syndication
+﻿namespace OnceAndFuture.DAL
 {
     using Newtonsoft.Json;
+    using OnceAndFuture.Syndication;
     using System.IO;
     using System.Text;
     using System.Threading.Tasks;

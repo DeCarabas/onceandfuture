@@ -1,5 +1,6 @@
 ﻿namespace OnceAndFuture.Syndication
 {
+    using OnceAndFuture.DAL;
     using System;
     using System.Collections.Generic;
     using System.Collections.Immutable;
