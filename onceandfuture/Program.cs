@@ -79,6 +79,8 @@
         {
             try
             {
+                Console.OutputEncoding = System.Text.Encoding.UTF8;
+
                 ParsedOpts parsedArgs = Options.ParseArguments(args);
                 if (parsedArgs.Error != null)
                 {
