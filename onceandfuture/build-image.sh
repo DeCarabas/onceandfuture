@@ -28,7 +28,7 @@ echo ======================================
 echo BUILDING PRODUCTION JS
 echo ======================================
 # The checked-in bundle is debug; generate the production JS.
-NODE_VERSION_NUMBER=v8.2.1
+NODE_VERSION_NUMBER=v8.11.1
 NODE_VERSION=node-$NODE_VERSION_NUMBER-linux-x64
 mkdir /tmp/nodejs
 cd /tmp/nodejs

@@ -1,5 +1,6 @@
 /* eslint-env node */
 module.exports = {
+  mode: 'development',
   entry: './wwwroot/main.js',
   output: {
     path: __dirname  + '/wwwroot',
