@@ -36,8 +36,10 @@
             Description = description;
             Summary = summary;
 
-            Enclosures = ImmutableList.CreateRange<Enclosure>(
-                enclosures ?? Enumerable.Empty<Enclosure>());
+            Enclosures =
+                ImmutableList.CreateRange<Enclosure>(
+                    enclosures ?? Enumerable.Empty<Enclosure>()
+                );
         }
 
         public Item With(
@@ -66,7 +68,8 @@
                 enclosures ?? Enclosures,
                 content ?? Content,
                 description ?? Description,
-                summary ?? Summary);
+                summary ?? Summary
+            );
         }
 
         [JsonProperty(PropertyName = "title")]
@@ -99,8 +102,10 @@
         // Tracking elements during parsing; not stored or used afterwards.
         [JsonIgnore]
         public XElement Content { get; }
+
         [JsonIgnore]
         public XElement Description { get; }
+
         [JsonIgnore]
         public XElement Summary { get; }
     }

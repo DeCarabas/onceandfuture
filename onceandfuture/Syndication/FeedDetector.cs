@@ -12,22 +12,34 @@
     public static class FeedDetector
     {
         static HttpClient client = Policies.CreateHttpClient();
-        static HashSet<string> FeedMimeTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "application/rss+xml",
-            "text/xml",
-            "application/atom+xml",
-            "application/x.atom+xml",
-            "application/x-atom+xml",
-        };
-        static readonly string[] OrderedFeedKeywords = new string[] { "atom", "rss", "rdf", "xml", "feed" };
-        static readonly string[] FeedNames = new string[] {
-            "atom.xml", "index.atom", "index.rdf", "rss.xml", "index.xml", "index.rss",
-        };
-        static readonly string[] FeedExtensions = new string[]
-        {
-            ".rss", ".rdf", ".xml", ".atom",
-        };
+        static
+        HashSet<string> FeedMimeTypes =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "application/rss+xml",
+                "text/xml",
+                "application/atom+xml",
+                "application/x.atom+xml",
+                "application/x-atom+xml",
+            };
+        static readonly
+        string[] OrderedFeedKeywords =
+            new string[] {"atom", "rss", "rdf", "xml", "feed"};
+        static readonly
+        string[] FeedNames =
+            new string[]
+            {
+                "atom.xml",
+                "index.atom",
+                "index.rdf",
+                "rss.xml",
+                "index.xml",
+                "index.rss",
+
+            };
+        static readonly
+        string[] FeedExtensions =
+            new string[] {".rss", ".rdf", ".xml", ".atom", };
 
         public static async Task<IList<Uri>> GetFeedUrls(
             string originUrl,
@@ -42,7 +54,7 @@
             if (LooksLikeFeed(data))
             {
                 Log.FindFeedBaseWasFeed(baseUri);
-                return new[] { baseUri };
+                return new[] {baseUri};
             }
 
             // Nope, let's dive into the soup!
@@ -57,7 +69,11 @@
                 string linkType = element.GetAttribute("type");
                 if (linkType != null && FeedMimeTypes.Contains(linkType))
                 {
-                    Uri hrefUrl = SyndicationUtil.TryParseAbsoluteUrl(element.GetAttribute("href"), baseUri);
+                    Uri hrefUrl =
+                        SyndicationUtil.TryParseAbsoluteUrl(
+                            element.GetAttribute("href"),
+                            baseUri
+                        );
                     if (hrefUrl != null)
                     {
                         linkUrls.Add(hrefUrl);
@@ -71,7 +87,10 @@
                 Log.FindFeedFoundLinkElements(baseUri, linkUrls);
                 linkUrls.Sort(UrlFeedComparison);
                 allUrls.AddRange(linkUrls);
-                if (!findAll) { return allUrls; }
+                if (!findAll)
+                {
+                    return allUrls;
+                }
             }
 
             // <a> tags
@@ -80,7 +99,11 @@
             List<Uri> remoteGuesses = new List<Uri>();
             foreach (IElement element in document.GetElementsByTagName("a"))
             {
-                Uri hrefUrl = SyndicationUtil.TryParseAbsoluteUrl(element.GetAttribute("href"), baseUri);
+                Uri hrefUrl =
+                    SyndicationUtil.TryParseAbsoluteUrl(
+                        element.GetAttribute("href"),
+                        baseUri
+                    );
                 if (hrefUrl != null)
                 {
                     if ((hrefUrl.Host == baseUri.Host) && IsFeedUrl(hrefUrl))
@@ -93,6 +116,7 @@
                     }
                 }
             }
+
             Log.FindFeedFoundSomeAnchors(baseUri, localGuesses, remoteGuesses);
 
             // (Consider ones on the same domain first.)
@@ -102,7 +126,10 @@
                 Log.FindFeedsFoundLocalGuesses(baseUri, localGuesses);
                 localGuesses.Sort(UrlFeedComparison);
                 allUrls.AddRange(localGuesses);
-                if (!findAll) { return localGuesses; }
+                if (!findAll)
+                {
+                    return localGuesses;
+                }
             }
 
             await FilterUrlsByFeed(remoteGuesses);
@@ -111,17 +138,24 @@
                 Log.FindFeedsFoundRemoteGuesses(baseUri, remoteGuesses);
                 remoteGuesses.Sort(UrlFeedComparison);
                 allUrls.AddRange(remoteGuesses);
-                if (!findAll) { return remoteGuesses; }
+                if (!findAll)
+                {
+                    return remoteGuesses;
+                }
             }
 
-            List<Uri> randomGuesses = FeedNames.Select(s => new Uri(baseUri, s)).ToList();
+            List<Uri> randomGuesses =
+                FeedNames.Select(s => new Uri(baseUri, s)).ToList();
             await FilterUrlsByFeed(randomGuesses);
             if (randomGuesses.Count > 0)
             {
                 Log.FindFeedsFoundRandomGuesses(baseUri, randomGuesses);
                 randomGuesses.Sort(UrlFeedComparison);
                 allUrls.AddRange(randomGuesses);
-                if (!findAll) { return randomGuesses; }
+                if (!findAll)
+                {
+                    return randomGuesses;
+                }
             }
 
             // All done, nothing. (Or... everything!)
@@ -144,32 +178,46 @@
             Uri parsedUri;
             if (!Uri.TryCreate(uri, UriKind.Absolute, out parsedUri))
             {
-                throw new FindFeedException("The provided URL ({0}) does not seem like a valid URL.", uri);
+                throw new FindFeedException(
+                    "The provided URL ({0}) does not seem like a valid URL.",
+                    uri
+                );
             }
+
             return parsedUri;
         }
 
         static async Task<string> GetFeedData(Uri url)
         {
-            HttpResponseMessage response = await Policies.HttpPolicy.ExecuteAsync(
-                () => client.GetAsync(url),
-                new Dictionary<string, object> { { "uri", url } });
+            HttpResponseMessage response =
+                await
+                    Policies.HttpPolicy.ExecuteAsync(
+                        () => client.GetAsync(url),
+                        new Dictionary<string, object> {{"uri", url}}
+                    );
             using (response)
             {
                 if (!response.IsSuccessStatusCode)
                 {
                     Log.DetectFeedServerError(url, response);
-                    throw new FindFeedException("The server at {0} returned an error.", url.Host);
+                    throw new FindFeedException(
+                        "The server at {0} returned an error.",
+                        url.Host
+                    );
                 }
 
                 var contentHeaders = response.Content.Headers;
-                if (contentHeaders.ContentType != null && contentHeaders.ContentType.CharSet != null)
+                if (
+                    contentHeaders.ContentType != null &&
+                    contentHeaders.ContentType.CharSet != null
+                )
                 {
                     string charset = contentHeaders.ContentType.CharSet;
                     if (charset[0] == '"' && charset[charset.Length - 1] == '"')
                     {
                         charset = charset.Substring(1, charset.Length - 2);
                     }
+
                     contentHeaders.ContentType.CharSet = charset;
                 }
 
@@ -192,11 +240,22 @@
 
         static int UrlFeedProbability(Uri url)
         {
-            if (url.AbsoluteUri.IndexOf("comments", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (
+                url.AbsoluteUri.IndexOf(
+                    "comments",
+                    StringComparison.OrdinalIgnoreCase
+                ) >= 0
+            )
             {
                 return -2;
             }
-            if (url.AbsoluteUri.IndexOf("georss", StringComparison.OrdinalIgnoreCase) >= 0)
+
+            if (
+                url.AbsoluteUri.IndexOf(
+                    "georss",
+                    StringComparison.OrdinalIgnoreCase
+                ) >= 0
+            )
             {
                 return -1;
             }
@@ -204,7 +263,12 @@
             for (int i = 0; i < OrderedFeedKeywords.Length; i++)
             {
                 string kw = OrderedFeedKeywords[i];
-                if (url.AbsoluteUri.IndexOf(kw, StringComparison.OrdinalIgnoreCase) >= 0)
+                if (
+                    url.AbsoluteUri.IndexOf(
+                        kw,
+                        StringComparison.OrdinalIgnoreCase
+                    ) >= 0
+                )
                 {
                     return OrderedFeedKeywords.Length - i;
                 }
@@ -218,7 +282,10 @@
             bool[] results = await Task.WhenAll(linkUrls.Select(u => IsFeed(u)));
             for (int i = linkUrls.Count - 1; i >= 0; i--)
             {
-                if (!results[i]) { linkUrls.RemoveAt(i); }
+                if (!results[i])
+                {
+                    linkUrls.RemoveAt(i);
+                }
             }
         }
 
@@ -238,10 +305,26 @@
         static bool LooksLikeFeed(string data)
         {
             data = data.ToLowerInvariant();
-            if (data.IndexOf("<html") >= 0) { return false; }
-            if (data.IndexOf("<rss") >= 0) { return true; }
-            if (data.IndexOf("<rdf") >= 0) { return true; }
-            if (data.IndexOf("<feed") >= 0) { return true; }
+            if (data.IndexOf("<html") >= 0)
+            {
+                return false;
+            }
+
+            if (data.IndexOf("<rss") >= 0)
+            {
+                return true;
+            }
+
+            if (data.IndexOf("<rdf") >= 0)
+            {
+                return true;
+            }
+
+            if (data.IndexOf("<feed") >= 0)
+            {
+                return true;
+            }
+
             return false;
         }
 
@@ -249,11 +332,17 @@
         {
             for (int i = 0; i < OrderedFeedKeywords.Length; i++)
             {
-                if (hrefUrl.AbsoluteUri.IndexOf(OrderedFeedKeywords[i], StringComparison.OrdinalIgnoreCase) >= 0)
+                if (
+                    hrefUrl.AbsoluteUri.IndexOf(
+                        OrderedFeedKeywords[i],
+                        StringComparison.OrdinalIgnoreCase
+                    ) >= 0
+                )
                 {
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -261,11 +350,17 @@
         {
             for (int i = 0; i < FeedExtensions.Length; i++)
             {
-                if (hrefUrl.AbsolutePath.EndsWith(FeedExtensions[i], StringComparison.OrdinalIgnoreCase))
+                if (
+                    hrefUrl.AbsolutePath.EndsWith(
+                        FeedExtensions[i],
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
                 {
                     return true;
                 }
             }
+
             return false;
         }
     }
