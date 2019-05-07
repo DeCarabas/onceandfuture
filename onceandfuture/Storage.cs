@@ -343,7 +343,7 @@
         const string OriginalLengthHeader = "x-amz-meta-original-length";
         static string ValidPathCharacters = DetermineValidPathCharacters();
 
-        static readonly Policy<HttpResponseMessage> HttpPolicy = Policy
+        static readonly AsyncPolicy<HttpResponseMessage> HttpPolicy = Policy
             .Handle<HttpRequestException>(Policies.ShouldRetryException)
             .Or<TaskCanceledException>()
             .Or<WebException>(Policies.ShouldRetryException)

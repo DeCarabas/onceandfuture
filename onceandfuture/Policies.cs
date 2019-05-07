@@ -20,7 +20,7 @@
         static ConcurrentDictionary<bool, HttpClient> clientCache = new ConcurrentDictionary<bool, HttpClient>();
         static Random random = new Random();
 
-        public static readonly RetryPolicy HttpPolicy = Policy
+        public static readonly AsyncRetryPolicy HttpPolicy = Policy
             .Handle<HttpRequestException>(ShouldRetryException)
             .Or<TaskCanceledException>()
             .Or<WebException>(ShouldRetryException)

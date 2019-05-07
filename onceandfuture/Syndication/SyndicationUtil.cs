@@ -1,8 +1,8 @@
 ﻿namespace OnceAndFuture.Syndication
 {
     using AngleSharp.Dom;
-    using AngleSharp.Dom.Html;
-    using AngleSharp.Parser.Html;
+    using AngleSharp.Html.Dom;
+    using AngleSharp.Html.Parser;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -118,7 +118,7 @@
         public static string ParseBody(XElement body)
         {
             var parser = new HtmlParser();
-            IHtmlDocument document = parser.Parse(body.Value);
+            IHtmlDocument document = parser.ParseDocument(body.Value);
 
             return HtmlFormatter.Format(document.Body);
         }

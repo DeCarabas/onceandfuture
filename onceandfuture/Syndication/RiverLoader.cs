@@ -194,7 +194,7 @@
                 Uri requestUri = uri;
                 for (int i = 0; i < 30; i++)
                 {
-                    response = await Policies.HttpPolicy.ExecuteAsync(() =>
+                    response = await Policies.HttpPolicy.ExecuteAsync(_ =>
                         {
                             var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
                             if (etag != null) { request.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag)); }

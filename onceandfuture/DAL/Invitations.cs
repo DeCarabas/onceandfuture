@@ -42,7 +42,7 @@
                             VALUES (@id, @expires, current_timestamp)
                         ";
                         cmd.Parameters.AddWithValue("id", NpgsqlDbType.Varchar, id);
-                        cmd.Parameters.AddWithValue("expires", NpgsqlDbType.TimestampTZ, expireVal);
+                        cmd.Parameters.AddWithValue("expires", NpgsqlDbType.TimestampTz, expireVal);
                         cmd.Prepare();
                         await cmd.ExecuteNonQueryAsync();
                     }

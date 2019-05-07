@@ -2,18 +2,18 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp1.1</TargetFramework>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>
     <RootNamespace>OnceAndFuture.Deployment</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.AutoScaling" Version="3.3.0.19" />
-    <PackageReference Include="AWSSDK.CloudFormation" Version="3.3.5.3" />
-    <PackageReference Include="AWSSDK.EC2" Version="3.3.13.6" />
-    <PackageReference Include="AWSSDK.ElasticLoadBalancingV2" Version="3.3.3" />
-    <PackageReference Include="AWSSDK.S3" Version="3.3.6.3" />
-    <PackageReference Include="Newtonsoft.Json" Version="10.0.2" />
+    <PackageReference Include="AWSSDK.AutoScaling" Version="3.3.100.15" />
+    <PackageReference Include="AWSSDK.CloudFormation" Version="3.3.100.15" />
+    <PackageReference Include="AWSSDK.EC2" Version="3.3.106.2" />
+    <PackageReference Include="AWSSDK.ElasticLoadBalancingV2" Version="3.3.101.13" />
+    <PackageReference Include="AWSSDK.S3" Version="3.3.101.13" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
   </ItemGroup>
 
   <ItemGroup>

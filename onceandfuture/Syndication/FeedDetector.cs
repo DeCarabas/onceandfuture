@@ -1,8 +1,8 @@
 ﻿namespace OnceAndFuture.Syndication
 {
     using AngleSharp.Dom;
-    using AngleSharp.Dom.Html;
-    using AngleSharp.Parser.Html;
+    using AngleSharp.Html.Dom;
+    using AngleSharp.Html.Parser;
     using System;
     using System.Collections.Generic;
     using System.Linq;
@@ -59,7 +59,7 @@
 
             // Nope, let's dive into the soup!
             var parser = new HtmlParser();
-            IHtmlDocument document = parser.Parse(data);
+            IHtmlDocument document = parser.ParseDocument(data);
 
             // Link elements.
             Log.FindFeedCheckingLinkElements(baseUri);
@@ -192,7 +192,7 @@
             HttpResponseMessage response =
                 await
                     Policies.HttpPolicy.ExecuteAsync(
-                        () => client.GetAsync(url),
+                        _ => client.GetAsync(url),
                         new Dictionary<string, object> {{"uri", url}}
                     );
             using (response)

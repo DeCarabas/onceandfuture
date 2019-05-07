@@ -1,6 +1,6 @@
 ﻿using AngleSharp.Dom;
-using AngleSharp.Dom.Html;
-using AngleSharp.Parser.Html;
+using AngleSharp.Html.Dom;
+using AngleSharp.Html.Parser;
 using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -180,10 +180,7 @@ namespace OnceAndFuture
 
         static ThumbnailExtractor()
         {
-            imageCache = new MemoryCache(new MemoryCacheOptions
-            {
-                CompactOnMemoryPressure = true,
-            });
+            imageCache = new MemoryCache(new MemoryCacheOptions());
         }
 
         public static void ConfigureProcess()
@@ -218,7 +215,7 @@ namespace OnceAndFuture
             string htmlText = element.HasElements
                 ? element.ToString(SaveOptions.DisableFormatting)
                 : element.Value;
-            return new HtmlParser().Parse(htmlText);
+            return new HtmlParser().ParseDocument(htmlText);
         }
 
         async Task<Item> GetItemThumbnailAsync(Uri baseUri, Item item)
@@ -280,7 +277,7 @@ namespace OnceAndFuture
             try
             {
                 HttpResponseMessage response = await Policies.HttpPolicy.ExecuteAsync(
-                    () => client.GetAsync(uri),
+                    _ => client.GetAsync(uri),
                     new Dictionary<string, object> { { "uri", uri } });
                 using (response)
                 {
@@ -304,7 +301,7 @@ namespace OnceAndFuture
                         using (Stream stream = await response.Content.ReadAsStreamAsync())
                         {
                             var parser = new HtmlParser();
-                            IHtmlDocument document = await parser.ParseAsync(stream);
+                            IHtmlDocument document = await parser.ParseDocumentAsync(stream);
 
                             return await FindThumbnailInSoupAsync("item_document", uri, document);
                         }
@@ -483,7 +480,7 @@ namespace OnceAndFuture
             {
                 // N.B.: We put the whole bit of cache logic in here because somebody might succeed or fail altogether
                 //       while we wait on retries, and we want to re-check the cache on every loop.
-                return await Policies.HttpPolicy.ExecuteAsync(async () =>
+                return await Policies.HttpPolicy.ExecuteAsync(async _ =>
                 {
                     object cachedObject = imageCache.Get(imageUrl.Uri.AbsoluteUri);
                     if (cachedObject is string)
