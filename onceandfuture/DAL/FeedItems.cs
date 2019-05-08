@@ -63,8 +63,8 @@
                         var descriptionParam = insertItem.Parameters.Add("@description", NpgsqlDbType.Varchar);
                         var summaryParam = insertItem.Parameters.Add("@summary", NpgsqlDbType.Varchar);
                         var thumbUrlParam = insertItem.Parameters.Add("@thumb_url", NpgsqlDbType.Varchar);
-                        var thumbWidthParam = insertItem.Parameters.Add("@thumb_width", NpgsqlDbType.Varchar);
-                        var thumbHeightParam = insertItem.Parameters.Add("@thumb_height", NpgsqlDbType.Varchar);
+                        var thumbWidthParam = insertItem.Parameters.Add("@thumb_width", NpgsqlDbType.Integer);
+                        var thumbHeightParam = insertItem.Parameters.Add("@thumb_height", NpgsqlDbType.Integer);
                         var epochParam = insertItem.Parameters.Add("@epoch", NpgsqlDbType.Bigint);
                         await insertItem.PrepareAsync();
 
