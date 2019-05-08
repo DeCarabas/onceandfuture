@@ -11,6 +11,78 @@
     {
         public FeedItemsStore() : base("items") { }
 
+        public async Task UpdateOriginUrl(Uri oldOrigin, Uri newOrigin)
+        {
+            await DoOperation("storeItems", oldOrigin.AbsoluteUri, async () =>
+            {
+                using (var connection = await OpenConnection())
+                {
+                    using (NpgsqlCommand command = connection.CreateCommand())
+                    {
+                        command.CommandText = @"
+                            UPDATE items SET feed_id = @newId WHERE feed_id = @oldId
+                        ";
+                        command.Parameters.AddWithValue("@newId", NpgsqlDbType.Varchar, newOrigin.AbsoluteUri);
+                        command.Parameters.AddWithValue("@oldId", NpgsqlDbType.Varchar, oldOrigin.AbsoluteUri);
+                        await command.ExecuteNonQueryAsync();
+                    }
+                }
+                return null;
+            });
+        }
+
+        public async Task UpdateItemThumbs(Uri originUrl, Item[] items)
+        {
+            await DoOperation("updateThumbs", originUrl.AbsoluteUri, async () =>
+            {
+                using (var connection = await OpenConnection())
+                {
+                    using (NpgsqlCommand command = connection.CreateCommand())
+                    {
+                        command.CommandText = @"
+                            UPDATE items 
+                            SET 
+                                thumb_url = @thumb_url, 
+                                thumb_width = @thumb_width, 
+                                thumb_height = @thumb_height
+                            WHERE
+                                feed_id = @feed_id AND
+                                item_id = @item_id 
+                        ";
+
+                        var feedIdParam = command.Parameters.Add("@feed_id", NpgsqlDbType.Varchar);
+                        var itemIdParam = command.Parameters.Add("@item_id", NpgsqlDbType.Varchar);
+                        var thumbUrlParam = command.Parameters.Add("@thumb_url", NpgsqlDbType.Varchar);
+                        var thumbWidthParam = command.Parameters.Add("@thumb_width", NpgsqlDbType.Integer);
+                        var thumbHeightParam = command.Parameters.Add("@thumb_height", NpgsqlDbType.Integer);
+                        await command.PrepareAsync();
+
+                        SetParameter(feedIdParam, originUrl.AbsoluteUri);
+                        for(int i = 0; i < items.Length; i++)
+                        {
+                            Item item = items[i];
+
+                            SetParameter(itemIdParam, item.Id);
+                            if (item.Thumbnail != null)
+                            {
+                                SetParameter(thumbUrlParam, item.Thumbnail.Url.AbsoluteUri);
+                                SetParameter(thumbWidthParam, item.Thumbnail.Width);
+                                SetParameter(thumbHeightParam, item.Thumbnail.Height);
+                            }
+                            else
+                            {
+                                SetParameter(thumbUrlParam, null);
+                                SetParameter(thumbWidthParam, null);
+                                SetParameter(thumbHeightParam, null);
+                            }
+                            await command.ExecuteNonQueryAsync();
+                        }
+                    }
+                }
+                return null;
+            });
+        }
+
         public async Task<Item[]> StoreItems(Uri originUrl, Item[] items)
         {
             var stored = new List<Item>(items.Length);

@@ -37,6 +37,11 @@
                 (river.Metadata.LastStatus != HttpStatusCode.Gone))
             {
                 river = await UpdateAsync(river);
+                if (river.Metadata.LastStatus == HttpStatusCode.MovedPermanently)
+                {
+                    // The first time this happens we need to move all the items across.
+                    await feedItemStore.UpdateOriginUrl(uri, river.Metadata.OriginUrl);
+                }
                 await WriteRiver(uri, river);
             }
 
@@ -165,6 +170,8 @@
                     }
 
                     newItems = await this.thumbnailExtractor.LoadItemThumbnailsAsync(baseUri, newItems);
+                    await this.feedItemStore.UpdateItemThumbs(river.Metadata.OriginUrl, newItems);
+
                     feed = feed.With(items: newItems);
                     updatedFeeds = river.UpdatedFeeds.With(feeds: river.UpdatedFeeds.Feeds.Insert(0, feed));
                 }
