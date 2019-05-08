@@ -25,6 +25,7 @@
         static readonly HttpClient client = Policies.CreateHttpClient(allowRedirect: false);
 
         readonly AggregateRiverStore aggregateStore = new AggregateRiverStore();
+        readonly FeedItemsStore feedItemStore = new FeedItemsStore();
         readonly RiverArchiveStore archiveStore = new RiverArchiveStore();
         readonly RiverFeedStore feedStore = new RiverFeedStore();
         readonly ThumbnailExtractor thumbnailExtractor = new ThumbnailExtractor();
@@ -144,13 +145,17 @@
             if (fetchResult.Feed != null)
             {
                 var feed = fetchResult.Feed;
+                Item[] newItems = await this.feedItemStore.StoreItems(
+                    river.Metadata.OriginUrl, feed.Items.ToArray());
+
+                // TODO: Filter this out once we've loaded a bit.
                 var existingItems = new HashSet<string>(
                     from existingFeed in river.UpdatedFeeds.Feeds
                     from item in existingFeed.Items
                     where item.Id != null
                     select item.Id
                 );
-                Item[] newItems = feed.Items.Where(item => !existingItems.Contains(item.Id)).ToArray();
+                newItems = newItems.Where(item => !existingItems.Contains(item.Id)).ToArray();
                 if (newItems.Length > 0)
                 {
                     Uri baseUri = SyndicationUtil.TryParseAbsoluteUrl(feed.WebsiteUrl) ?? feed.FeedUrl;
