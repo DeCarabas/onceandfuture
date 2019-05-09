@@ -183,18 +183,6 @@ namespace OnceAndFuture
             imageCache = new MemoryCache(new MemoryCacheOptions());
         }
 
-        public static void ConfigureProcess()
-        {
-            var formats = new ImageSharp.Formats.IImageFormat[]
-            {
-                    new ImageSharp.Formats.BmpFormat(),
-                    new ImageSharp.Formats.PngFormat(),
-                    new ImageSharp.Formats.JpegFormat(),
-                    new ImageSharp.Formats.GifFormat(),
-            };
-            foreach (var fmt in formats) { ImageSharp.Configuration.Default.AddImageFormat(fmt); }
-        }
-
         public async Task<Item[]> LoadItemThumbnailsAsync(Uri baseUri, Item[] items)
         {
             Stopwatch loadTimer = Stopwatch.StartNew();

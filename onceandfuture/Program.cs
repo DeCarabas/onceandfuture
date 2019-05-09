@@ -1,7 +1,6 @@
 ﻿namespace OnceAndFuture
 {
     using Amazon.KeyManagementService;
-    using ImageSharp;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.Configuration;
@@ -147,7 +146,6 @@
             // }
             Serilog.Log.Logger = logConfig.CreateLogger();
 
-            ThumbnailExtractor.ConfigureProcess();
             DocumentStore.InitializeLogging();
         }
 

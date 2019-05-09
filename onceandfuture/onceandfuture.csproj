@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -14,7 +14,6 @@
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="0.12.0" />
     <PackageReference Include="AWSSDK.KeyManagementService" Version="3.3.101.1" />
-    <PackageReference Include="ImageSharp" Version="1.0.0-alpha9-00140" />
     <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />
     <PackageReference Include="Microsoft.AspNetCore.ResponseCompression" Version="2.2.0" />
