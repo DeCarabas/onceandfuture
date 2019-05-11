@@ -107,10 +107,11 @@ namespace OnceAndFuture.Deployment
                                                     Ebs = new{
                                                             DeleteOnTermination =
                                                                 true,
-                                                            SnapshotId = "snap-066b5016ee2261563",
+                                                            SnapshotId = "snap-000242f160dfc17c6",
                                                             VolumeSize = 8,
-                                                            VolumeType = "gp2"
-                                                        },
+                                                            VolumeType = "gp2",
+                                                            Encrypted = false
+                                                        }
                                                 }
                                             },
                                         IamInstanceProfile = "qa-onceandfuture-BuilderIAMInstanceProfile-1CY8JHUXVJRAX", // TODO PROD
@@ -228,10 +229,11 @@ namespace OnceAndFuture.Deployment
                                                     Ebs = new{
                                                             DeleteOnTermination =
                                                                 true,
-                                                            SnapshotId = "snap-066b5016ee2261563",
+                                                            SnapshotId = "snap-000242f160dfc17c6",
                                                             VolumeSize = 8,
-                                                            VolumeType = "gp2"
-                                                        },
+                                                            VolumeType = "gp2",
+                                                            Encrypted = false
+                                                        }
                                                 }
                                             },
                                         IamInstanceProfile = "qa-onceandfuture-IAMInstanceProfile-16NZXY5JUOMO2", // TODO PROD
