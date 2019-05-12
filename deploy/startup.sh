@@ -2,7 +2,7 @@
 set -euo pipefail
 IFS=$'\n\t'
 function signal_done {
-	/opt/aws/bin/cfn-signal -e $? --stack {{STACKNAME}} --resource AutoScalingGroup --region us-west-2
+    /opt/aws/bin/cfn-signal -e $? --stack {{STACKNAME}} --resource AutoScalingGroup --region us-west-2
 }
 trap signal_done EXIT
 mkfifo /tmp/fifo.setup
@@ -12,11 +12,12 @@ exec 2>&1
 set -v
 
 echo "assumeyes=1" >> /etc/yum.conf
+yum install rsyslog
 yum update --security
 
 echo '$SystemLogRateLimitInterval 0' >> /etc/rsyslog.conf
 echo '$SystemLogRateLimitBurst 0' >> /etc/rsyslog.conf
-/etc/init.d/rsyslog restart
+systemctl restart rsyslog
 
 cat << "EOF" > /etc/logrotate.conf
 daily
@@ -61,8 +62,8 @@ log_stream_name = {instance_id}
 initial_position = start_of_file
 log_group_name = /{{ENV}}/{{APP}}
 EOF
-service awslogs start
-chkconfig awslogs on
+systemctl start awslogsd
+systemctl enable awslogsd.service
 
 cat << "EOF" > /etc/sysconfig/docker
 DAEMON_MAXFILES=1048576
@@ -74,9 +75,10 @@ DOCKER_STORAGE_OPTIONS="-s overlay"
 EOF
 
 usermod -a -G docker ec2-user
-service docker start
-chkconfig docker on
-/sbin/start amazon-ssm-agent
+systemctl enable docker
+systemctl start docker
+systemctl enable amazon-ssm-agent
+systemctl start amazon-ssm-agent
 
 echo 'RELEASE={{RELEASE}}' >> /etc/{{APP}}.env
 echo 'SHA={{SHA}}' >> /etc/{{APP}}.env

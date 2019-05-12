@@ -70,6 +70,24 @@ namespace OnceAndFuture.Deployment
                 return w.ToString();
             }
         }
+
+        // These go together.
+        public object ImageId => "ami-061392db613a6357b";
+
+        public object BlockDeviceMappings =>
+            new[]
+            {
+                new{
+                    DeviceName = "/dev/xvda",
+                    Ebs = new{
+                            DeleteOnTermination = true,
+                            SnapshotId = "snap-000242f160dfc17c6",
+                            VolumeSize = 8,
+                            VolumeType = "gp2",
+                            Encrypted = false
+                        }
+                }
+            };
     }
 
     class BuildStack : StackBase
@@ -99,21 +117,8 @@ namespace OnceAndFuture.Deployment
                                                 }
                                             },
                                         InstanceInitiatedShutdownBehavior = "terminate",
-                                        ImageId = "ami-061392db613a6357b",
-                                        BlockDeviceMappings = new[]
-                                            {
-                                                new{
-                                                    DeviceName = "/dev/xvda",
-                                                    Ebs = new{
-                                                            DeleteOnTermination =
-                                                                true,
-                                                            SnapshotId = "snap-000242f160dfc17c6",
-                                                            VolumeSize = 8,
-                                                            VolumeType = "gp2",
-                                                            Encrypted = false
-                                                        }
-                                                }
-                                            },
+                                        ImageId = ImageId,
+                                        BlockDeviceMappings = BlockDeviceMappings,
                                         IamInstanceProfile = "qa-onceandfuture-BuilderIAMInstanceProfile-1CY8JHUXVJRAX", // TODO PROD
                                         InstanceType = "t2.medium",
                                         NetworkInterfaces = new[]
@@ -222,22 +227,9 @@ namespace OnceAndFuture.Deployment
                                 Type = "AWS::AutoScaling::LaunchConfiguration",
                                 Properties = new{
                                         AssociatePublicIpAddress = true,
-                                        BlockDeviceMappings = new[]
-                                            {
-                                                new{
-                                                    DeviceName = "/dev/xvda",
-                                                    Ebs = new{
-                                                            DeleteOnTermination =
-                                                                true,
-                                                            SnapshotId = "snap-000242f160dfc17c6",
-                                                            VolumeSize = 8,
-                                                            VolumeType = "gp2",
-                                                            Encrypted = false
-                                                        }
-                                                }
-                                            },
+                                        ImageId = ImageId,
+                                        BlockDeviceMappings = BlockDeviceMappings,
                                         IamInstanceProfile = "qa-onceandfuture-IAMInstanceProfile-16NZXY5JUOMO2", // TODO PROD
-                                        ImageId = "ami-061392db613a6357b",
                                         InstanceType = "t2.micro",
                                         SecurityGroups = new[]
                                             {
